@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SGI APANDI — Sistema de Gestión Institucional (Educación Especial Chile)</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Chart.js para gráficos de cobertura curricular y asistencia -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Socket.io Client para Botón SOS en Tiempo Real -->
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            apandi: {
+              50: '#eff6ff',
+              100: '#dbeafe',
+              600: '#2563eb',
+              700: '#1d4ed8',
+              800: '#1e40af',
+              900: '#1e3a8a'
+            }
+          }
+        }
+      }
+    };
+  </script>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col font-sans">
+
+  <!-- BANNER DE ALERTA SOS EN TIEMPO REAL (Oculto por defecto) -->
+  <div id="sosRealtimeBanner" class="hidden bg-red-600 text-white px-4 py-3 shadow-lg border-b-4 border-red-800 animate-pulse sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-2">
+      <div class="flex items-center gap-3">
+        <span class="text-2xl font-extrabold">🚨 ALERTA SOS ACTIVA EN AULA</span>
+        <div id="sosBannerText" class="text-sm md:text-base font-medium"></div>
+      </div>
+      <button onclick="document.getElementById('sosRealtimeBanner').classList.add('hidden')" class="bg-white text-red-700 font-bold px-3 py-1 rounded text-xs uppercase">
+        Acusar Recibo e Ir a Sala
+      </button>
+    </div>
+  </div>
+
+  <!-- PANTALLA DE LOGIN CON ACCESO RÁPIDO POR ROL (RBAC) -->
+  <div id="loginScreen" class="fixed inset-0 bg-slate-900/95 z-40 flex items-center justify-center p-4 overflow-y-auto">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-4xl w-full overflow-hidden grid grid-cols-1 md:grid-cols-12">
+      <!-- Panel Izquierdo Normativo -->
+      <div class="md:col-span-5 bg-gradient-to-br from-apandi-900 to-apandi-700 text-white p-8 flex flex-col justify-between">
+        <div>
+          <span class="inline-block bg-blue-500/30 border border-blue-300/40 text-xs font-semibold px-3 py-1 rounded-full mb-3">
+            MINEDUC CHILE • NIVEL LABORAL
+          </span>
+          <h1 class="text-2xl font-extrabold tracking-tight">SGI APANDI</h1>
+          <p class="text-blue-100 text-sm mt-2">
+            Sistema de Gestión Institucional Integral para Centro de Capacitación Laboral de Educación Especial.
+          </p>
+          <ul class="mt-6 space-y-2.5 text-xs text-blue-100">
+            <li class="flex items-center gap-2">✅ <span><strong>Decreto 83 / 170:</strong> Talleres Grupo A y Grupo B, PID, PAI y PACI.</span></li>
+            <li class="flex items-center gap-2">🔒 <span><strong>Ley 19.628:</strong> Encriptación AES-256-GCM en datos clínicos y PAEC.</span></li>
+            <li class="flex items-center gap-2">✍️ <span><strong>Libro Digital:</strong> Asistencia y Firma Electrónica Simple con PIN.</span></li>
+            <li class="flex items-center gap-2">🚨 <span><strong>Botón SOS Aula:</strong> Alerta instantánea a Profesional PAEC.</span></li>
+          </ul>
+        </div>
+        <div class="mt-6 pt-4 border-t border-blue-800 text-xs text-blue-200">
+          Stack: Node.js (JS Puro) • MariaDB • phpMyAdmin • Tailwind CSS • Docker
+        </div>
+      </div>
+
+      <!-- Panel Derecho Formulario y Selector Rápido de Roles -->
+      <div class="md:col-span-7 p-8">
+        <h2 class="text-xl font-bold text-slate-900">Iniciar Sesión en la Plataforma</h2>
+        <p class="text-xs text-slate-500 mt-1">Selecciona un perfil de prueba con 1 clic para verificar los permisos RBAC o ingresa credenciales:</p>
+
+        <!-- Botones de Acceso Rápido RBAC -->
+        <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-4">
+          <button type="button" onclick="quickLogin('cmunoz@apandi.cl')" class="text-left p-2.5 rounded-lg border border-blue-200 bg-blue-50 hover:bg-blue-100 transition">
+            <div class="text-xs font-bold text-blue-900">👩‍🏫 Docente Titular</div>
+            <div class="text-[11px] text-blue-700 truncate">Libro PID + Lectura PIE</div>
+          </button>
+          <button type="button" onclick="quickLogin('cvargas.pie@apandi.cl')" class="text-left p-2.5 rounded-lg border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 transition">
+            <div class="text-xs font-bold text-emerald-900">🩺 Especialista PIE</div>
+            <div class="text-[11px] text-emerald-700 truncate">Edición AES-256 + SOS</div>
+          </button>
+          <button type="button" onclick="quickLogin('utp@apandi.cl')" class="text-left p-2.5 rounded-lg border border-purple-200 bg-purple-50 hover:bg-purple-100 transition">
+            <div class="text-xs font-bold text-purple-900">🎓 Director / UTP</div>
+            <div class="text-[11px] text-purple-700 truncate">Supervisión Total</div>
+          </button>
+          <button type="button" onclick="quickLogin('jfuentes@apandi.cl')" class="text-left p-2.5 rounded-lg border border-amber-200 bg-amber-50 hover:bg-amber-100 transition">
+            <div class="text-xs font-bold text-amber-900">🛠️ Monitor Taller</div>
+            <div class="text-[11px] text-amber-700 truncate">Sin acceso a Ficha Médica</div>
+          </button>
+          <button type="button" onclick="quickLogin('pgomez.familia@gmail.com')" class="text-left p-2.5 rounded-lg border border-rose-200 bg-rose-50 hover:bg-rose-100 transition">
+            <div class="text-xs font-bold text-rose-900">👨‍👩‍👦 Apoderado</div>
+            <div class="text-[11px] text-rose-700 truncate">Solo Lectura + PDF</div>
+          </button>
+          <button type="button" onclick="quickLogin('admin@apandi.cl')" class="text-left p-2.5 rounded-lg border border-slate-300 bg-slate-100 hover:bg-slate-200 transition">
+            <div class="text-xs font-bold text-slate-900">🛡️ Administrador</div>
+            <div class="text-[11px] text-slate-600 truncate">RBAC y Logs Auditoría</div>
+          </button>
+        </div>
+
+        <form id="loginForm" class="mt-5 space-y-4">
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 uppercase">Correo Institucional o RUT</label>
+            <input id="loginEmail" type="text" value="cmunoz@apandi.cl" required
+              class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:ring-2 focus:ring-apandi-600 focus:outline-none" />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 uppercase">Contraseña</label>
+            <input id="loginPassword" type="password" value="Apandi2026!" required
+              class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:ring-2 focus:ring-apandi-600 focus:outline-none" />
+          </div>
+          <div id="loginError" class="hidden text-xs text-red-600 font-semibold bg-red-50 p-2 rounded"></div>
+          <button type="submit" class="w-full bg-apandi-700 hover:bg-apandi-800 text-white font-bold py-2.5 rounded-lg shadow transition">
+            Ingresar al Sistema SGI
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- CABECERA PRINCIPAL MOBILE-FIRST CON BOTÓN SOS EN AULA -->
+  <header class="bg-apandi-900 text-white shadow-md sticky top-0 z-30">
+    <div class="max-w-7xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center font-black text-lg shadow-inner">
+          AP
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="font-extrabold tracking-tight text-base md:text-lg">SGI APANDI</span>
+            <span id="headerRoleBadge" class="text-[11px] bg-blue-700 px-2.5 py-0.5 rounded-full font-semibold uppercase">DOCENTE</span>
+          </div>
+          <p id="headerUserName" class="text-xs text-blue-200">Cargando usuario...</p>
+        </div>
+      </div>
+
+      <!-- Acciones Rápidas: Botón SOS en Aula + Cambio de Usuario -->
+      <div class="flex items-center gap-2">
+        <button id="btnOpenSosModal" onclick="openSosModal()"
+          class="bg-red-600 hover:bg-red-500 active:scale-95 text-white font-extrabold px-3.5 py-2 rounded-xl shadow-lg border-2 border-red-300 flex items-center gap-2 text-xs md:text-sm transition">
+          <span>🚨 BOTÓN SOS AULA</span>
+        </button>
+        <button onclick="logout()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold px-3 py-2 rounded-lg border border-slate-600">
+          Cambiar Rol / Salir
+        </button>
+      </div>
+    </div>
+
+    <!-- Barra de Navegación de Módulos (Scrollable en Móvil) -->
+    <nav class="bg-apandi-800 border-t border-blue-800 overflow-x-auto">
+      <div class="max-w-7xl mx-auto px-4 flex space-x-1 py-1.5 text-xs font-semibold whitespace-nowrap">
+        <button onclick="switchTab('tab-dashboard')" class="nav-tab bg-white text-apandi-900 px-3.5 py-2 rounded-lg transition" data-target="tab-dashboard">
+          📊 1. Portal Docente & RRHH
+        </button>
+        <button onclick="switchTab('tab-estudiantes')" class="nav-tab text-blue-100 hover:bg-blue-700/60 px-3.5 py-2 rounded-lg transition" data-target="tab-estudiantes">
+          🎓 2. Matrícula y Talleres (Grupo A/B)
+        </button>
+        <button onclick="switchTab('tab-libro')" class="nav-tab text-blue-100 hover:bg-blue-700/60 px-3.5 py-2 rounded-lg transition" data-target="tab-libro">
+          📖 3. Libro de Clases Digital (PID + Firma PIN)
+        </button>
+        <button onclick="switchTab('tab-clinico')" class="nav-tab text-blue-100 hover:bg-blue-700/60 px-3.5 py-2 rounded-lg transition" data-target="tab-clinico">
+          🩺 4. Expediente Clínico y PIE (AES-256)
+        </button>
+        <button onclick="switchTab('tab-paec')" class="nav-tab text-blue-100 hover:bg-blue-700/60 px-3.5 py-2 rounded-lg transition" data-target="tab-paec">
+          🤝 5. Convivencia PAEC y Bitácora
+        </button>
+        <button onclick="switchTab('tab-apoderados')" class="nav-tab text-blue-100 hover:bg-blue-700/60 px-3.5 py-2 rounded-lg transition" data-target="tab-apoderados">
+          👨‍👩‍👦 6. Portal Apoderados & Informe PDF
+        </button>
+        <button onclick="switchTab('tab-auditoria')" class="nav-tab text-blue-100 hover:bg-blue-700/60 px-3.5 py-2 rounded-lg transition" data-target="tab-auditoria">
+          🛡️ 7. Auditoría Ley 19.628
+        </button>
+      </div>
+    </nav>
+  </header>
+
+  <!-- CONTENIDO PRINCIPAL -->
+  <main class="max-w-7xl w-full mx-auto px-4 py-6 flex-1 space-y-6">
+
+    <!-- ================================================================== -->
+    <!-- MÓDULO 1: PORTAL DOCENTE / RRHH Y DASHBOARD DE COBERTURA           -->
+    <!-- ================================================================== -->
+    <section id="tab-dashboard" class="tab-section space-y-6">
+      <!-- Tarjetas de Indicadores Clave -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+          <span class="text-xs font-semibold text-slate-500 uppercase">Taller Asignado (Decreto 83)</span>
+          <p class="text-lg font-extrabold text-slate-900 mt-1">Corte y Confección Textil</p>
+          <span class="inline-block mt-1 text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded font-medium">Nivel Laboral 2 • Sala T1</span>
+        </div>
+        <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+          <span class="text-xs font-semibold text-slate-500 uppercase">Distribución Funcional</span>
+          <p class="text-lg font-extrabold text-slate-900 mt-1">Grupo A: 2 | Grupo B: 1</p>
+          <span class="inline-block mt-1 text-xs bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded font-medium">100% con PAI/PAEC al día</span>
+        </div>
+        <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+          <span class="text-xs font-semibold text-slate-500 uppercase">Cobertura Curricular PID</span>
+          <p class="text-lg font-extrabold text-apandi-700 mt-1">88% Semestral</p>
+          <span class="inline-block mt-1 text-xs bg-purple-100 text-purple-800 px-2 py-0.5 rounded font-medium">Clases firmadas con PIN</span>
+        </div>
+        <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+          <span class="text-xs font-semibold text-slate-500 uppercase">Seguridad Ley 19.628</span>
+          <p class="text-lg font-extrabold text-emerald-700 mt-1">AES-256-GCM Activo</p>
+          <span class="inline-block mt-1 text-xs bg-slate-100 text-slate-700 px-2 py-0.5 rounded font-medium">Trazabilidad auditada</span>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <!-- Reloj Control Geolocalizado RRHH -->
+        <div class="lg:col-span-5 bg-white p-5 rounded-xl shadow-sm border border-slate-200 flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between">
+              <h3 class="font-bold text-slate-900 text-base">⏱️ Reloj Control Docente / RRHH</h3>
+              <span class="text-xs bg-emerald-100 text-emerald-800 px-2.5 py-0.5 rounded-full font-semibold">GPS Verificado</span>
+            </div>
+            <p class="text-xs text-slate-500 mt-1">Registro de asistencia del personal con geolocalización HTML5.</p>
+
+            <div id="clockStatusBox" class="mt-4 p-3.5 rounded-lg bg-slate-50 border border-slate-200 text-xs space-y-1">
+              <div><strong>Estado Hoy:</strong> <span id="clockStatusText" class="text-amber-700 font-bold">Sin marcaje registrado hoy</span></div>
+              <div><strong>Hora Entrada:</strong> <span id="clockInTime">--:--</span> | <strong>Hora Salida:</strong> <span id="clockOutTime">--:--</span></div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3 mt-4">
+              <button onclick="markStaffAttendance('ENTRADA')" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 px-4 rounded-lg text-xs shadow transition">
+                📍 Marcar Entrada (GPS)
+              </button>
+              <button onclick="markStaffAttendance('SALIDA')" class="bg-slate-700 hover:bg-slate-800 text-white font-bold py-2.5 px-4 rounded-lg text-xs shadow transition">
+                🏁 Marcar Salida
+              </button>
+            </div>
+          </div>
+
+          <!-- Horario Semanal del Docente -->
+          <div class="mt-6 pt-4 border-t border-slate-100">
+            <h4 class="font-bold text-xs text-slate-700 uppercase mb-2">📅 Mi Horario de Bloques de Taller</h4>
+            <div id="staffScheduleList" class="space-y-2 max-h-48 overflow-y-auto text-xs"></div>
+          </div>
+        </div>
+
+        <!-- Notificaciones UTP y Alertas Automáticas de Inasistencia -->
+        <div class="lg:col-span-7 bg-white p-5 rounded-xl shadow-sm border border-slate-200">
+          <div class="flex items-center justify-between mb-3">
+            <h3 class="font-bold text-slate-900 text-base">🔔 Notificaciones de UTP y Alertas Automáticas</h3>
+            <span class="text-xs text-slate-500">Motor de Workflows Activo</span>
+          </div>
+          <div id="utpNotificationsList" class="space-y-2.5 max-h-48 overflow-y-auto"></div>
+
+          <!-- Gráficos de Cobertura Curricular y Asistencia -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-5 pt-4 border-t border-slate-100">
+            <div>
+              <h4 class="text-xs font-bold text-slate-600 uppercase mb-2 text-center">Avance Conceptual Decreto 83</h4>
+              <canvas id="chartLogros" height="160"></canvas>
+            </div>
+            <div>
+              <h4 class="text-xs font-bold text-slate-600 uppercase mb-2 text-center">Asistencia por Grupo Funcional</h4>
+              <canvas id="chartAsistencia" height="160"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================================================================== -->
+    <!-- MÓDULO 2: CONTROL ESTUDIANTIL, MATRÍCULA Y TALLERES (GRUPO A / B)  -->
+    <!-- ================================================================== -->
+    <section id="tab-estudiantes" class="tab-section hidden space-y-6">
+      <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-4 border-b border-slate-200">
+          <div>
+            <h2 class="text-lg font-bold text-slate-900">🎓 Nómina de Estudiantes y Nivel de Funcionalidad (Decreto 83)</h2>
+            <p class="text-xs text-slate-500">Categorización por apoyos: <strong>Grupo A (Mayor funcionalidad laboral)</strong> y <strong>Grupo B (Mayor apoyo y mediación)</strong>.</p>
+          </div>
+        </div>
+
+        <div class="overflow-x-auto mt-4">
+          <table class="w-full text-left border-collapse text-xs">
+            <thead>
+              <tr class="bg-slate-100 text-slate-700 uppercase">
+                <th class="p-3 rounded-tl-lg">Matrícula / RUT</th>
+                <th class="p-3">Estudiante</th>
+                <th class="p-3">Taller Laboral Asignado</th>
+                <th class="p-3">Nivel Funcionalidad</th>
+                <th class="p-3">RND / COMPIN</th>
+                <th class="p-3">Apoderado Titular</th>
+                <th class="p-3">Profesional SOS (PAEC)</th>
+                <th class="p-3 rounded-tr-lg text-right">Acciones Rápidas</th>
+              </tr>
+            </thead>
+            <tbody id="studentsTableBody" class="divide-y divide-slate-200"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================================================================== -->
+    <!-- MÓDULO 3: LIBRO DE CLASES DIGITAL (PID, ASISTENCIA Y FIRMA PIN)    -->
+    <!-- ================================================================== -->
+    <section id="tab-libro" class="tab-section hidden space-y-6">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <!-- Formulario de Planificación Interdisciplinaria Diversificada (PID) -->
+        <div class="lg:col-span-5 bg-white p-5 rounded-xl shadow-sm border border-slate-200">
+          <h3 class="font-bold text-slate-900 text-base">✍️ Registrar y Firmar Clase PID (Grupo A / Grupo B)</h3>
+          <p class="text-xs text-slate-500 mt-1">Planificación Interdisciplinaria Diversificada con Firma Electrónica Simple (PIN Docente: <code>1234</code>).</p>
+
+          <form id="pidForm" class="mt-4 space-y-3 text-xs">
+            <div>
+              <label class="font-semibold text-slate-700">Unidad Temática del Taller</label>
+              <input id="pidUnidad" type="text" required value="Unidad 4: Confección de Bolsos Reutilizables y Control de Calidad"
+                class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2" />
+            </div>
+            <div>
+              <label class="font-semibold text-slate-700">Objetivo de Aprendizaje (OA Laboral)</label>
+              <input id="pidObjetivo" type="text" required value="OA 05: Unir piezas textiles aplicando costuras de refuerzo y normas de seguridad."
+                class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2" />
+            </div>
+            <div class="p-3 rounded-lg bg-emerald-50 border border-emerald-200">
+              <label class="font-bold text-emerald-900">🟢 Estrategia Diversificada GRUPO A (Más Funcional)</label>
+              <textarea id="pidGrupoA" rows="2" required class="mt-1 w-full rounded border border-emerald-300 p-2 bg-white">Realizan costura de asas reforzadas en máquina recta industrial y verifican medidas con cinta métrica.</textarea>
+            </div>
+            <div class="p-3 rounded-lg bg-amber-50 border border-amber-200">
+              <label class="font-bold text-amber-900">🟡 Estrategia Diversificada GRUPO B (Mayor Apoyo)</label>
+              <textarea id="pidGrupoB" rows="2" required class="mt-1 w-full rounded border border-amber-300 p-2 bg-white">Posicionan asas utilizando plantilla guía con topes táctiles, fijan con clips de color y realizan pespunte asistido.</textarea>
+            </div>
+            <div>
+              <label class="font-semibold text-slate-700">Recursos DUA / Apoyos Visuales</label>
+              <input id="pidRecursos" type="text" value="Secuencia pictográfica ARASAAC, plantillas acrílicas y protectores auditivos."
+                class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2" />
+            </div>
+            <div class="p-3 rounded-lg bg-blue-50 border border-blue-200 flex items-center justify-between gap-3">
+              <div>
+                <label class="font-bold text-blue-900 block">🔐 PIN de Firma Electrónica Simple</label>
+                <span class="text-[11px] text-blue-700">Sella criptográficamente el Libro de Clases (Demo: 1234)</span>
+              </div>
+              <input id="pidPin" type="password" maxlength="6" value="1234" required
+                class="w-24 text-center font-mono text-sm font-bold rounded-lg border border-blue-400 px-2 py-1.5 bg-white" />
+            </div>
+            <button type="submit" class="w-full bg-apandi-700 hover:bg-apandi-800 text-white font-bold py-2.5 rounded-lg shadow transition">
+              Firmar con PIN y Guardar Clase PID
+            </button>
+          </form>
+        </div>
+
+        <!-- Listado de Clases PID Firmadas, Toma de Asistencia y Evaluaciones Cualitativas -->
+        <div class="lg:col-span-7 space-y-6">
+          <!-- Toma de Asistencia Rápida Mobile-First -->
+          <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
+            <h3 class="font-bold text-slate-900 text-base">📋 Asistencia Diaria Estudiantil (Disparador de Alertas UTP)</h3>
+            <p class="text-xs text-slate-500 mt-1">Si marcas <strong>AUSENTE</strong>, el motor automático genera alerta inmediata a UTP/Convivencia.</p>
+            <div id="attendanceStudentList" class="mt-3 divide-y divide-slate-200 text-xs"></div>
+          </div>
+
+          <!-- Registro de Evaluación Conceptual Decreto 83 -->
+          <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
+            <h3 class="font-bold text-slate-900 text-base">🏅 Calificaciones Conceptuales (Escala Cualitativa Decreto 83)</h3>
+            <form id="evalForm" class="mt-3 grid grid-cols-1 sm:grid-cols-12 gap-2.5 text-xs">
+              <select id="evalEstudiante" class="sm:col-span-4 rounded-lg border border-slate-300 px-2.5 py-2"></select>
+              <select id="evalLogro" class="sm:col-span-4 rounded-lg border border-slate-300 px-2.5 py-2 font-bold text-emerald-800">
+                <option value="LOGRADO">LOGRADO (L)</option>
+                <option value="EN_DESARROLLO">EN DESARROLLO (ED)</option>
+                <option value="EN_INICIO">EN INICIO (EI)</option>
+                <option value="NO_OBSERVADO">NO OBSERVADO (NO)</option>
+              </select>
+              <select id="evalDimension" class="sm:col-span-4 rounded-lg border border-slate-300 px-2.5 py-2">
+                <option value="TECNICA_VOCACIONAL">Dimensión Técnica Vocacional</option>
+                <option value="AUTONOMIA_PERSONAL">Autonomía Personal y Seguridad</option>
+                <option value="HABILIDADES_SOCIOLABORALES">Habilidades Sociolaborales</option>
+              </select>
+              <input id="evalIndicador" type="text" required placeholder="Indicador de competencia evaluado..."
+                value="Reconoce y utiliza herramientas de corte respetando demarcación de seguridad"
+                class="sm:col-span-9 rounded-lg border border-slate-300 px-3 py-2" />
+              <button type="submit" class="sm:col-span-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg py-2 px-3">
+                Registrar Logro
+              </button>
+            </form>
+
+            <div id="evaluationsList" class="mt-4 space-y-2 max-h-52 overflow-y-auto text-xs"></div>
+          </div>
+
+          <!-- Historial de Clases PID Firmadas -->
+          <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
+            <h3 class="font-bold text-slate-900 text-base">📚 Leccionario PID Firmado Electrónicamente</h3>
+            <div id="pidClassesList" class="mt-3 space-y-3 text-xs"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================================================================== -->
+    <!-- MÓDULO 4: EXPEDIENTE CLÍNICO Y PIE (ENCRIPTADO AES-256 LEY 19.628) -->
+    <!-- ================================================================== -->
+    <section id="tab-clinico" class="tab-section hidden space-y-6">
+      <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-4 border-b border-slate-200">
+          <div>
+            <div class="flex items-center gap-2">
+              <h2 class="text-lg font-bold text-slate-900">🩺 Expediente Digital Clínico y PIE (Anamnesis, PAI y PACI)</h2>
+              <span class="bg-emerald-100 text-emerald-800 text-[11px] font-bold px-2.5 py-0.5 rounded-full border border-emerald-300">
+                🔒 Cifrado AES-256-GCM (Ley 19.628)
+              </span>
+            </div>
+            <p class="text-xs text-slate-500 mt-1">
+              Solo <strong>Especialista PIE</strong> y <strong>Director/UTP</strong> pueden editar. <strong>Docente Titular</strong> tiene acceso en <em>Modo Solo Lectura</em>. Cada visualización genera un registro en Auditoría.
+            </p>
+          </div>
+          <div class="flex items-center gap-2">
+            <label class="text-xs font-bold text-slate-700">Estudiante:</label>
+            <select id="clinicalStudentSelect" onchange="loadClinicalRecord(this.value)" class="rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold"></select>
+          </div>
+        </div>
+
+        <div id="clinicalAccessDeniedBox" class="hidden mt-4 p-4 rounded-xl bg-red-50 border border-red-200 text-red-800 text-xs font-semibold"></div>
+
+        <div id="clinicalContentBox" class="mt-5 grid grid-cols-1 lg:grid-cols-12 gap-6">
+          <!-- Ficha Clínica Desencriptada -->
+          <div class="lg:col-span-6 space-y-4">
+            <div class="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-3 text-xs">
+              <div class="flex items-center justify-between">
+                <h3 class="font-bold text-slate-900 text-sm">🧬 Ficha Clínica y Diagnóstico (Decreto 170)</h3>
+                <span id="clinicalPermissionBadge" class="px-2 py-0.5 rounded text-[11px] font-bold"></span>
+              </div>
+              <div class="p-2 rounded bg-slate-900 text-emerald-400 font-mono text-[10px] break-all">
+                <strong>CipherText en MariaDB (AES-256):</strong> <span id="clinicalCipherPreview"></span>
+              </div>
+              <div>
+                <label class="font-bold text-slate-700 block">Diagnóstico Principal (Desencriptado en memoria):</label>
+                <textarea id="clinDiagnostico" rows="2" class="mt-1 w-full rounded border border-slate-300 p-2 bg-white"></textarea>
+              </div>
+              <div>
+                <label class="font-bold text-slate-700 block">Síntesis de Anamnesis Clínica y Sensorial:</label>
+                <textarea id="clinAnamnesis" rows="3" class="mt-1 w-full rounded border border-slate-300 p-2 bg-white"></textarea>
+              </div>
+              <div>
+                <label class="font-bold text-slate-700 block">Farmacoterapia y Alertas Médicas (JSON Dinámico):</label>
+                <div id="clinMedicamentosBox" class="mt-1 p-2.5 bg-white rounded border border-slate-200 space-y-1"></div>
+              </div>
+              <button id="btnSaveClinical" onclick="saveClinicalRecord()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 rounded-lg shadow transition">
+                💾 Encriptar con AES-256 y Guardar Cambios Clínicos
+              </button>
+            </div>
+          </div>
+
+          <!-- PAI (Estrategias DUA) y PACI -->
+          <div class="lg:col-span-6 space-y-4 text-xs">
+            <div class="p-4 rounded-xl bg-blue-50/60 border border-blue-200 space-y-2.5">
+              <h3 class="font-bold text-blue-950 text-sm">🧩 Plan de Apoyo Individual (PAI) — Estrategias DUA</h3>
+              <div id="paiContentBox" class="space-y-2 text-slate-700"></div>
+            </div>
+            <div class="p-4 rounded-xl bg-purple-50/60 border border-purple-200 space-y-2.5">
+              <h3 class="font-bold text-purple-950 text-sm">📑 Plan de Adecuación Curricular Individual (PACI)</h3>
+              <div id="paciContentBox" class="space-y-2 text-slate-700"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================================================================== -->
+    <!-- MÓDULO 5: CONVIVENCIA ESCOLAR (PAEC Y BITÁCORA DE INCIDENCIAS)     -->
+    <!-- ================================================================== -->
+    <section id="tab-paec" class="tab-section hidden space-y-6">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <div class="lg:col-span-5 bg-white p-5 rounded-xl shadow-sm border border-slate-200 space-y-3 text-xs">
+          <h3 class="font-bold text-slate-900 text-base">🤝 Plan de Acompañamiento Emocional y Conductual (PAEC)</h3>
+          <p class="text-slate-500">Protocolo preventivo y de respuesta ante Desregulación Emocional y Conductual (DEC).</p>
+          <div id="paecDetailCard" class="space-y-3 pt-2"></div>
+        </div>
+
+        <div class="lg:col-span-7 bg-white p-5 rounded-xl shadow-sm border border-slate-200">
+          <div class="flex items-center justify-between mb-3">
+            <h3 class="font-bold text-slate-900 text-base">🚨 Bitácora de Incidencias y Activaciones SOS en Aula</h3>
+            <button onclick="openSosModal()" class="bg-red-600 hover:bg-red-700 text-white font-bold px-3 py-1.5 rounded-lg text-xs">
+              + Simular Desregulación SOS
+            </button>
+          </div>
+          <div id="bitacoraList" class="space-y-3 text-xs max-h-96 overflow-y-auto"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================================================================== -->
+    <!-- MÓDULO 6: PORTAL APODERADOS Y GENERADOR AUTOMÁTICO DE PDF          -->
+    <!-- ================================================================== -->
+    <section id="tab-apoderados" class="tab-section hidden space-y-6">
+      <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-200">
+          <div>
+            <span class="text-[11px] font-bold uppercase bg-rose-100 text-rose-800 px-2.5 py-0.5 rounded-full">Vista Familiar de Solo Lectura</span>
+            <h2 class="text-lg font-bold text-slate-900 mt-1">👨‍👩‍👦 Portal de la Familia e Informe Pedagógico Automático</h2>
+            <p class="text-xs text-slate-500">Consolida automáticamente la Asistencia, los Logros del PID y los avances del PAI/PAEC en un documento PDF oficial.</p>
+          </div>
+          <div class="flex items-center gap-3">
+            <select id="guardianStudentSelect" onchange="loadGuardianPortal(this.value)" class="rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold"></select>
+            <button onclick="downloadFamilyReportPDF()" class="bg-apandi-700 hover:bg-apandi-800 text-white font-bold px-4 py-2.5 rounded-xl shadow flex items-center gap-2 text-xs transition">
+              <span>📄 Descargar PDF "Informe para la Familia"</span>
+            </button>
+          </div>
+        </div>
+
+        <div id="guardianPortalContent" class="mt-5 grid grid-cols-1 md:grid-cols-3 gap-6 text-xs"></div>
+      </div>
+    </section>
+
+    <!-- ================================================================== -->
+    <!-- MÓDULO 7: REGISTRO DE AUDITORÍA INMUTABLE (LEY 19.628)             -->
+    <!-- ================================================================== -->
+    <section id="tab-auditoria" class="tab-section hidden space-y-6">
+      <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
+        <div class="flex items-center justify-between pb-4 border-b border-slate-200">
+          <div>
+            <h2 class="text-lg font-bold text-slate-900">🛡️ Registro de Auditoría de Accesos Clínicos (Cumplimiento Ley 19.628)</h2>
+            <p class="text-xs text-slate-500">Cada lectura, modificación, firma electrónica o descarga de datos sensibles queda registrada con fecha, usuario, rol e IP.</p>
+          </div>
+          <button onclick="loadAuditLogs()" class="bg-slate-800 text-white text-xs font-semibold px-3 py-1.5 rounded-lg">
+            🔄 Actualizar Trazabilidad
+          </button>
+        </div>
+        <div class="overflow-x-auto mt-4">
+          <table class="w-full text-left border-collapse text-xs">
+            <thead>
+              <tr class="bg-slate-100 text-slate-700 uppercase">
+                <th class="p-2.5">Fecha / Hora</th>
+                <th class="p-2.5">Usuario / Rol</th>
+                <th class="p-2.5">Módulo Sensible</th>
+                <th class="p-2.5">Acción</th>
+                <th class="p-2.5">Detalle de Trazabilidad</th>
+                <th class="p-2.5">IP Origen</th>
+              </tr>
+            </thead>
+            <tbody id="auditTableBody" class="divide-y divide-slate-200"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- MODAL DEL BOTÓN SOS EN AULA (DESREGULACIÓN SEVERA) -->
+  <div id="sosModal" class="hidden fixed inset-0 bg-slate-900/80 z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border-t-8 border-red-600">
+      <div class="flex items-center justify-between">
+        <h3 class="text-lg font-extrabold text-red-700 flex items-center gap-2">
+          🚨 ACTIVAR ALERTA SOS EN AULA (PAEC)
+        </h3>
+        <button onclick="closeSosModal()" class="text-slate-400 hover:text-slate-600 font-bold text-lg">✕</button>
+      </div>
+      <p class="text-xs text-slate-600 mt-1">
+        Al confirmar, se enviará una notificación inmediata (Push/WebSocket/SMS) al <strong>Profesional SOS</strong> designado en el PAEC del estudiante y se registrará en la bitácora encriptada.
+      </p>
+
+      <form id="sosForm" class="mt-4 space-y-3 text-xs">
+        <div>
+          <label class="font-bold text-slate-700">Estudiante en Desregulación Severa (DEC Etapa 3):</label>
+          <select id="sosStudentSelect" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 font-semibold"></select>
+        </div>
+        <div>
+          <label class="font-bold text-slate-700">Ubicación Exacta:</label>
+          <input id="sosUbicacion" type="text" value="Pabellón Técnico - Sala T1 (Taller Corte y Confección)" required
+            class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2" />
+        </div>
+        <div>
+          <label class="font-bold text-slate-700">Observación Breve del Gatillante / Estado:</label>
+          <textarea id="sosDescripcion" rows="2" required class="mt-1 w-full rounded-lg border border-slate-300 p-2">Sobrecarga sensorial auditiva por ruido de motor industrial. Se requiere acompañamiento a Sala Sensorial.</textarea>
+        </div>
+        <div class="flex justify-end gap-2 pt-2">
+          <button type="button" onclick="closeSosModal()" class="px-4 py-2 rounded-lg border border-slate-300 text-slate-700 font-semibold">
+            Cancelar
+          </button>
+          <button type="submit" class="bg-red-600 hover:bg-red-700 text-white font-extrabold px-5 py-2 rounded-lg shadow-lg">
+            🚨 ENVIAR ALERTA SOS AHORA
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="/js/app.js"></script>
+</body>
+</html>
+

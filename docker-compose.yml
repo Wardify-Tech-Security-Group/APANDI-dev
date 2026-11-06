@@ -1,0 +1,77 @@
+services:
+  # 1. Base de Datos MariaDB (MySQL Compatible)
+  mariadb:
+    image: mariadb:11.4
+    container_name: apandi_mariadb
+    restart: unless-stopped
+    environment:
+      MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-apandi_root_2026}
+      MARIADB_DATABASE: ${DB_NAME:-sgi_apandi}
+      MARIADB_USER: ${DB_USER:-apandi_user}
+      MARIADB_PASSWORD: ${DB_PASSWORD:-apandi_pass_2026}
+      TZ: America/Santiago
+    ports:
+      - "${DB_PORT:-3306}:3306"
+    volumes:
+      - mariadb_data:/var/lib/mysql
+      - ./database/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - apandi_net
+
+  # 2. Gestor Visual phpMyAdmin
+  phpmyadmin:
+    image: phpmyadmin:5.2
+    container_name: apandi_phpmyadmin
+    restart: unless-stopped
+    depends_on:
+      mariadb:
+        condition: service_healthy
+    environment:
+      PMA_HOST: mariadb
+      PMA_PORT: 3306
+      PMA_ARBITRARY: 0
+      UPLOAD_LIMIT: 64M
+      TZ: America/Santiago
+    ports:
+      - "${PMA_PORT:-8080}:80"
+    networks:
+      - apandi_net
+
+  # 3. Backend API REST (JavaScript Puro / Node.js) + Frontend (HTML / Tailwind / JS)
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: apandi_app
+    restart: unless-stopped
+    depends_on:
+      mariadb:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      DB_HOST: mariadb
+      DB_PORT: 3306
+      TZ: America/Santiago
+    ports:
+      - "${APP_PORT:-3000}:3000"
+    volumes:
+      - ./src:/usr/src/app/src
+      - ./public:/usr/src/app/public
+    networks:
+      - apandi_net
+
+volumes:
+  mariadb_data:
+    driver: local
+
+networks:
+  apandi_net:
+    driver: bridge
+
