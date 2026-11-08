@@ -1,15 +1,17 @@
 services:
-  # 1. Base de Datos MariaDB (MySQL Compatible)
+  # 1. Base de Datos MariaDB (100% MySQL Compatible - Esquema Blindado)
   mariadb:
     image: mariadb:11.4
     container_name: apandi_mariadb
     restart: unless-stopped
+    env_file:
+      - .env
     environment:
-      MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-apandi_root_2026}
-      MARIADB_DATABASE: ${DB_NAME:-sgi_apandi}
-      MARIADB_USER: ${DB_USER:-apandi_user}
-      MARIADB_PASSWORD: ${DB_PASSWORD:-apandi_pass_2026}
-      TZ: America/Santiago
+      MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:?Falta definir DB_ROOT_PASSWORD en .env}
+      MARIADB_DATABASE: ${DB_NAME:?Falta definir DB_NAME en .env}
+      MARIADB_USER: ${DB_USER:?Falta definir DB_USER en .env}
+      MARIADB_PASSWORD: ${DB_PASSWORD:?Falta definir DB_PASSWORD en .env}
+      TZ: ${TZ:-America/Santiago}
     ports:
       - "${DB_PORT:-3306}:3306"
     volumes:
@@ -33,22 +35,23 @@ services:
       mariadb:
         condition: service_healthy
     environment:
-      PMA_HOST: mariadb
-      PMA_PORT: 3306
+      PMA_HOST: ${DB_HOST:-mariadb}
+      PMA_PORT: ${DB_PORT:-3306}
       PMA_ARBITRARY: 0
       UPLOAD_LIMIT: 64M
-      TZ: America/Santiago
+      TZ: ${TZ:-America/Santiago}
     ports:
       - "${PMA_PORT:-8080}:80"
     networks:
       - apandi_net
 
-  # 3. Backend API REST (JavaScript Puro / Node.js) + Frontend (HTML / Tailwind / JS)
-  app:
+  # 3. Servidor Web Estándar Hosting Chile (Apache + Puente MySQL + JS API + Frontend Avanzado)
+  # Sin Node.js: 100% compatible con cualquier Hosting compartido / cPanel en Chile
+  web:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: apandi_app
+    container_name: apandi_web
     restart: unless-stopped
     depends_on:
       mariadb:
@@ -56,14 +59,21 @@ services:
     env_file:
       - .env
     environment:
-      DB_HOST: mariadb
-      DB_PORT: 3306
-      TZ: America/Santiago
+      DB_HOST: ${DB_HOST:-mariadb}
+      DB_PORT: ${DB_PORT:-3306}
+      DB_NAME: ${DB_NAME:?Falta definir DB_NAME en .env}
+      DB_USER: ${DB_USER:?Falta definir DB_USER en .env}
+      DB_PASSWORD: ${DB_PASSWORD:?Falta definir DB_PASSWORD en .env}
+      JWT_SECRET: ${JWT_SECRET:?Falta definir JWT_SECRET en .env}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-8h}
+      AES_MASTER_KEY: ${AES_MASTER_KEY:?Falta definir AES_MASTER_KEY en .env}
+      TZ: ${TZ:-America/Santiago}
     ports:
-      - "${APP_PORT:-3000}:3000"
+      - "${APP_PORT:-3000}:80"
     volumes:
-      - ./src:/usr/src/app/src
-      - ./public:/usr/src/app/public
+      - ./public:/var/www/html
+      - ./scripts:/var/www/scripts:ro
+      - ./.env:/var/www/.env:ro
     networks:
       - apandi_net
 
@@ -74,4 +84,3 @@ volumes:
 networks:
   apandi_net:
     driver: bridge
-
