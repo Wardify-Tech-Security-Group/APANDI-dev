@@ -72,6 +72,7 @@ services:
       - "${APP_PORT:-3000}:80"
     volumes:
       - ./public:/var/www/html
+      - ./scripts:/var/www/scripts:ro
       - ./.env:/var/www/.env:ro
     networks:
       - apandi_net

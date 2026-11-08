@@ -236,19 +236,32 @@ $body = json_decode(file_get_contents('php://input'), true) ?: [];
 // ENRUTADOR REST JSON PARA EL MOTOR JAVASCRIPT API
 // =============================================================================
 
+// 0. Healthcheck institucional para monitoreo y CI/CD DevSecOps
+if ($route === 'health' && $method === 'GET') {
+    echo json_encode([
+        'ok' => true,
+        'status' => 'OK',
+        'sistema' => 'SGI APANDI - Educación Especial Nivel Laboral (PHP 8.3 + MariaDB 11.4)',
+        'normativa' => ['Decreto 83', 'Decreto 170', 'Ley 19.628 AES-256-GCM'],
+        'timestamp' => date('c')
+    ]);
+    exit;
+}
+
 // 1. Login con verificación estricta Bcrypt Cost 12 y emisión de JWT
 if ($route === 'auth/login' && $method === 'POST') {
-    $emailOrRut = trim($body['emailOrRut'] ?? '');
+    $emailOrRut = trim($body['emailOrRut'] ?? ($body['rut'] ?? ''));
+    $rutSinPuntos = str_replace('.', '', $emailOrRut);
     $password = (string)($body['password'] ?? '');
 
     $stmt = $pdo->prepare("
         SELECT u.*, r.codigo AS rol_codigo, r.nombre AS rol_nombre, r.permisos_json
         FROM apx_sec_cuentas_acceso u
         INNER JOIN apx_sec_rbac_perfiles r ON u.id_rol = r.id_rol
-        WHERE (u.email = ? OR u.rut = ?) AND u.activo = 1
+        WHERE (u.email = ? OR u.rut = ? OR REPLACE(u.rut, '.', '') = ?) AND u.activo = 1
         LIMIT 1
     ");
-    $stmt->execute([$emailOrRut, $emailOrRut]);
+    $stmt->execute([$emailOrRut, $emailOrRut, $rutSinPuntos]);
     $user = $stmt->fetch();
 
     if (!$user || !password_verify($password, $user['password_hash'])) {
