@@ -14,9 +14,9 @@ export async function checkConsecutiveAbsences() {
         CONCAT(e.nombres, ' ', e.apellidos) AS estudiante,
         t.nombre AS taller,
         COUNT(a.id_asistencia) AS total_ausencias
-      FROM Asistencia_Estudiantes a
-      INNER JOIN Estudiantes e ON a.id_estudiante = e.id_estudiante
-      INNER JOIN Talleres t ON a.id_taller = t.id_taller
+      FROM apx_ped_asistencia_alumnos a
+      INNER JOIN apx_acad_expedientes_alumnos e ON a.id_estudiante = e.id_estudiante
+      INNER JOIN apx_acad_unidades_laborales t ON a.id_taller = t.id_taller
       WHERE a.estado = 'AUSENTE'
         AND a.fecha >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
       GROUP BY e.id_estudiante, e.nombres, e.apellidos, t.nombre
@@ -26,14 +26,14 @@ export async function checkConsecutiveAbsences() {
     for (const row of studentAbsences) {
       const titulo = `Alerta de Inasistencia Estudiantil: ${row.estudiante}`;
       const [existing] = await pool.query(
-        `SELECT id_notificacion FROM Notificaciones_UTP 
+        `SELECT id_notificacion FROM apx_sys_alertas_utp 
          WHERE tipo = 'ALERTA_INASISTENCIA' AND titulo = ? AND DATE(created_at) = CURDATE()`,
         [titulo]
       );
 
       if (existing.length === 0) {
         await pool.query(
-          `INSERT INTO Notificaciones_UTP (id_emisor, id_destinatario, tipo, titulo, mensaje)
+          `INSERT INTO apx_sys_alertas_utp (id_emisor, id_destinatario, tipo, titulo, mensaje)
            VALUES (2, NULL, 'ALERTA_INASISTENCIA', ?, ?)`,
           [
             titulo,
@@ -58,4 +58,3 @@ export function startAttendanceAlertCron() {
     await checkConsecutiveAbsences();
   });
 }
-

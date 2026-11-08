@@ -1,6 +1,85 @@
-node_modules/
-.env
-*.log
-.DS_Store
-thumbs.db
+# =============================================================================
+# SGI APANDI — PROTECCIÓN ESTRICTA DE REPOSITORIO (.gitignore)
+# =============================================================================
 
+# 1. Variables de Entorno y Secretos (CRÍTICO)
+.env
+.env.*
+*.env
+.env.local
+.env.development
+.env.testing
+.env.staging
+.env.production
+.env.backup
+
+# 2. Bases de Datos, Volcados SQL y Respaldos (Previene filtración de esquemas y datos)
+*.sql
+*.sql.gz
+*.sql.bz2
+*.sql.zip
+*.sql.bak
+*.dump
+*.sqlite
+*.sqlite3
+*.db
+database/*.sql
+backups/
+dumps/
+mariadb_data/
+mysql_data/
+docker-data/
+
+# 3. Claves Criptográficas, Certificados y Credenciales
+*.pem
+*.key
+*.crt
+*.cer
+*.csr
+*.p12
+*.pfx
+*.jks
+*.keystore
+*.asc
+*.gpg
+secrets/
+certs/
+private/
+
+# 4. Registros (Logs), Auditorías Locales y Volcados de Error
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+error_log
+debug.log
+
+# 5. Dependencias y Paquetes
+node_modules/
+vendor/
+
+# 6. Archivos Temporales, Caché y Respaldos de Edición
+tmp/
+temp/
+cache/
+.cache/
+*.bak
+*.swp
+*.swo
+*.tmp
+*~
+*.orig
+
+# 7. Sistema Operativo e IDEs
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+thumbs.db
+Desktop.ini
+.vscode/
+.idea/

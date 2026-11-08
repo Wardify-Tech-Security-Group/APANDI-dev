@@ -6,7 +6,8 @@
   "type": "module",
   "scripts": {
     "start": "node src/server.js",
-    "dev": "node --watch src/server.js"
+    "dev": "node --watch src/server.js",
+    "ci:verify": "node src/scripts/ci-security-check.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

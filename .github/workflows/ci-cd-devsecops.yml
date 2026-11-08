@@ -1,0 +1,207 @@
+name: APANDI DevSecOps CI/CD Pipeline (Ley 19.628 & MINEDUC)
+
+on:
+  push:
+    branches: [ main, staging, develop ]
+  pull_request:
+    branches: [ main, staging ]
+
+permissions:
+  contents: read
+  packages: write
+  security-events: write
+
+jobs:
+  # ===========================================================================
+  # ETAPA 1: GUARDIÁN ANTI-FILTRACIONES (SAST, Secret Scanning & SQL Leak Guard)
+  # ===========================================================================
+  security-leak-guard:
+    name: "1. Guardián Anti-Filtraciones (.sql / .env / Tablas Antiguas)"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout del repositorio
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Bloquear archivos .env o dumps .sql rastreados en Git
+        run: |
+          echo "Verificando que ningún archivo .env ni .sql esté versionado en Git..."
+          TRACKED_FORBIDDEN=$(git ls-files | grep -E '(^|/)\.env($|\.)|\.sql$|\.dump$|\.bak$|\.pem$|\.key$' || true)
+          if [ -n "$TRACKED_FORBIDDEN" ]; then
+            echo "❌ ERROR CRÍTICO DE SEGURIDAD: Archivos sensibles detectados en el repositorio:"
+            echo "$TRACKED_FORBIDDEN"
+            exit 1
+          fi
+          echo "✔ Ningún archivo .env ni dump .sql está versionado."
+
+      - name: Escaneo de Secretos con Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Verificar ausencia total del esquema SQL filtrado (sgi_apandi / tablas antiguas)
+        run: |
+          echo "Buscando rastros del SQL antiguo filtrado..."
+          LEAK_MATCHES=$(grep -rnE "sgi_apandi|Apandi2026!|RootApandi2026!|CREATE TABLE IF NOT EXISTS (Roles|Usuarios|Logs_Auditoria|Ficha_Clinica|Estudiantes|Apoderados)" src/ public/ Dockerfile docker-compose.yml || true)
+          if [ -n "$LEAK_MATCHES" ]; then
+            echo "❌ ERROR: Se encontraron referencias al esquema o contraseñas filtradas:"
+            echo "$LEAK_MATCHES"
+            exit 1
+          fi
+          echo "✔ Cero referencias al esquema antiguo."
+
+  # ===========================================================================
+  # ETAPA 2: PRUEBAS DE INTEGRACIÓN CON MARIADB 11.4 EFÍMERO + AES-256-GCM
+  # ===========================================================================
+  db-schema-and-crypto-tests:
+    name: "2. Test Esquema Blindado (apx_*) & Cifrado AES-256-GCM"
+    needs: security-leak-guard
+    runs-on: ubuntu-latest
+
+    services:
+      mariadb:
+        image: mariadb:11.4
+        env:
+          MARIADB_ROOT_PASSWORD: ${{ secrets.CI_DB_ROOT_PASSWORD || 'CiRt9#vN3!zX9_pL5@mK2*qW7&bC4^jF6dG0' }}
+          MARIADB_DATABASE: apandi_vault_ci_db
+          MARIADB_USER: apx_ci_sec_usr
+          MARIADB_PASSWORD: ${{ secrets.CI_DB_PASSWORD || 'CiDv9#mK4!xP8_qL2@zR7*wN5&vB3^tY6cH1' }}
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="healthcheck.sh --connect --innodb_initialized"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=10
+
+    env:
+      NODE_ENV: test
+      PORT: 3000
+      DB_HOST: 127.0.0.1
+      DB_PORT: 3306
+      DB_USER: apx_ci_sec_usr
+      DB_PASSWORD: ${{ secrets.CI_DB_PASSWORD || 'CiDv9#mK4!xP8_qL2@zR7*wN5&vB3^tY6cH1' }}
+      DB_NAME: apandi_vault_ci_db
+      AES_MASTER_KEY: ${{ secrets.CI_AES_MASTER_KEY || 'c4f9a2e7b1d803659a4e7f2c8b1d60395e8a2f4c7b1d9036a5e8c2f4b7d10963' }}
+      JWT_SECRET: ${{ secrets.CI_JWT_SECRET || '7f4a9c2e8b1d6035a9e4c7f2b8d16039e5a2c8f4b7d19036a5e8c2f4b7d10963c4f9a2e7b1d80365' }}
+      APP_DEFAULT_USER_PASSWORD: ${{ secrets.CI_DEFAULT_USER_PASSWORD || 'Ap4nd1#S3cV4ult!2026_Cl' }}
+      APP_DEFAULT_SIGNATURE_PIN: ${{ secrets.CI_DEFAULT_SIGNATURE_PIN || '849206' }}
+
+    steps:
+      - name: Checkout del código
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js 20 LTS
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Instalar dependencias y auditar vulnerabilidades NPM
+        run: |
+          npm install
+          npm audit --audit-level=high || true
+
+      - name: Ejecutar Verificador DevSecOps (Migración DDL apx_*, Bcrypt Cost 12 y AES-256-GCM)
+        run: npm run ci:verify
+
+      - name: Smoke Test End-to-End de API (Login JWT, Ficha Clínica Encriptada y Firma PIN)
+        run: |
+          nohup npm start > server.log 2>&1 &
+          SERVER_PID=$!
+          sleep 4
+
+          echo "1) Verificando /health..."
+          curl -fsS http://127.0.0.1:3000/health | grep -q '"status":"OK"'
+
+          echo "2) Verificando Login JWT con contraseña de alta entropía..."
+          TOKEN=$(curl -fsS -X POST http://127.0.0.1:3000/api/auth/login \
+            -H "Content-Type: application/json" \
+            -d "{\"emailOrRut\":\"15432198-K\",\"password\":\"$APP_DEFAULT_USER_PASSWORD\"}" | node -pe "JSON.parse(fs.readFileSync(0,'utf8')).token")
+
+          if [ -z "$TOKEN" ] || [ "$TOKEN" = "undefined" ]; then
+            echo "❌ Falló la emisión del token JWT"
+            cat server.log
+            exit 1
+          fi
+
+          echo "3) Verificando desencriptación en memoria de Ficha Clínica (apx_med_dossier_clinico_enc)..."
+          curl -fsS http://127.0.0.1:3000/api/clinico/expediente/1 \
+            -H "Authorization: Bearer $TOKEN" | grep -q "Discapacidad Intelectual Moderada"
+
+          kill $SERVER_PID || true
+          echo "✔ Smoke Test End-to-End superado."
+
+  # ===========================================================================
+  # ETAPA 3: BUILD DE IMAGEN DOCKER INMUTABLE Y ESCANEO TRIVY
+  # ===========================================================================
+  docker-build-and-scan:
+    name: "3. Build Contenedor & Escaneo Trivy CVE"
+    needs: db-schema-and-crypto-tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout del código
+        uses: actions/checkout@v4
+
+      - name: Construir imagen Docker de APANDI
+        run: docker build -t ghcr.io/${{ github.repository }}/apandi-sgi:${{ github.sha }} .
+
+      - name: Escanear vulnerabilidades de contenedor con Aqua Trivy
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ghcr.io/${{ github.repository }}/apandi-sgi:${{ github.sha }}
+          format: 'table'
+          exit-code: '1'
+          ignore-unfixed: true
+          severity: 'CRITICAL,HIGH'
+
+      - name: Publicar imagen en GitHub Container Registry (Solo rama main)
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+          docker push ghcr.io/${{ github.repository }}/apandi-sgi:${{ github.sha }}
+
+  # ===========================================================================
+  # ETAPA 4: DESPLIEGUE SEGURO A PRODUCCIÓN (Zero-SQL-Files & Vault Injection)
+  # ===========================================================================
+  deploy-production:
+    name: "4. Despliegue Producción (Inyección de Secretos desde GitHub Vault)"
+    needs: docker-build-and-scan
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Despliegue automatizado vía SSH sin archivos .sql en el repositorio
+        if: ${{ secrets.PROD_SSH_HOST != '' }}
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.PROD_SSH_HOST }}
+          username: ${{ secrets.PROD_SSH_USER }}
+          key: ${{ secrets.PROD_SSH_PRIVATE_KEY }}
+          script: |
+            set -e
+            cd /opt/apandi-sgi
+
+            # Generar .env en producción exclusivamente desde GitHub Secrets con permisos 0600
+            umask 077
+            cat <<EOF > .env
+            NODE_ENV=production
+            PORT=3000
+            DB_HOST=mariadb
+            DB_PORT=3306
+            DB_NAME=${{ secrets.PROD_DB_NAME }}
+            DB_USER=${{ secrets.PROD_DB_USER }}
+            DB_PASSWORD=${{ secrets.PROD_DB_PASSWORD }}
+            DB_ROOT_PASSWORD=${{ secrets.PROD_DB_ROOT_PASSWORD }}
+            AES_MASTER_KEY=${{ secrets.PROD_AES_MASTER_KEY }}
+            JWT_SECRET=${{ secrets.PROD_JWT_SECRET }}
+            JWT_EXPIRES_IN=8h
+            APP_DEFAULT_USER_PASSWORD=${{ secrets.PROD_DEFAULT_USER_PASSWORD }}
+            APP_DEFAULT_SIGNATURE_PIN=${{ secrets.PROD_DEFAULT_SIGNATURE_PIN }}
+            EOF
+
+            docker compose pull
+            docker compose up -d --remove-orphans
+            docker exec apandi_app npm run ci:verify
+

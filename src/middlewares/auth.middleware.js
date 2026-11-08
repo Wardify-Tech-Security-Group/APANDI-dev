@@ -3,7 +3,10 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-const JWT_SECRET = process.env.JWT_SECRET || 'sgi_apandi_super_secret_jwt_key_mineduc_2026_chile';
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET || JWT_SECRET.length < 32) {
+  throw new Error('JWT_SECRET no está definido o es demasiado corto en .env');
+}
 
 /**
  * Verifica que la petición contenga un token JWT válido
@@ -48,4 +51,3 @@ export function authorizeRoles(...allowedRoles) {
     next();
   };
 }
-

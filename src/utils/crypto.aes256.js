@@ -7,14 +7,14 @@ const ALGORITHM = 'aes-256-gcm';
 const IV_LENGTH = 12; // Estándar NIST para AES-GCM
 
 /**
- * Obtiene la clave maestra de 32 bytes (256 bits) desde las variables de entorno
+ * Obtiene la clave maestra de 32 bytes (256 bits) estrictamente desde las variables de entorno (.env)
  */
 function getSecretKey() {
-  const hexKey = process.env.AES_MASTER_KEY || '9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08';
-  if (hexKey.length === 64) {
-    return Buffer.from(hexKey, 'hex');
+  const hexKey = process.env.AES_MASTER_KEY;
+  if (!hexKey || hexKey.length !== 64) {
+    throw new Error('AES_MASTER_KEY inválida o ausente en .env (requiere 64 caracteres hexadecimales).');
   }
-  return crypto.createHash('sha256').update(hexKey).digest();
+  return Buffer.from(hexKey, 'hex');
 }
 
 /**
@@ -68,4 +68,3 @@ export function createSignatureHash({ idClase, idDocente, fechaClase, pin }) {
   const payload = `${idClase}|${idDocente}|${fechaClase}|${pin}|${Date.now()}`;
   return crypto.createHash('sha256').update(payload).digest('hex');
 }
-

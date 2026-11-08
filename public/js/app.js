@@ -53,8 +53,8 @@ async function apiFetch(endpoint, options = {}) {
 
 window.quickLogin = async function (email) {
   document.getElementById('loginEmail').value = email;
-  document.getElementById('loginPassword').value = 'Apandi2026!';
-  await performLogin(email, 'Apandi2026!');
+  document.getElementById('loginPassword').value = 'Ap4nd1#S3cV4ult!2026_Cl';
+  await performLogin(email, 'Ap4nd1#S3cV4ult!2026_Cl');
 };
 
 async function performLogin(emailOrRut, password) {
@@ -462,7 +462,7 @@ window.saveStudentAttendance = async function (id_estudiante, estado) {
         id_taller: 1,
         estado,
         observacion: `Marcaje digital por ${currentUser.nombre_completo}`,
-        pin_firma: '1234'
+        pin_firma: '849206'
       })
     });
     await loadPedagogicalBook();

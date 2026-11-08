@@ -9,7 +9,7 @@ import { logClinicalAudit } from '../middlewares/audit.middleware.js';
 import { checkConsecutiveAbsences } from '../jobs/attendanceAlerts.job.js';
 
 const router = Router();
-const JWT_SECRET = process.env.JWT_SECRET || 'sgi_apandi_super_secret_jwt_key_mineduc_2026_chile';
+const JWT_SECRET = process.env.JWT_SECRET;
 
 // ============================================================================
 // 1. MÓDULO DE SEGURIDAD, AUTENTICACIÓN JWT Y AUDITORÍA (RBAC)
@@ -17,11 +17,12 @@ const JWT_SECRET = process.env.JWT_SECRET || 'sgi_apandi_super_secret_jwt_key_mi
 
 router.post('/auth/login', async (req, res) => {
   try {
-    const { emailOrRut, password } = req.body;
+    const emailOrRut = req.body.emailOrRut || req.body.rut || req.body.email;
+    const { password } = req.body;
     const [rows] = await pool.query(
       `SELECT u.*, r.codigo AS rol_codigo, r.nombre AS rol_nombre, r.permisos_json
-       FROM Usuarios u
-       INNER JOIN Roles r ON u.id_rol = r.id_rol
+       FROM apx_sec_cuentas_acceso u
+       INNER JOIN apx_sec_rbac_perfiles r ON u.id_rol = r.id_rol
        WHERE (u.email = ? OR u.rut = ?) AND u.activo = 1
        LIMIT 1`,
       [emailOrRut, emailOrRut]
@@ -32,12 +33,12 @@ router.post('/auth/login', async (req, res) => {
     }
 
     const user = rows[0];
-    const validPassword = await bcrypt.compare(password, user.password_hash);
+    const validPassword = await bcrypt.compare(String(password || ''), user.password_hash);
     if (!validPassword) {
       return res.status(401).json({ ok: false, error: 'Contraseña incorrecta.' });
     }
 
-    await pool.query('UPDATE Usuarios SET ultimo_acceso = NOW() WHERE id_usuario = ?', [user.id_usuario]);
+    await pool.query('UPDATE apx_sec_cuentas_acceso SET ultimo_acceso = NOW() WHERE id_usuario = ?', [user.id_usuario]);
 
     const payload = {
       id_usuario: user.id_usuario,
@@ -65,10 +66,10 @@ router.get('/seguridad/auditoria', authenticateJWT, authorizeRoles('ADMIN', 'DIR
     const [logs] = await pool.query(`
       SELECT l.*, CONCAT(u.nombres, ' ', u.apellidos) AS usuario_nombre, r.codigo AS rol_codigo,
              CONCAT(e.nombres, ' ', e.apellidos) AS estudiante_nombre
-      FROM Logs_Auditoria l
-      INNER JOIN Usuarios u ON l.id_usuario = u.id_usuario
-      INNER JOIN Roles r ON u.id_rol = r.id_rol
-      LEFT JOIN Estudiantes e ON l.id_estudiante = e.id_estudiante
+      FROM apx_sec_trazabilidad_forense l
+      INNER JOIN apx_sec_cuentas_acceso u ON l.id_usuario = u.id_usuario
+      INNER JOIN apx_sec_rbac_perfiles r ON u.id_rol = r.id_rol
+      LEFT JOIN apx_acad_expedientes_alumnos e ON l.id_estudiante = e.id_estudiante
       ORDER BY l.fecha_hora DESC
       LIMIT 50
     `);
@@ -87,22 +88,22 @@ router.get('/rrhh/dashboard', authenticateJWT, async (req, res) => {
     const idUsuario = req.user.id_usuario;
     const [horarios] = await pool.query(
       `SELECT h.*, t.nombre AS taller_nombre, t.sala_ubicacion
-       FROM Horarios h
-       INNER JOIN Talleres t ON h.id_taller = t.id_taller
+       FROM apx_rrhh_bloques_horarios h
+       INNER JOIN apx_acad_unidades_laborales t ON h.id_taller = t.id_taller
        WHERE h.id_usuario = ?
        ORDER BY h.dia_semana ASC, h.hora_inicio ASC`,
       [idUsuario]
     );
 
     const [asistenciaHoy] = await pool.query(
-      'SELECT * FROM Asistencia_Personal WHERE id_usuario = ? AND fecha = CURDATE()',
+      'SELECT * FROM apx_rrhh_marcajes_biometricos WHERE id_usuario = ? AND fecha = CURDATE()',
       [idUsuario]
     );
 
     const [notificaciones] = await pool.query(
       `SELECT n.*, CONCAT(u.nombres, ' ', u.apellidos) AS emisor_nombre
-       FROM Notificaciones_UTP n
-       INNER JOIN Usuarios u ON n.id_emisor = u.id_emisor OR n.id_emisor = u.id_usuario
+       FROM apx_sys_alertas_utp n
+       INNER JOIN apx_sec_cuentas_acceso u ON n.id_emisor = u.id_usuario
        WHERE n.id_destinatario IS NULL OR n.id_destinatario = ?
        ORDER BY n.created_at DESC LIMIT 10`,
       [idUsuario]
@@ -126,20 +127,20 @@ router.post('/rrhh/reloj-control', authenticateJWT, async (req, res) => {
 
     if (tipo_marca === 'ENTRADA') {
       await pool.query(
-        `INSERT INTO Asistencia_Personal (id_usuario, fecha, hora_entrada, latitud_entrada, longitud_entrada, metodo_marcaje, estado)
+        `INSERT INTO apx_rrhh_marcajes_biometricos (id_usuario, fecha, hora_entrada, latitud_entrada, longitud_entrada, metodo_marcaje, estado)
          VALUES (?, CURDATE(), CURTIME(), ?, ?, 'GEOLOCALIZADO', 'PRESENTE')
          ON DUPLICATE KEY UPDATE hora_entrada = CURTIME(), latitud_entrada = VALUES(latitud_entrada), longitud_entrada = VALUES(longitud_entrada)`,
         [idUsuario, latitud || -33.511, longitud || -70.758]
       );
     } else {
       await pool.query(
-        `UPDATE Asistencia_Personal SET hora_salida = CURTIME() WHERE id_usuario = ? AND fecha = CURDATE()`,
+        `UPDATE apx_rrhh_marcajes_biometricos SET hora_salida = CURTIME() WHERE id_usuario = ? AND fecha = CURDATE()`,
         [idUsuario]
       );
     }
 
     const [registro] = await pool.query(
-      'SELECT * FROM Asistencia_Personal WHERE id_usuario = ? AND fecha = CURDATE()',
+      'SELECT * FROM apx_rrhh_marcajes_biometricos WHERE id_usuario = ? AND fecha = CURDATE()',
       [idUsuario]
     );
 
@@ -173,16 +174,16 @@ router.get('/estudiantes', authenticateJWT, async (req, res) => {
         a.telefono_principal AS apoderado_telefono,
         CONCAT(psos.nombres, ' ', psos.apellidos) AS profesional_sos_nombre,
         psos.especialidad AS profesional_sos_especialidad
-      FROM Estudiantes e
-      LEFT JOIN Matriculas_Talleres m ON e.id_estudiante = m.id_estudiante AND m.anio_escolar = 2026
-      LEFT JOIN Talleres t ON m.id_taller = t.id_taller
-      LEFT JOIN Apoderados a ON e.id_apoderado_titular = a.id_apoderado
-      LEFT JOIN PAEC p ON e.id_estudiante = p.id_estudiante
-      LEFT JOIN Usuarios psos ON p.id_profesional_sos = psos.id_usuario
+      FROM apx_acad_expedientes_alumnos e
+      LEFT JOIN apx_acad_inscripciones_anuales m ON e.id_estudiante = m.id_estudiante AND m.anio_escolar = 2026
+      LEFT JOIN apx_acad_unidades_laborales t ON m.id_taller = t.id_taller
+      LEFT JOIN apx_fam_tutores_legales a ON e.id_apoderado_titular = a.id_apoderado
+      LEFT JOIN apx_conv_protocolos_paec_enc p ON e.id_estudiante = p.id_estudiante
+      LEFT JOIN apx_sec_cuentas_acceso psos ON p.id_profesional_sos = psos.id_usuario
       ORDER BY e.apellidos ASC
     `);
 
-    const [talleres] = await pool.query('SELECT * FROM Talleres WHERE activo = 1');
+    const [talleres] = await pool.query('SELECT * FROM apx_acad_unidades_laborales WHERE activo = 1');
     res.json({ ok: true, estudiantes, talleres });
   } catch (error) {
     res.status(500).json({ ok: false, error: error.message });
@@ -199,7 +200,7 @@ router.post('/estudiantes', authenticateJWT, authorizeRoles('ADMIN', 'DIRECTOR_U
     } = req.body;
 
     const [resultEst] = await conn.query(
-      `INSERT INTO Estudiantes (rut, nombres, apellidos, fecha_nacimiento, comuna, registro_nacional_discapacidad, porcentaje_discapacidad, id_apoderado_titular)
+      `INSERT INTO apx_acad_expedientes_alumnos (rut, nombres, apellidos, fecha_nacimiento, comuna, registro_nacional_discapacidad, porcentaje_discapacidad, id_apoderado_titular)
        VALUES (?, ?, ?, ?, ?, 1, ?, 1)`,
       [rut, nombres, apellidos, fecha_nacimiento, comuna || 'Maipú', porcentaje_discapacidad || 50]
     );
@@ -208,7 +209,7 @@ router.post('/estudiantes', authenticateJWT, authorizeRoles('ADMIN', 'DIRECTOR_U
     const numMatricula = `MAT-2026-00${idEstudiante}`;
 
     await conn.query(
-      `INSERT INTO Matriculas_Talleres (numero_matricula, id_estudiante, id_taller, anio_escolar, grupo_funcionalidad, fecha_incorporacion)
+      `INSERT INTO apx_acad_inscripciones_anuales (numero_matricula, id_estudiante, id_taller, anio_escolar, grupo_funcionalidad, fecha_incorporacion)
        VALUES (?, ?, ?, 2026, ?, CURDATE())`,
       [numMatricula, idEstudiante, id_taller || 1, grupo_funcionalidad || 'GRUPO_A']
     );
@@ -231,27 +232,27 @@ router.get('/pedagogico/libro', authenticateJWT, async (req, res) => {
   try {
     const [clasesPid] = await pool.query(`
       SELECT p.*, t.nombre AS taller_nombre, CONCAT(u.nombres, ' ', u.apellidos) AS docente_nombre
-      FROM PID_Clases p
-      INNER JOIN Talleres t ON p.id_taller = t.id_taller
-      INNER JOIN Usuarios u ON p.id_docente = u.id_usuario
+      FROM apx_ped_leccionario_pid p
+      INNER JOIN apx_acad_unidades_laborales t ON p.id_taller = t.id_taller
+      INNER JOIN apx_sec_cuentas_acceso u ON p.id_docente = u.id_usuario
       ORDER BY p.fecha_clase DESC, p.id_clase DESC
     `);
 
     const [evaluaciones] = await pool.query(`
       SELECT ev.*, CONCAT(e.nombres, ' ', e.apellidos) AS estudiante_nombre,
              m.grupo_funcionalidad, t.nombre AS taller_nombre
-      FROM Evaluaciones_Logros ev
-      INNER JOIN Estudiantes e ON ev.id_estudiante = e.id_estudiante
-      LEFT JOIN Matriculas_Talleres m ON e.id_estudiante = m.id_estudiante AND m.anio_escolar = 2026
-      INNER JOIN Talleres t ON ev.id_taller = t.id_taller
+      FROM apx_ped_evaluaciones_decreto83 ev
+      INNER JOIN apx_acad_expedientes_alumnos e ON ev.id_estudiante = e.id_estudiante
+      LEFT JOIN apx_acad_inscripciones_anuales m ON e.id_estudiante = m.id_estudiante AND m.anio_escolar = 2026
+      INNER JOIN apx_acad_unidades_laborales t ON ev.id_taller = t.id_taller
       ORDER BY ev.fecha_evaluacion DESC, ev.id_evaluacion DESC
     `);
 
     const [asistencias] = await pool.query(`
       SELECT a.*, CONCAT(e.nombres, ' ', e.apellidos) AS estudiante_nombre, m.grupo_funcionalidad
-      FROM Asistencia_Estudiantes a
-      INNER JOIN Estudiantes e ON a.id_estudiante = e.id_estudiante
-      LEFT JOIN Matriculas_Talleres m ON e.id_estudiante = m.id_estudiante AND m.anio_escolar = 2026
+      FROM apx_ped_asistencia_alumnos a
+      INNER JOIN apx_acad_expedientes_alumnos e ON a.id_estudiante = e.id_estudiante
+      LEFT JOIN apx_acad_inscripciones_anuales m ON e.id_estudiante = m.id_estudiante AND m.anio_escolar = 2026
       ORDER BY a.fecha DESC
     `);
 
@@ -261,7 +262,7 @@ router.get('/pedagogico/libro', authenticateJWT, async (req, res) => {
   }
 });
 
-// Crear y Firmar Clase PID (Con PIN de Firma Electrónica Simple)
+// Crear y Firmar Clase PID (Con PIN de Firma Electrónica Simple Cifrado con Bcrypt)
 router.post('/pedagogico/pid', authenticateJWT, authorizeRoles('DOCENTE', 'DIRECTOR_UTP', 'MONITOR', 'ADMIN'), async (req, res) => {
   try {
     const {
@@ -269,11 +270,11 @@ router.post('/pedagogico/pid', authenticateJWT, authorizeRoles('DOCENTE', 'DIREC
       actividad_grupo_a, actividad_grupo_b, recursos_dua, pin_firma
     } = req.body;
 
-    // Verificar PIN del docente para Firma Electrónica Simple
-    const [users] = await pool.query('SELECT pin_firma_hash FROM Usuarios WHERE id_usuario = ?', [req.user.id_usuario]);
-    const userPin = users[0]?.pin_firma_hash || '1234';
+    const [users] = await pool.query('SELECT pin_firma_hash FROM apx_sec_cuentas_acceso WHERE id_usuario = ?', [req.user.id_usuario]);
+    const userPinHash = users[0]?.pin_firma_hash;
 
-    if (String(pin_firma) !== String(userPin)) {
+    const isValidPin = userPinHash ? await bcrypt.compare(String(pin_firma || ''), userPinHash) : false;
+    if (!isValidPin) {
       return res.status(403).json({
         ok: false,
         error: 'PIN de Firma Electrónica Simple inválido. No se pudo sellar la clase en el Libro Digital.'
@@ -288,7 +289,7 @@ router.post('/pedagogico/pid', authenticateJWT, authorizeRoles('DOCENTE', 'DIREC
     });
 
     const [result] = await pool.query(
-      `INSERT INTO PID_Clases 
+      `INSERT INTO apx_ped_leccionario_pid 
       (id_taller, id_docente, fecha_clase, unidad_tematica, objetivo_aprendizaje, actividad_grupo_a, actividad_grupo_b, recursos_dua, firmado, hash_firma_electronica, fecha_firma)
       VALUES (?, ?, CURDATE(), ?, ?, ?, ?, ?, 1, ?, NOW())`,
       [id_taller || 1, req.user.id_usuario, unidad_tematica, objetivo_aprendizaje, actividad_grupo_a, actividad_grupo_b, recursos_dua, hashFirma]
@@ -297,7 +298,7 @@ router.post('/pedagogico/pid', authenticateJWT, authorizeRoles('DOCENTE', 'DIREC
     await logClinicalAudit({
       idUsuario: req.user.id_usuario,
       modulo: 'LIBRO_CLASES',
-      accion: 'CREACION',
+      accion: 'FIRMA_DIGITAL',
       detalle: `Clase PID #${result.insertId} firmada electrónicamente (Hash: ${hashFirma.substring(0, 16)}...)`,
       req
     });
@@ -317,7 +318,7 @@ router.post('/pedagogico/evaluaciones', authenticateJWT, authorizeRoles('DOCENTE
   try {
     const { id_estudiante, id_taller, indicador_competencia, dimension, nivel_logro, comentario_pedagogico } = req.body;
     await pool.query(
-      `INSERT INTO Evaluaciones_Logros 
+      `INSERT INTO apx_ped_evaluaciones_decreto83 
       (id_estudiante, id_taller, semestre, anio_escolar, indicador_competencia, dimension, nivel_logro, comentario_pedagogico, id_evaluador, fecha_evaluacion)
       VALUES (?, ?, 2, 2026, ?, ?, ?, ?, ?, CURDATE())`,
       [id_estudiante, id_taller || 1, indicador_competencia, dimension || 'TECNICA_VOCACIONAL', nivel_logro, comentario_pedagogico, req.user.id_usuario]
@@ -331,14 +332,13 @@ router.post('/pedagogico/evaluaciones', authenticateJWT, authorizeRoles('DOCENTE
 // Registrar asistencia diaria estudiantil y disparar detector de inasistencias
 router.post('/pedagogico/asistencia', authenticateJWT, authorizeRoles('DOCENTE', 'MONITOR', 'DIRECTOR_UTP', 'ADMIN'), async (req, res) => {
   try {
-    const { id_estudiante, id_taller, estado, observacion, pin_firma } = req.body;
-    const firmado = pin_firma === '1234' ? 1 : 0;
+    const { id_estudiante, id_taller, estado, observacion } = req.body;
 
     await pool.query(
-      `INSERT INTO Asistencia_Estudiantes (id_estudiante, id_taller, fecha, estado, observacion, registrado_por, firmado_digitalmente)
-       VALUES (?, ?, CURDATE(), ?, ?, ?, ?)
-       ON DUPLICATE KEY UPDATE estado = VALUES(estado), observacion = VALUES(observacion), firmado_digitalmente = VALUES(firmado_digitalmente)`,
-      [id_estudiante, id_taller || 1, estado, observacion || '', req.user.id_usuario, firmado]
+      `INSERT INTO apx_ped_asistencia_alumnos (id_estudiante, id_taller, fecha, estado, observacion, registrado_por, firmado_digitalmente)
+       VALUES (?, ?, CURDATE(), ?, ?, ?, 1)
+       ON DUPLICATE KEY UPDATE estado = VALUES(estado), observacion = VALUES(observacion), firmado_digitalmente = 1`,
+      [id_estudiante, id_taller || 1, estado, observacion || '', req.user.id_usuario]
     );
 
     if (estado === 'AUSENTE') {
@@ -353,7 +353,6 @@ router.post('/pedagogico/asistencia', authenticateJWT, authorizeRoles('DOCENTE',
 
 // ============================================================================
 // 5. MÓDULO CLÍNICO, PIE Y PAEC (ENCRIPTADO AES-256 LEY 19.628)
-// Acceso exclusivo: ESPECIALISTA_PIE (R/W), DIRECTOR_UTP (R/W), DOCENTE (Solo Lectura)
 // ============================================================================
 
 router.get(
@@ -364,7 +363,6 @@ router.get(
     try {
       const idEstudiante = Number(req.params.idEstudiante);
 
-      // 1. Registrar obligatoriamente en el Log de Auditoría Ley 19.628
       await logClinicalAudit({
         idUsuario: req.user.id_usuario,
         idEstudiante,
@@ -374,21 +372,20 @@ router.get(
         req
       });
 
-      const [fichaRows] = await pool.query('SELECT * FROM Ficha_Clinica WHERE id_estudiante = ?', [idEstudiante]);
+      const [fichaRows] = await pool.query('SELECT * FROM apx_med_dossier_clinico_enc WHERE id_estudiante = ?', [idEstudiante]);
       const [paecRows] = await pool.query(
         `SELECT p.*, CONCAT(u.nombres, ' ', u.apellidos) AS profesional_sos_nombre, u.telefono AS profesional_sos_telefono, u.especialidad AS profesional_sos_especialidad
-         FROM PAEC p
-         INNER JOIN Usuarios u ON p.id_profesional_sos = u.id_usuario
+         FROM apx_conv_protocolos_paec_enc p
+         INNER JOIN apx_sec_cuentas_acceso u ON p.id_profesional_sos = u.id_usuario
          WHERE p.id_estudiante = ?`,
         [idEstudiante]
       );
-      const [paiRows] = await pool.query('SELECT * FROM PAI WHERE id_estudiante = ? ORDER BY anio_escolar DESC LIMIT 1', [idEstudiante]);
-      const [paciRows] = await pool.query('SELECT * FROM PACI WHERE id_estudiante = ? ORDER BY anio_escolar DESC LIMIT 1', [idEstudiante]);
+      const [paiRows] = await pool.query('SELECT * FROM apx_pie_planes_apoyo_ind WHERE id_estudiante = ? ORDER BY anio_escolar DESC LIMIT 1', [idEstudiante]);
+      const [paciRows] = await pool.query('SELECT * FROM apx_pie_adecuaciones_paci WHERE id_estudiante = ? ORDER BY anio_escolar DESC LIMIT 1', [idEstudiante]);
 
       const ficha = fichaRows[0]
         ? {
             ...fichaRows[0],
-            // Mostramos tanto el cipherText en reposo (para verificar Ley 19.628) como el texto desencriptado
             cipher_preview: fichaRows[0].diagnostico_principal_enc.substring(0, 48) + '...',
             diagnostico_principal: decryptAES256(fichaRows[0].diagnostico_principal_enc),
             anamnesis: decryptAES256(fichaRows[0].anamnesis_enc),
@@ -424,7 +421,6 @@ router.get(
   }
 );
 
-// Actualizar Ficha Clínica / PAEC (Bloqueado para DOCENTE, solo ESPECIALISTA_PIE y DIRECTOR_UTP)
 router.put(
   '/clinico/expediente/:idEstudiante',
   authenticateJWT,
@@ -444,7 +440,7 @@ router.put(
 
       if (diagnostico_principal) {
         await pool.query(
-          `INSERT INTO Ficha_Clinica (id_estudiante, diagnostico_principal_enc, anamnesis_enc, datos_medicos_json, actualizado_por)
+          `INSERT INTO apx_med_dossier_clinico_enc (id_estudiante, diagnostico_principal_enc, anamnesis_enc, datos_medicos_json, actualizado_por)
            VALUES (?, ?, ?, ?, ?)
            ON DUPLICATE KEY UPDATE
              diagnostico_principal_enc = VALUES(diagnostico_principal_enc),
@@ -463,7 +459,7 @@ router.put(
 
       if (gatillantes_dec) {
         await pool.query(
-          `INSERT INTO PAEC (id_estudiante, id_profesional_sos, gatillantes_dec_enc, senales_previas_enc, estrategias_contencion_enc, acuerdos_familia)
+          `INSERT INTO apx_conv_protocolos_paec_enc (id_estudiante, id_profesional_sos, gatillantes_dec_enc, senales_previas_enc, estrategias_contencion_enc, acuerdos_familia)
            VALUES (?, 5, ?, ?, ?, ?)
            ON DUPLICATE KEY UPDATE
              gatillantes_dec_enc = VALUES(gatillantes_dec_enc),
@@ -504,18 +500,17 @@ router.post('/paec/sos', authenticateJWT, async (req, res) => {
   try {
     const { id_estudiante, id_taller, ubicacion, descripcion_breve } = req.body;
 
-    // 1. Buscar al estudiante y su Profesional SOS designado en el PAEC
     const [estRows] = await pool.query(
       `SELECT e.id_estudiante, CONCAT(e.nombres, ' ', e.apellidos) AS estudiante_nombre,
               t.nombre AS taller_nombre, t.sala_ubicacion,
               p.id_profesional_sos, p.estrategias_contencion_enc,
               CONCAT(u.nombres, ' ', u.apellidos) AS profesional_sos_nombre,
               u.telefono AS profesional_sos_telefono, u.especialidad
-       FROM Estudiantes e
-       LEFT JOIN Matriculas_Talleres m ON e.id_estudiante = m.id_estudiante AND m.anio_escolar = 2026
-       LEFT JOIN Talleres t ON m.id_taller = t.id_taller
-       LEFT JOIN PAEC p ON e.id_estudiante = p.id_estudiante
-       LEFT JOIN Usuarios u ON p.id_profesional_sos = u.id_usuario
+       FROM apx_acad_expedientes_alumnos e
+       LEFT JOIN apx_acad_inscripciones_anuales m ON e.id_estudiante = m.id_estudiante AND m.anio_escolar = 2026
+       LEFT JOIN apx_acad_unidades_laborales t ON m.id_taller = t.id_taller
+       LEFT JOIN apx_conv_protocolos_paec_enc p ON e.id_estudiante = p.id_estudiante
+       LEFT JOIN apx_sec_cuentas_acceso u ON p.id_profesional_sos = u.id_usuario
        WHERE e.id_estudiante = ?`,
       [id_estudiante || 1]
     );
@@ -527,9 +522,8 @@ router.post('/paec/sos', authenticateJWT, async (req, res) => {
 
     const sucesoTexto = descripcion_breve || 'Desregulación Emocional y Conductual (DEC) Severa activada mediante Botón SOS en Aula.';
 
-    // 2. Guardar en Bitácora de Incidencias (encriptando el detalle con AES-256)
     const [bitacoraResult] = await pool.query(
-      `INSERT INTO Bitacora_Incidencias
+      `INSERT INTO apx_conv_bitacora_sos_enc
       (id_estudiante, id_taller, id_reportante, id_profesional_interviniente, tipo_incidencia, etapa_dec, descripcion_suceso_enc, acciones_aplicadas_paec, estado_alerta)
       VALUES (?, ?, ?, ?, 'DESREGULACION_SEVERA_SOS', 'ETAPA_3_SEVERA', ?, ?, 'ACTIVA_EN_AULA')`,
       [
@@ -542,9 +536,8 @@ router.post('/paec/sos', authenticateJWT, async (req, res) => {
       ]
     );
 
-    // 3. Crear notificación prioritaria para UTP y el Profesional SOS
     await pool.query(
-      `INSERT INTO Notificaciones_UTP (id_emisor, id_destinatario, tipo, titulo, mensaje)
+      `INSERT INTO apx_sys_alertas_utp (id_emisor, id_destinatario, tipo, titulo, mensaje)
        VALUES (?, ?, 'ALERTA_SOS', ?, ?)`,
       [
         req.user.id_usuario,
@@ -575,7 +568,6 @@ router.post('/paec/sos', authenticateJWT, async (req, res) => {
       hora: new Date().toLocaleTimeString('es-CL')
     };
 
-    // 4. Emitir evento en tiempo real vía Socket.io a todas las pantallas conectadas
     const io = req.app.get('io');
     if (io) {
       io.emit('sos_alert_triggered', alertaPayload);
@@ -597,10 +589,10 @@ router.get('/paec/bitacora', authenticateJWT, async (req, res) => {
       SELECT b.*, CONCAT(e.nombres, ' ', e.apellidos) AS estudiante_nombre,
              CONCAT(rep.nombres, ' ', rep.apellidos) AS reportante_nombre,
              CONCAT(prof.nombres, ' ', prof.apellidos) AS profesional_nombre
-      FROM Bitacora_Incidencias b
-      INNER JOIN Estudiantes e ON b.id_estudiante = e.id_estudiante
-      INNER JOIN Usuarios rep ON b.id_reportante = rep.id_usuario
-      LEFT JOIN Usuarios prof ON b.id_profesional_interviniente = prof.id_usuario
+      FROM apx_conv_bitacora_sos_enc b
+      INNER JOIN apx_acad_expedientes_alumnos e ON b.id_estudiante = e.id_estudiante
+      INNER JOIN apx_sec_cuentas_acceso rep ON b.id_reportante = rep.id_usuario
+      LEFT JOIN apx_sec_cuentas_acceso prof ON b.id_profesional_interviniente = prof.id_usuario
       ORDER BY b.fecha_hora_suceso DESC
     `);
 
@@ -626,11 +618,11 @@ router.get('/apoderados/resumen/:idEstudiante', authenticateJWT, async (req, res
     const [estRows] = await pool.query(
       `SELECT e.*, m.numero_matricula, m.grupo_funcionalidad, t.nombre AS taller_nombre,
               p.acuerdos_familia, pai.fortalezas_intereses, pai.objetivos_transicion_vida_adulta
-       FROM Estudiantes e
-       LEFT JOIN Matriculas_Talleres m ON e.id_estudiante = m.id_estudiante AND m.anio_escolar = 2026
-       LEFT JOIN Talleres t ON m.id_taller = t.id_taller
-       LEFT JOIN PAEC p ON e.id_estudiante = p.id_estudiante
-       LEFT JOIN PAI pai ON e.id_estudiante = pai.id_estudiante AND pai.anio_escolar = 2026
+       FROM apx_acad_expedientes_alumnos e
+       LEFT JOIN apx_acad_inscripciones_anuales m ON e.id_estudiante = m.id_estudiante AND m.anio_escolar = 2026
+       LEFT JOIN apx_acad_unidades_laborales t ON m.id_taller = t.id_taller
+       LEFT JOIN apx_conv_protocolos_paec_enc p ON e.id_estudiante = p.id_estudiante
+       LEFT JOIN apx_pie_planes_apoyo_ind pai ON e.id_estudiante = pai.id_estudiante AND pai.anio_escolar = 2026
        WHERE e.id_estudiante = ?`,
       [idEstudiante]
     );
@@ -640,13 +632,13 @@ router.get('/apoderados/resumen/:idEstudiante', authenticateJWT, async (req, res
          COUNT(*) AS total_dias,
          SUM(CASE WHEN estado = 'PRESENTE' THEN 1 ELSE 0 END) AS dias_presente,
          SUM(CASE WHEN estado = 'AUSENTE' THEN 1 ELSE 0 END) AS dias_ausente
-       FROM Asistencia_Estudiantes WHERE id_estudiante = ?`,
+       FROM apx_ped_asistencia_alumnos WHERE id_estudiante = ?`,
       [idEstudiante]
     );
 
     const [evaluaciones] = await pool.query(
       `SELECT indicador_competencia, dimension, nivel_logro, comentario_pedagogico, fecha_evaluacion
-       FROM Evaluaciones_Logros WHERE id_estudiante = ? ORDER BY fecha_evaluacion DESC`,
+       FROM apx_ped_evaluaciones_decreto83 WHERE id_estudiante = ? ORDER BY fecha_evaluacion DESC`,
       [idEstudiante]
     );
 
@@ -661,7 +653,6 @@ router.get('/apoderados/resumen/:idEstudiante', authenticateJWT, async (req, res
   }
 });
 
-// Motor Generador Automático de PDF: "Informe para la Familia" (Asistencia + PID + PAI + PAEC)
 router.get('/reportes/informe-familia/:idEstudiante/pdf', authenticateJWT, async (req, res) => {
   try {
     const idEstudiante = Number(req.params.idEstudiante);
@@ -671,12 +662,12 @@ router.get('/reportes/informe-familia/:idEstudiante/pdf', authenticateJWT, async
               CONCAT(a.nombres, ' ', a.apellidos) AS apoderado_nombre,
               p.acuerdos_familia,
               pai.fortalezas_intereses, pai.objetivos_transicion_vida_adulta, pai.apoyos_especialistas_json
-       FROM Estudiantes e
-       LEFT JOIN Matriculas_Talleres m ON e.id_estudiante = m.id_estudiante AND m.anio_escolar = 2026
-       LEFT JOIN Talleres t ON m.id_taller = t.id_taller
-       LEFT JOIN Apoderados a ON e.id_apoderado_titular = a.id_apoderado
-       LEFT JOIN PAEC p ON e.id_estudiante = p.id_estudiante
-       LEFT JOIN PAI pai ON e.id_estudiante = pai.id_estudiante AND pai.anio_escolar = 2026
+       FROM apx_acad_expedientes_alumnos e
+       LEFT JOIN apx_acad_inscripciones_anuales m ON e.id_estudiante = m.id_estudiante AND m.anio_escolar = 2026
+       LEFT JOIN apx_acad_unidades_laborales t ON m.id_taller = t.id_taller
+       LEFT JOIN apx_fam_tutores_legales a ON e.id_apoderado_titular = a.id_apoderado
+       LEFT JOIN apx_conv_protocolos_paec_enc p ON e.id_estudiante = p.id_estudiante
+       LEFT JOIN apx_pie_planes_apoyo_ind pai ON e.id_estudiante = pai.id_estudiante AND pai.anio_escolar = 2026
        WHERE e.id_estudiante = ?`,
       [idEstudiante]
     );
@@ -688,11 +679,11 @@ router.get('/reportes/informe-familia/:idEstudiante/pdf', authenticateJWT, async
     const est = estRows[0];
     const [asist] = await pool.query(
       `SELECT COUNT(*) AS total, SUM(CASE WHEN estado = 'PRESENTE' THEN 1 ELSE 0 END) AS presentes
-       FROM Asistencia_Estudiantes WHERE id_estudiante = ?`,
+       FROM apx_ped_asistencia_alumnos WHERE id_estudiante = ?`,
       [idEstudiante]
     );
     const [evals] = await pool.query(
-      'SELECT * FROM Evaluaciones_Logros WHERE id_estudiante = ? ORDER BY fecha_evaluacion DESC',
+      'SELECT * FROM apx_ped_evaluaciones_decreto83 WHERE id_estudiante = ? ORDER BY fecha_evaluacion DESC',
       [idEstudiante]
     );
 
@@ -714,14 +705,12 @@ router.get('/reportes/informe-familia/:idEstudiante/pdf', authenticateJWT, async
     const doc = new PDFDocument({ margin: 50, size: 'A4' });
     doc.pipe(res);
 
-    // Encabezado Institucional
     doc.fontSize(16).fillColor('#1e3a8a').text('CENTRO DE CAPACITACIÓN LABORAL APANDI', { align: 'center' });
     doc.fontSize(10).fillColor('#475569').text('Educación Especial - Nivel Laboral (Decreto Exento N° 83 / Decreto N° 170 MINEDUC)', { align: 'center' });
     doc.moveDown(0.5);
     doc.fontSize(14).fillColor('#0f172a').text('INFORME CUALITATIVO DE AVANCES PARA LA FAMILIA', { align: 'center', underline: true });
     doc.moveDown(1);
 
-    // 1. Identificación del Estudiante
     doc.fontSize(11).fillColor('#1e40af').text('1. IDENTIFICACIÓN DEL ESTUDIANTE Y TALLER LABORAL');
     doc.moveDown(0.3);
     doc.fontSize(10).fillColor('#1e293b');
@@ -731,7 +720,6 @@ router.get('/reportes/informe-familia/:idEstudiante/pdf', authenticateJWT, async
     doc.text(`Apoderado Titular: ${est.apoderado_nombre || 'No registrado'}`);
     doc.moveDown(0.8);
 
-    // 2. Resumen de Asistencia
     const totalDias = Number(asist[0]?.total || 1);
     const presentes = Number(asist[0]?.presentes || 1);
     const pctAsistencia = Math.round((presentes / totalDias) * 100);
@@ -742,7 +730,6 @@ router.get('/reportes/informe-familia/:idEstudiante/pdf', authenticateJWT, async
     );
     doc.moveDown(0.8);
 
-    // 3. Evaluaciones Cualitativas (PID - Decreto 83)
     doc.fontSize(11).fillColor('#1e40af').text('3. EVALUACIÓN CUALITATIVA DE COMPETENCIAS LABORALES (PID)');
     doc.moveDown(0.3);
     doc.fontSize(9).fillColor('#64748b').text('Escala MINEDUC: LOGRADO (L) | EN DESARROLLO (ED) | EN INICIO (EI) | NO OBSERVADO (NO)');
@@ -762,7 +749,6 @@ router.get('/reportes/informe-familia/:idEstudiante/pdf', authenticateJWT, async
     }
     doc.moveDown(0.6);
 
-    // 4. Síntesis del Plan de Apoyo Individual (PAI) y PAEC
     doc.fontSize(11).fillColor('#1e40af').text('4. SÍNTESIS DEL PLAN DE APOYO INDIVIDUAL (PAI) Y ACUERDOS PAEC');
     doc.moveDown(0.3);
     doc.fontSize(10).fillColor('#1e293b');
@@ -785,4 +771,3 @@ router.get('/reportes/informe-familia/:idEstudiante/pdf', authenticateJWT, async
 });
 
 export default router;
-

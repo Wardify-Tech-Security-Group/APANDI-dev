@@ -1,7 +1,7 @@
 import { pool } from '../config/db.js';
 
 /**
- * Registra en la tabla Logs_Auditoria cualquier acceso o modificación a datos sensibles
+ * Registra en la tabla apx_sec_trazabilidad_forense cualquier acceso o modificación a datos sensibles
  * Cumplimiento de trazabilidad exigido por la Ley 19.628 de Protección de la Vida Privada
  */
 export async function logClinicalAudit({
@@ -17,7 +17,7 @@ export async function logClinicalAudit({
     const userAgent = req ? (req.headers['user-agent'] || 'SGI-Client').substring(0, 250) : 'CRON/INTERNAL';
 
     await pool.query(
-      `INSERT INTO Logs_Auditoria (id_usuario, id_estudiante, modulo, accion, detalle, ip_origen, user_agent)
+      `INSERT INTO apx_sec_trazabilidad_forense (id_usuario, id_estudiante, modulo, accion, detalle, ip_origen, user_agent)
        VALUES (?, ?, ?, ?, ?, ?, ?)`,
       [idUsuario, idEstudiante, modulo, accion, detalle, ip, userAgent]
     );
@@ -25,4 +25,3 @@ export async function logClinicalAudit({
     console.error('[Auditoría Ley 19.628] Error al registrar log:', error.message);
   }
 }
-
