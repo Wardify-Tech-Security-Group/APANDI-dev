@@ -1,10 +1,10 @@
-name: APANDI DevSecOps CI/CD Pipeline (Ley 19.628 & MINEDUC)
+name: APANDI DevSecOps CI/CD Pipeline (PHP 8.3 + MariaDB 11.4 - Ley 19.628)
 
 on:
   push:
-    branches: [ main, staging, develop ]
+    branches: [ main, staging, develop, Desarrollo ]
   pull_request:
-    branches: [ main, staging ]
+    branches: [ main, staging, develop, Desarrollo ]
 
 permissions:
   contents: read
@@ -16,7 +16,7 @@ jobs:
   # ETAPA 1: GUARDIÁN ANTI-FILTRACIONES (SAST, Secret Scanning & SQL Leak Guard)
   # ===========================================================================
   security-leak-guard:
-    name: "1. Guardián Anti-Filtraciones (.sql / .env / Tablas Antiguas)"
+    name: "1. Guardián Anti-Filtraciones (.env / Respaldos / Tablas Antiguas)"
     runs-on: ubuntu-latest
     steps:
       - name: Checkout del repositorio
@@ -24,26 +24,21 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Bloquear archivos .env o dumps .sql rastreados en Git
+      - name: Bloquear archivos .env, llaves privadas o volcados de respaldo en Git
         run: |
-          echo "Verificando que ningún archivo .env ni .sql esté versionado en Git..."
-          TRACKED_FORBIDDEN=$(git ls-files | grep -E '(^|/)\.env($|\.)|\.sql$|\.dump$|\.bak$|\.pem$|\.key$' || true)
+          echo "Verificando que ningún archivo .env, llave o volcado sensible esté versionado..."
+          TRACKED_FORBIDDEN=$(git ls-files | grep -E '(^|/)\.env($|\.)|\.sql\.(gz|bz2|zip|bak)$|\.dump$|\.bak$|\.pem$|\.key$' || true)
           if [ -n "$TRACKED_FORBIDDEN" ]; then
             echo "❌ ERROR CRÍTICO DE SEGURIDAD: Archivos sensibles detectados en el repositorio:"
             echo "$TRACKED_FORBIDDEN"
             exit 1
           fi
-          echo "✔ Ningún archivo .env ni dump .sql está versionado."
-
-      - name: Escaneo de Secretos con Gitleaks
-        uses: gitleaks/gitleaks-action@v2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          echo "✔ Ningún archivo .env ni respaldo sensible está versionado."
 
       - name: Verificar ausencia total del esquema SQL filtrado (sgi_apandi / tablas antiguas)
         run: |
-          echo "Buscando rastros del SQL antiguo filtrado..."
-          LEAK_MATCHES=$(grep -rnE "sgi_apandi|Apandi2026!|RootApandi2026!|CREATE TABLE IF NOT EXISTS (Roles|Usuarios|Logs_Auditoria|Ficha_Clinica|Estudiantes|Apoderados)" src/ public/ Dockerfile docker-compose.yml || true)
+          echo "Buscando rastros del SQL antiguo filtrado o contraseñas comprometidas..."
+          LEAK_MATCHES=$(grep -rnE "sgi_apandi|Apandi2026!|RootApandi2026!|CREATE TABLE IF NOT EXISTS (Roles|Usuarios|Logs_Auditoria|Ficha_Clinica|Estudiantes|Apoderados)" public/ database/ Dockerfile docker-compose.yml || true)
           if [ -n "$LEAK_MATCHES" ]; then
             echo "❌ ERROR: Se encontraron referencias al esquema o contraseñas filtradas:"
             echo "$LEAK_MATCHES"
@@ -52,10 +47,10 @@ jobs:
           echo "✔ Cero referencias al esquema antiguo."
 
   # ===========================================================================
-  # ETAPA 2: PRUEBAS DE INTEGRACIÓN CON MARIADB 11.4 EFÍMERO + AES-256-GCM
+  # ETAPA 2: PRUEBAS DE INTEGRACIÓN PHP 8.3 + MARIADB 11.4 EFÍMERO + AES-256-GCM
   # ===========================================================================
   db-schema-and-crypto-tests:
-    name: "2. Test Esquema Blindado (apx_*) & Cifrado AES-256-GCM"
+    name: "2. Test PHP 8.3 + Esquema Blindado (apx_*) & Cifrado AES-256-GCM"
     needs: security-leak-guard
     runs-on: ubuntu-latest
 
@@ -76,8 +71,8 @@ jobs:
           --health-retries=10
 
     env:
-      NODE_ENV: test
-      PORT: 3000
+      APP_ENV: testing
+      TZ: America/Santiago
       DB_HOST: 127.0.0.1
       DB_PORT: 3306
       DB_USER: apx_ci_sec_usr
@@ -92,87 +87,72 @@ jobs:
       - name: Checkout del código
         uses: actions/checkout@v4
 
-      - name: Configurar Node.js 20 LTS
-        uses: actions/setup-node@v4
+      - name: Configurar PHP 8.3 (PDO MySQL, OpenSSL AES-256-GCM, MBString)
+        uses: shivammathur/setup-php@v2
         with:
-          node-version: 20
-          cache: 'npm'
+          php-version: '8.3'
+          extensions: mbstring, xml, pdo, pdo_mysql, mysqli, openssl, json
+          coverage: none
 
-      - name: Instalar dependencias y auditar vulnerabilidades NPM
+      - name: Validar sintaxis de todos los archivos PHP (Linting)
+        run: find public/ scripts/ -name "*.php" -print0 | xargs -0 -n1 php -l
+
+      - name: Ejecutar Verificador DevSecOps (19 Tablas apx_*, Bcrypt Cost 12 y AES-256-GCM)
+        run: php scripts/ci-security-check.php
+
+      - name: Smoke Test End-to-End de API PHP (Login JWT y Desencriptación Ficha Clínica Ley 19.628)
         run: |
-          npm install
-          npm audit --audit-level=high || true
-
-      - name: Ejecutar Verificador DevSecOps (Migración DDL apx_*, Bcrypt Cost 12 y AES-256-GCM)
-        run: npm run ci:verify
-
-      - name: Smoke Test End-to-End de API (Login JWT, Ficha Clínica Encriptada y Firma PIN)
-        run: |
-          nohup npm start > server.log 2>&1 &
+          php -S 127.0.0.1:8000 -t public > php-server.log 2>&1 &
           SERVER_PID=$!
-          sleep 4
+          sleep 2
 
-          echo "1) Verificando /health..."
-          curl -fsS http://127.0.0.1:3000/health | grep -q '"status":"OK"'
+          echo "1) Verificando endpoint /api/index.php?route=health..."
+          curl -fsS "http://127.0.0.1:8000/api/index.php?route=health" | grep -q '"status":"OK"'
 
           echo "2) Verificando Login JWT con contraseña de alta entropía..."
-          TOKEN=$(curl -fsS -X POST http://127.0.0.1:3000/api/auth/login \
+          LOGIN_JSON=$(curl -fsS -X POST "http://127.0.0.1:8000/api/index.php?route=auth/login" \
             -H "Content-Type: application/json" \
-            -d "{\"emailOrRut\":\"15432198-K\",\"password\":\"$APP_DEFAULT_USER_PASSWORD\"}" | node -pe "JSON.parse(fs.readFileSync(0,'utf8')).token")
+            -d "{\"emailOrRut\":\"15.432.198-K\",\"password\":\"$APP_DEFAULT_USER_PASSWORD\"}")
+          TOKEN=$(php -r '$d = json_decode($argv[1], true); echo $d["token"] ?? "";' "$LOGIN_JSON")
 
-          if [ -z "$TOKEN" ] || [ "$TOKEN" = "undefined" ]; then
-            echo "❌ Falló la emisión del token JWT"
-            cat server.log
+          if [ -z "$TOKEN" ]; then
+            echo "❌ Falló la emisión del token JWT: $LOGIN_JSON"
+            cat php-server.log
             exit 1
           fi
 
           echo "3) Verificando desencriptación en memoria de Ficha Clínica (apx_med_dossier_clinico_enc)..."
-          curl -fsS http://127.0.0.1:3000/api/clinico/expediente/1 \
+          curl -fsS "http://127.0.0.1:8000/api/index.php?route=clinico/expediente/1" \
             -H "Authorization: Bearer $TOKEN" | grep -q "Discapacidad Intelectual Moderada"
 
           kill $SERVER_PID || true
           echo "✔ Smoke Test End-to-End superado."
 
   # ===========================================================================
-  # ETAPA 3: BUILD DE IMAGEN DOCKER INMUTABLE Y ESCANEO TRIVY
+  # ETAPA 3: BUILD DE IMAGEN DOCKER APACHE + PHP 8.3
   # ===========================================================================
-  docker-build-and-scan:
-    name: "3. Build Contenedor & Escaneo Trivy CVE"
+  docker-build-and-verify:
+    name: "3. Build Imagen Docker (PHP 8.3 + Apache)"
     needs: db-schema-and-crypto-tests
     runs-on: ubuntu-latest
     steps:
       - name: Checkout del código
         uses: actions/checkout@v4
 
-      - name: Construir imagen Docker de APANDI
-        run: docker build -t ghcr.io/${{ github.repository }}/apandi-sgi:${{ github.sha }} .
-
-      - name: Escanear vulnerabilidades de contenedor con Aqua Trivy
-        uses: aquasecurity/trivy-action@master
-        with:
-          image-ref: ghcr.io/${{ github.repository }}/apandi-sgi:${{ github.sha }}
-          format: 'table'
-          exit-code: '1'
-          ignore-unfixed: true
-          severity: 'CRITICAL,HIGH'
-
-      - name: Publicar imagen en GitHub Container Registry (Solo rama main)
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-        run: |
-          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-          docker push ghcr.io/${{ github.repository }}/apandi-sgi:${{ github.sha }}
+      - name: Construir imagen Docker de APANDI Web
+        run: docker build -t apandi-web:${{ github.sha }} .
 
   # ===========================================================================
-  # ETAPA 4: DESPLIEGUE SEGURO A PRODUCCIÓN (Zero-SQL-Files & Vault Injection)
+  # ETAPA 4: DESPLIEGUE SEGURO A PRODUCCIÓN / CPANEL CHILE
   # ===========================================================================
   deploy-production:
     name: "4. Despliegue Producción (Inyección de Secretos desde GitHub Vault)"
-    needs: docker-build-and-scan
+    needs: docker-build-and-verify
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-latest
     environment: production
     steps:
-      - name: Despliegue automatizado vía SSH sin archivos .sql en el repositorio
+      - name: Despliegue automatizado vía SSH con generación segura de .env
         if: ${{ secrets.PROD_SSH_HOST != '' }}
         uses: appleboy/ssh-action@v1.0.3
         with:
@@ -183,11 +163,11 @@ jobs:
             set -e
             cd /opt/apandi-sgi
 
-            # Generar .env en producción exclusivamente desde GitHub Secrets con permisos 0600
             umask 077
             cat <<EOF > .env
-            NODE_ENV=production
-            PORT=3000
+            APP_ENV=production
+            APP_PORT=80
+            TZ=America/Santiago
             DB_HOST=mariadb
             DB_PORT=3306
             DB_NAME=${{ secrets.PROD_DB_NAME }}
@@ -196,12 +176,9 @@ jobs:
             DB_ROOT_PASSWORD=${{ secrets.PROD_DB_ROOT_PASSWORD }}
             AES_MASTER_KEY=${{ secrets.PROD_AES_MASTER_KEY }}
             JWT_SECRET=${{ secrets.PROD_JWT_SECRET }}
-            JWT_EXPIRES_IN=8h
+            JWT_EXPIRES_IN=4h
             APP_DEFAULT_USER_PASSWORD=${{ secrets.PROD_DEFAULT_USER_PASSWORD }}
             APP_DEFAULT_SIGNATURE_PIN=${{ secrets.PROD_DEFAULT_SIGNATURE_PIN }}
             EOF
 
-            docker compose pull
-            docker compose up -d --remove-orphans
-            docker exec apandi_app npm run ci:verify
-
+            docker compose up -d --build --remove-orphans

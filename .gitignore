@@ -46,20 +46,28 @@ secrets/
 certs/
 private/
 
-# 4. Registros (Logs), Auditorías Locales y Volcados de Error
+# 4. Archivos de Configuración de Servidores con Credenciales Locales
+config.local.php
+parameters.yml
+wp-config.php
+.htpasswd
+
+# 5. Registros (Logs), Auditorías Locales y Volcados de Error
 *.log
 logs/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+php_errors.log
 error_log
 debug.log
 
-# 5. Dependencias y Paquetes
+# 6. Dependencias y Paquetes
 node_modules/
 vendor/
+composer.phar
 
-# 6. Archivos Temporales, Caché y Respaldos de Edición
+# 7. Archivos Temporales, Caché y Respaldos de Edición
 tmp/
 temp/
 cache/
@@ -71,7 +79,7 @@ cache/
 *~
 *.orig
 
-# 7. Sistema Operativo e IDEs
+# 8. Sistema Operativo e IDEs
 .DS_Store
 .DS_Store?
 ._*
@@ -83,3 +91,7 @@ thumbs.db
 Desktop.ini
 .vscode/
 .idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln

@@ -1,5 +1,5 @@
 services:
-  # 1. Base de Datos MariaDB (MySQL Compatible - Esquema Blindado apx_*)
+  # 1. Base de Datos MariaDB (100% MySQL Compatible - Esquema Blindado)
   mariadb:
     image: mariadb:11.4
     container_name: apandi_mariadb
@@ -45,12 +45,13 @@ services:
     networks:
       - apandi_net
 
-  # 3. Backend API REST (JavaScript Puro / Node.js) + Frontend (HTML / Tailwind / JS)
-  app:
+  # 3. Servidor Web Estándar Hosting Chile (Apache + Puente MySQL + JS API + Frontend Avanzado)
+  # Sin Node.js: 100% compatible con cualquier Hosting compartido / cPanel en Chile
+  web:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: apandi_app
+    container_name: apandi_web
     restart: unless-stopped
     depends_on:
       mariadb:
@@ -68,10 +69,11 @@ services:
       AES_MASTER_KEY: ${AES_MASTER_KEY:?Falta definir AES_MASTER_KEY en .env}
       TZ: ${TZ:-America/Santiago}
     ports:
-      - "${APP_PORT:-3000}:3000"
+      - "${APP_PORT:-3000}:80"
     volumes:
-      - ./src:/usr/src/app/src
-      - ./public:/usr/src/app/public
+      - ./public:/var/www/html
+      - ./scripts:/var/www/scripts:ro
+      - ./.env:/var/www/.env:ro
     networks:
       - apandi_net
 
