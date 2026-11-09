@@ -54,6 +54,10 @@ loadEnvConfig();
 $tz = getenv('TZ') ?: ($_ENV['TZ'] ?? 'America/Santiago');
 date_default_timezone_set($tz);
 
+# Constantes para control de intentos y tiempo de espera para login | considerar agregarlos a .env para más seguridad
+const LOGIN_MAX_FAILED_ATTEMPTS = 10;
+const LOGIN_LOCKOUT_MINUTES = 15;
+
 // Lectura estricta desde .env sin credenciales ni llaves hardcodeadas en el código fuente
 $dbHost = getenv('DB_HOST') ?: ($_ENV['DB_HOST'] ?? 'localhost');
 $dbPort = getenv('DB_PORT') ?: ($_ENV['DB_PORT'] ?? '3306');
@@ -223,6 +227,31 @@ function logAudit(PDO $pdo, int $idUsuario, ?int $idEstudiante, string $modulo, 
     $stmt->execute([$idUsuario, $idEstudiante, $modulo, $accion, $detalle, $ip, $ua]);
 }
 
+// Registra el fallo, reinicia el contador tras un bloqueo vencido y aplica el bloqueo al alcanzar el umbral.
+function recordFailedLogin(PDO $pdo, int $idUsuario): void {
+
+    $sql = sprintf(
+        "
+        UPDATE apx_sec_cuentas_acceso
+        SET intentos_fallidos = CASE
+                WHEN bloqueado_hasta IS NOT NULL AND bloqueado_hasta <= NOW() THEN 1
+                ELSE LEAST(COALESCE(intentos_fallidos, 0) + 1, %d)
+            END,
+            bloqueado_hasta = CASE
+                WHEN bloqueado_hasta IS NOT NULL AND bloqueado_hasta <= NOW() THEN NULL
+                WHEN intentos_fallidos >= %d THEN DATE_ADD(NOW(), INTERVAL %d MINUTE)
+                ELSE bloqueado_hasta
+            END
+        WHERE id_usuario = ? AND (bloqueado_hasta IS NULL OR bloqueado_hasta <= NOW())
+        ",
+        LOGIN_MAX_FAILED_ATTEMPTS,
+        LOGIN_MAX_FAILED_ATTEMPTS,
+        LOGIN_LOCKOUT_MINUTES
+    );
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute([$idUsuario]);
+}
+
 $route = $_GET['route'] ?? '';
 if (!$route) {
     $uri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
@@ -254,8 +283,13 @@ if ($route === 'auth/login' && $method === 'POST') {
     $rutSinPuntos = str_replace('.', '', $emailOrRut);
     $password = (string)($body['password'] ?? '');
 
+    // Recupera solo los datos necesarios y calcula si el bloqueo sigue vigente.
     $stmt = $pdo->prepare("
-        SELECT u.*, r.codigo AS rol_codigo, r.nombre AS rol_nombre, r.permisos_json
+        SELECT u.id_usuario, u.rut, u.nombres, u.apellidos, u.email, u.password_hash,
+               u.especialidad, u.horas_contrato, u.debe_cambiar_clave,
+               u.intentos_fallidos, u.bloqueado_hasta,
+               (u.bloqueado_hasta IS NOT NULL AND u.bloqueado_hasta > NOW()) AS cuenta_bloqueada,
+               r.codigo AS rol_codigo, r.nombre AS rol_nombre
         FROM apx_sec_cuentas_acceso u
         INNER JOIN apx_sec_rbac_perfiles r ON u.id_rol = r.id_rol
         WHERE (u.email = ? OR u.rut = ? OR REPLACE(u.rut, '.', '') = ?) AND u.activo = 1
@@ -264,14 +298,24 @@ if ($route === 'auth/login' && $method === 'POST') {
     $stmt->execute([$emailOrRut, $emailOrRut, $rutSinPuntos]);
     $user = $stmt->fetch();
 
-    if (!$user || !password_verify($password, $user['password_hash'])) {
+    // Rechaza credenciales inválidas o cuentas bloqueadas y contabiliza el fallo si corresponde.
+    if (!$user || (int)$user['cuenta_bloqueada'] === 1 || !password_verify($password, $user['password_hash'])) {
+        if ($user && (int)$user['cuenta_bloqueada'] !== 1) {
+            recordFailedLogin($pdo, (int)$user['id_usuario']);
+        }
         http_response_code(401);
         echo json_encode(['ok' => false, 'error' => 'Credenciales inválidas o usuario inactivo.']);
         exit;
     }
 
-    $pdo->prepare("UPDATE apx_sec_cuentas_acceso SET ultimo_acceso = NOW() WHERE id_usuario = ?")->execute([$user['id_usuario']]);
+    // Al autenticar correctamente, actualiza el último acceso y limpia el estado de bloqueo.
+    $pdo->prepare("
+        UPDATE apx_sec_cuentas_acceso
+        SET ultimo_acceso = NOW(), intentos_fallidos = 0, bloqueado_hasta = NULL
+        WHERE id_usuario = ?
+    ")->execute([$user['id_usuario']]);
 
+    // Informa al cliente si la cuenta requiere que el usuario cambie su clave.
     $userPayload = [
         'id_usuario' => (int)$user['id_usuario'],
         'rut' => $user['rut'],
@@ -280,7 +324,8 @@ if ($route === 'auth/login' && $method === 'POST') {
         'rol_codigo' => $user['rol_codigo'],
         'rol_nombre' => $user['rol_nombre'],
         'especialidad' => $user['especialidad'],
-        'horas_contrato' => (int)$user['horas_contrato']
+        'horas_contrato' => (int)$user['horas_contrato'],
+        'debe_cambiar_clave' => (bool)$user['debe_cambiar_clave']
     ];
 
     echo json_encode([
