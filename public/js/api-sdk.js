@@ -132,13 +132,20 @@ window.ApandiAPIClient = class ApandiAPIClient {
         const data = await response.json();
         this.dbMode = 'MARIADB_LIVE';
         if (!response.ok) {
-          throw new Error(data.error || 'Error en la operación');
+          const apiErr = new Error(data.error || 'Error en la operación');
+          apiErr.status = response.status;
+          apiErr.data = data;
+          throw apiErr;
         }
         return data;
       }
       throw new Error('Fallback JS Engine');
     } catch (err) {
       if (
+        err.status === 429 ||
+        err.message.includes('bloquead') ||
+        err.message.includes('bloqueo') ||
+        err.message.includes('intentos') ||
         err.message.includes('Restricción Legal') ||
         err.message.includes('PIN de Firma') ||
         err.message.includes('Modo Solo Lectura') ||
