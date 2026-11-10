@@ -1,41 +1,44 @@
 <!DOCTYPE html>
-<html lang="es" class="h-full bg-slate-100">
+<html lang="es" class="h-full bg-[#f4f7f8]">
 
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>SGI APANDI — Sistema de Gestión Institucional Integral | Educación Especial Chile</title>
-  <!-- Google Fonts: Plus Jakarta Sans & JetBrains Mono -->
+  <title>APANDI | Gestión de Estudiantes y SGI Educación Especial</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <!-- Google Fonts: DM Sans (Diseño Figma) & Plus Jakarta Sans & JetBrains Mono -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link
-    href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
+    href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400..800;1,9..40,400..800&family=JetBrains+Mono:wght@400;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
     rel="stylesheet">
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- Chart.js para analítica institucional -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <!-- jsPDF para el Motor Generador Automático del PDF "Informe para la Familia" -->
+  <!-- jsPDF para el Motor Generador Automático de PDFs (Formatos Institucionales e Informe Familia) -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <!-- SheetJS (xlsx) para Importación y Exportación de Excel de la Base de Estudiantes (Figma) -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script>
     tailwind.config = {
       theme: {
         extend: {
           fontFamily: {
-            sans: ['"Plus Jakarta Sans"', 'system-ui', 'sans-serif'],
+            sans: ['"DM Sans"', '"Plus Jakarta Sans"', 'ui-sans-serif', 'system-ui', 'sans-serif'],
             mono: ['"JetBrains Mono"', 'monospace']
           },
           colors: {
             apandi: {
-              50: '#eff6ff',
-              100: '#dbeafe',
-              200: '#bfdbfe',
-              500: '#3b82f6',
-              600: '#2563eb',
-              700: '#1d4ed8',
-              800: '#1e40af',
-              900: '#1e3a8a',
-              950: '#0f172a'
+              50: '#f0fdfa',
+              100: '#ccfbf1',
+              200: '#99f6e4',
+              500: '#15928d',
+              600: '#087c78',
+              700: '#066a67',
+              800: '#115e59',
+              900: '#073b3a',
+              950: '#042f2e'
             }
           }
         }
@@ -43,7 +46,21 @@
     };
   </script>
   <style>
-    /* Scrollbars limpios e institucionales */
+    /* Estilos globales exportados de Figma (styles.css) + SGI */
+    * {
+      border-color: #e2e8f0;
+    }
+
+    body {
+      font-family: 'DM Sans', system-ui, -apple-system, sans-serif;
+      background-color: #f4f7f8;
+    }
+
+    button:not(:disabled),
+    [role='button']:not(:disabled) {
+      cursor: pointer;
+    }
+
     ::-webkit-scrollbar {
       width: 6px;
       height: 6px;
@@ -79,11 +96,31 @@
     .sos-pulse {
       animation: pulse-ring 2s infinite;
     }
+
+    @media print {
+      aside,
+      header,
+      button,
+      select,
+      #sosRealtimeBanner,
+      #mobileNavStrip {
+        display: none !important;
+      }
+
+      main {
+        padding: 0 !important;
+        overflow: visible !important;
+      }
+
+      body {
+        background: white !important;
+        overflow: visible !important;
+      }
+    }
   </style>
 </head>
 
-<body
-  class="h-full text-slate-800 antialiased selection:bg-apandi-600 selection:text-white overflow-hidden flex flex-col">
+<body class="h-full bg-[#f4f7f8] text-slate-950 antialiased selection:bg-[#087c78] selection:text-white overflow-hidden flex flex-col">
 
   <!-- ==================================================================== -->
   <!-- ALERTA GLOBAL SOS EN TIEMPO REAL (SUPERIOR)                          -->
@@ -112,210 +149,263 @@
   </div>
 
   <!-- ==================================================================== -->
-  <!-- PANTALLA DE ACCESO INSTITUCIONAL (LOGIN PROFESIONAL Y LIMPIO)        -->
+  <!-- PANTALLA DE ACCESO INSTITUCIONAL (DISEÑO SPLIT-SCREEN FIGMA)         -->
   <!-- ==================================================================== -->
-  <div id="loginScreen"
-    class="fixed inset-0 bg-gradient-to-br from-slate-950 via-slate-900 to-apandi-950 z-50 flex items-center justify-center p-4 overflow-y-auto">
-    <div class="w-full max-w-md bg-white rounded-3xl shadow-2xl border border-slate-200/80 overflow-hidden">
-      <!-- Encabezado Institucional Limpio -->
-      <div class="bg-slate-900 px-8 pt-8 pb-6 text-center border-b border-slate-800">
-        <div
-          class="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-500 to-apandi-700 mx-auto flex items-center justify-center font-black text-white text-2xl shadow-lg mb-3">
-          AP
+  <div id="loginScreen" class="fixed inset-0 z-50 grid min-h-screen bg-[#f4f7f8] lg:grid-cols-[1.05fr_.95fr] overflow-y-auto">
+    <!-- Panel Izquierdo Institucional (#073b3a) exportado de Figma -->
+    <section class="relative hidden overflow-hidden bg-[#073b3a] p-12 text-white lg:flex lg:flex-col lg:justify-between">
+      <div class="absolute -right-24 -top-24 h-96 w-96 rounded-full border border-white/10"></div>
+      <div class="absolute -right-4 top-12 h-64 w-64 rounded-full border border-white/10"></div>
+      <div class="absolute bottom-[-18%] left-[-5%] h-[460px] w-[460px] rounded-full bg-teal-400/10 blur-2xl"></div>
+
+      <!-- Brand Inverse -->
+      <div class="relative flex items-center gap-3">
+        <div class="grid h-11 w-11 place-items-center rounded-xl bg-white text-[#087c78] shadow-sm">
+          <svg xmlns="http://www.w3.org/2000/svg" width="25" height="25" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.42 10.922a1 1 0 0 0-.019-1.838L12.83 5.18a2 2 0 0 0-1.66 0L2.6 9.08a1 1 0 0 0 0 1.832l8.57 3.908a2 2 0 0 0 1.66 0z"/><path d="M22 10v6"/><path d="M6 12.5V16a6 3 0 0 0 12 0v-3.5"/></svg>
         </div>
-        <h1 class="text-xl font-extrabold text-white tracking-tight">SGI APANDI</h1>
-        <p class="text-xs text-slate-400 mt-1">Centro de Capacitación Laboral • Sistema de Gestión Institucional</p>
+        <div>
+          <p class="text-xl font-bold tracking-[0.08em] text-white">APANDI</p>
+          <p class="text-[10px] uppercase tracking-[0.16em] text-teal-100/70">Gestión educacional</p>
+        </div>
       </div>
 
-      <!-- Formulario de Inicio de Sesión -->
-      <div class="p-8">
-        <form id="loginForm" class="space-y-5">
-          <div>
-            <label for="loginEmail" class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-              RUT o Correo Institucional
-            </label>
-            <input id="loginEmail" type="text" value="cmunoz@apandi.cl" placeholder="nombre@apandi.cl o 12.345.678-9"
-              required
-              class="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm font-medium text-slate-900 focus:ring-2 focus:ring-apandi-600 focus:border-apandi-600 focus:outline-none transition" />
-          </div>
+      <!-- Hero Copy -->
+      <div class="relative max-w-xl">
+        <span class="mb-6 inline-flex items-center gap-2 rounded-full border border-teal-200/20 bg-white/10 px-4 py-2 text-sm text-teal-50">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></svg>
+          Plataforma institucional segura
+        </span>
+        <h1 class="text-5xl font-semibold leading-[1.08] tracking-[-0.04em]">
+          Cada antecedente,<br />
+          en el lugar correcto.
+        </h1>
+        <p class="mt-6 max-w-lg text-lg leading-8 text-teal-50/75">
+          Gestiona fichas, evaluaciones y documentación institucional de manera centralizada,
+          trazable y protegida bajo normativa MINEDUC (Decreto 83 / Decreto 170) y Ley N° 19.628.
+        </p>
+      </div>
 
-          <div>
-            <div class="flex items-center justify-between mb-1.5">
-              <label for="loginPassword" class="block text-xs font-bold text-slate-700 uppercase tracking-wider">
-                Contraseña
-              </label>
-              <button type="button"
-                onclick="alert('Para restablecer su clave institucional, contacte a Administración o Dirección UTP.')"
-                class="text-xs font-semibold text-apandi-600 hover:text-apandi-800">
-                ¿Olvidó su contraseña?
-              </button>
-            </div>
-            <input id="loginPassword" type="password" value="Ap4nd1#S3cV4ult!2026_Cl" placeholder="••••••••••••" required
-              class="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm font-medium text-slate-900 focus:ring-2 focus:ring-apandi-600 focus:border-apandi-600 focus:outline-none transition" />
+      <div class="relative flex flex-wrap gap-8 text-sm text-teal-50/65">
+        <span>Centro de Capacitación Laboral APANDI</span>
+        <span>Acceso restringido • AES-256-GCM</span>
+      </div>
+    </section>
+
+    <!-- Panel Derecho: Formulario de Inicio de Sesión -->
+    <section class="flex items-center justify-center p-6 sm:p-12">
+      <div class="w-full max-w-md bg-white sm:bg-transparent p-6 sm:p-0 rounded-3xl sm:rounded-none shadow-xl sm:shadow-none border sm:border-0 border-slate-200">
+        <!-- Brand Móvil -->
+        <div class="mb-8 lg:hidden flex items-center gap-3">
+          <div class="grid h-11 w-11 place-items-center rounded-xl bg-[#087c78] text-white">
+            <svg xmlns="http://www.w3.org/2000/svg" width="25" height="25" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.42 10.922a1 1 0 0 0-.019-1.838L12.83 5.18a2 2 0 0 0-1.66 0L2.6 9.08a1 1 0 0 0 0 1.832l8.57 3.908a2 2 0 0 0 1.66 0z"/><path d="M22 10v6"/><path d="M6 12.5V16a6 3 0 0 0 12 0v-3.5"/></svg>
           </div>
+          <div>
+            <p class="text-xl font-bold tracking-[0.08em] text-[#073b3a]">APANDI</p>
+            <p class="text-[10px] uppercase tracking-[0.16em] text-slate-500">Gestión educacional</p>
+          </div>
+        </div>
+
+        <div class="mb-7">
+          <p class="mb-2 text-sm font-semibold uppercase tracking-[0.14em] text-teal-700">
+            Bienvenido/a
+          </p>
+          <h2 class="text-3xl font-semibold tracking-[-0.03em] text-slate-950">
+            Inicia sesión en APANDI
+          </h2>
+          <p class="mt-2.5 text-sm leading-6 text-slate-500">
+            Utiliza tu nombre de usuario, RUT o correo institucional.
+          </p>
+        </div>
+
+        <form id="loginForm" class="space-y-5">
+          <label class="block text-sm font-medium text-slate-700">
+            Usuario, RUT o correo institucional
+            <input id="loginEmail" type="text" value="cmunoz@apandi.cl" placeholder="nombre@apandi.cl o 17.654.321-8" required
+              class="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-teal-600 focus:ring-4 focus:ring-teal-600/10" />
+          </label>
+
+          <label class="block text-sm font-medium text-slate-700">
+            Contraseña
+            <input id="loginPassword" type="password" value="Ap4nd1#S3cV4ult!2026_Cl" placeholder="••••••••••" required
+              class="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-teal-600 focus:ring-4 focus:ring-teal-600/10" />
+          </label>
 
           <div class="flex items-center justify-between text-xs text-slate-600">
             <label class="flex items-center gap-2 cursor-pointer select-none">
-              <input type="checkbox" checked class="rounded border-slate-300 text-apandi-600 focus:ring-apandi-500" />
-              <span>Mantener sesión activa en este equipo</span>
+              <input type="checkbox" checked class="rounded border-slate-300 text-[#087c78] focus:ring-teal-600" />
+              <span>Mantener sesión protegida (8 horas)</span>
             </label>
           </div>
 
           <div id="loginError"
-            class="hidden text-xs text-red-700 font-bold bg-red-50 border border-red-200 p-3 rounded-xl text-center">
+            class="hidden rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
           </div>
 
           <button id="loginSubmitBtn" type="submit"
-            class="w-full bg-apandi-700 hover:bg-apandi-800 active:scale-[0.99] text-white font-extrabold py-3.5 rounded-xl shadow-lg shadow-apandi-700/25 transition text-sm cursor-pointer">
-            Iniciar Sesión
+            class="flex w-full items-center justify-center rounded-xl bg-[#087c78] px-4 py-3.5 text-sm font-semibold text-white shadow-lg shadow-teal-900/10 transition hover:bg-[#066a67] active:scale-[0.99] disabled:opacity-60">
+            Iniciar sesión
+          </button>
+
+          <button type="button"
+            onclick="alert('Para restablecer su contraseña institucional, contacte a Administración o Dirección UTP.')"
+            class="w-full text-center text-sm font-medium text-teal-700 hover:underline">
+            ¿Olvidaste tu contraseña? Contacta a administración
           </button>
         </form>
 
-        <!-- Selector discreto de cuentas de prueba para evaluación del sistema -->
-        <div class="mt-6 pt-5 border-t border-slate-100">
-          <label class="block text-[11px] font-semibold text-slate-400 text-center mb-2">
-            Cambiar cuenta de prueba (Clave blindada: Ap4nd1#S3cV4ult!2026_Cl)
+        <!-- Selector rápido de cuentas institucionales para evaluación RBAC -->
+        <div class="mt-7 pt-5 border-t border-slate-200/80">
+          <label class="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-2">
+            Selector rápido de perfil institucional (Demo RBAC):
           </label>
           <select onchange="window.app.quickLogin(this.value)"
-            class="w-full rounded-xl bg-slate-50 border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 focus:outline-none focus:border-apandi-600">
-            <option value="cmunoz@apandi.cl">Docente Titular — cmunoz@apandi.cl</option>
-            <option value="cvargas.pie@apandi.cl">Especialista PIE — cvargas.pie@apandi.cl</option>
-            <option value="utp@apandi.cl">Directora / Jefa UTP — utp@apandi.cl</option>
-            <option value="jfuentes@apandi.cl">Monitor de Taller — jfuentes@apandi.cl</option>
-            <option value="pgomez.familia@gmail.com">Portal Apoderado — pgomez.familia@gmail.com</option>
-            <option value="admin@apandi.cl">Administrador — admin@apandi.cl</option>
+            class="w-full rounded-xl bg-white border border-slate-200 px-3.5 py-2.5 text-xs font-semibold text-slate-700 outline-none focus:border-teal-600">
+            <option value="cmunoz@apandi.cl">👩‍🏫 Docente Titular — cmunoz@apandi.cl</option>
+            <option value="cvargas.pie@apandi.cl">🩺 Especialista PIE — cvargas.pie@apandi.cl</option>
+            <option value="utp@apandi.cl">🎓 Directora / Jefa UTP — utp@apandi.cl</option>
+            <option value="jfuentes@apandi.cl">🛠️ Monitor de Taller — jfuentes@apandi.cl</option>
+            <option value="pgomez.familia@gmail.com">👨‍👩‍👦 Portal Apoderado — pgomez.familia@gmail.com</option>
+            <option value="admin@apandi.cl">🛡️ Administrador — admin@apandi.cl</option>
           </select>
         </div>
       </div>
-    </div>
+    </section>
   </div>
 
   <!-- ==================================================================== -->
-  <!-- SHELL PRINCIPAL DE LA APLICACIÓN (SIDEBAR + TOPBAR + WORKSPACE)      -->
+  <!-- SHELL PRINCIPAL DE LA APLICACIÓN (DISEÑO FIGMA + MÓDULOS SGI)        -->
   <!-- ==================================================================== -->
-  <div class="flex-1 flex overflow-hidden">
+  <div class="flex-1 flex overflow-hidden relative">
 
-    <!-- SIDEBAR INSTITUCIONAL IZQUIERDA -->
+    <!-- Backdrop Móvil -->
+    <div id="mobileMenuOverlay" onclick="window.app.toggleMobileSidebar(false)"
+      class="hidden fixed inset-0 z-30 bg-slate-950/30 lg:hidden"></div>
+
+    <!-- SIDEBAR INSTITUCIONAL IZQUIERDA (Estilo Figma: Blanco limpio con acentos Teal) -->
     <aside id="appSidebar"
-      class="w-72 bg-slate-900 text-slate-200 flex flex-col justify-between shrink-0 border-r border-slate-800 hidden lg:flex select-none">
-      <div class="p-4 space-y-5 overflow-y-auto">
-        <!-- Brand Header -->
-        <div class="flex items-center justify-between px-2">
+      class="w-[270px] bg-white text-slate-700 flex flex-col justify-between shrink-0 border-r border-slate-200 hidden lg:flex select-none z-40">
+      <div class="px-4 pt-6 pb-4 space-y-5 overflow-y-auto flex-1">
+        <!-- Brand Header Figma -->
+        <div class="px-3 flex items-center justify-between">
           <div class="flex items-center gap-3">
-            <div
-              class="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-apandi-700 flex items-center justify-center font-black text-white text-lg shadow-md">
-              AP
+            <div class="grid h-11 w-11 place-items-center rounded-xl bg-[#087c78] text-white shadow-sm">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.42 10.922a1 1 0 0 0-.019-1.838L12.83 5.18a2 2 0 0 0-1.66 0L2.6 9.08a1 1 0 0 0 0 1.832l8.57 3.908a2 2 0 0 0 1.66 0z"/><path d="M22 10v6"/><path d="M6 12.5V16a6 3 0 0 0 12 0v-3.5"/></svg>
             </div>
             <div>
-              <div class="font-extrabold text-white tracking-tight text-base leading-none">SGI APANDI</div>
-              <span class="text-[10px] text-blue-400 font-semibold uppercase tracking-wider">Educación Especial
-                Chile</span>
+              <p class="text-xl font-bold tracking-[0.08em] text-[#073b3a] leading-none">APANDI</p>
+              <p class="text-[10px] uppercase tracking-[0.16em] text-slate-500 mt-1">Gestión educacional</p>
             </div>
           </div>
-          <span
-            class="text-[10px] font-mono bg-slate-800 text-slate-300 px-2 py-0.5 rounded border border-slate-700">v2.5</span>
         </div>
 
-        <!-- Estado de Conexión MariaDB + Encriptación -->
-        <div class="p-3 rounded-xl bg-slate-800/80 border border-slate-700/80 space-y-1.5 text-[11px]">
-          <div class="flex items-center justify-between">
-            <span class="text-slate-400 font-medium">Motor BD:</span>
-            <span id="sidebarDbBadge" class="inline-flex items-center gap-1.5 font-bold text-emerald-400">
-              <span class="w-2 h-2 rounded-full bg-emerald-400"></span> MariaDB 11.4
-            </span>
-          </div>
-          <div class="flex items-center justify-between">
-            <span class="text-slate-400 font-medium">Ley 19.628:</span>
-            <span
-              class="font-mono text-[10px] text-blue-300 bg-blue-950/80 px-2 py-0.5 rounded border border-blue-800">AES-256-GCM</span>
-          </div>
-          <div class="pt-1 border-t border-slate-700/70 flex items-center justify-between">
-            <a href="http://localhost:8080" target="_blank"
-              class="text-blue-400 hover:text-blue-300 font-semibold underline">
-              🗄️ Gestor phpMyAdmin ↗
-            </a>
-            <span class="text-slate-500">Año 2026</span>
-          </div>
-        </div>
-
-        <!-- Menú de Navegación por Áreas -->
+        <!-- Menú de Navegación Principal (Figma + Módulos Especializados SGI) -->
         <div class="space-y-4">
           <div>
-            <div class="px-3 text-[10px] font-extrabold uppercase tracking-wider text-slate-500 mb-1.5">
-              I. Gestión & Pedagogía
+            <div class="px-3.5 text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400 mb-1.5">
+              Gestión Estudiantil
             </div>
-            <nav class="space-y-1 text-xs font-semibold">
+            <nav class="space-y-1">
               <button onclick="window.app.switchTab('tab-dashboard')" data-target="tab-dashboard"
-                class="nav-tab w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition text-left bg-apandi-600 text-white shadow">
-                <span class="text-base">📊</span>
-                <span>1. Portal Docente & RRHH</span>
+                class="nav-tab flex w-full items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-semibold transition bg-teal-50 text-teal-800">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>
+                <span>Panel principal</span>
               </button>
+
               <button onclick="window.app.switchTab('tab-estudiantes')" data-target="tab-estudiantes"
-                class="nav-tab w-full flex items-center justify-between px-3 py-2.5 rounded-xl transition text-left text-slate-300 hover:bg-slate-800">
-                <span class="flex items-center gap-3"><span class="text-base">🎓</span><span>2. Matrícula y
-                    Talleres</span></span>
-                <span class="text-[10px] bg-slate-800 px-2 py-0.5 rounded-full text-blue-300">A/B</span>
+                class="nav-tab flex w-full items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-medium transition text-slate-600 hover:bg-slate-50 hover:text-slate-950">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5V19A9 3 0 0 0 21 19V5"/><path d="M3 12A9 3 0 0 0 21 12"/></svg>
+                <span>Base de estudiantes</span>
+                <span id="navStudentsCount" class="ml-auto rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-600">5</span>
               </button>
+
+              <button onclick="window.app.switchTab('tab-buscar-rut')" data-target="tab-buscar-rut"
+                class="nav-tab flex w-full items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-medium transition text-slate-600 hover:bg-slate-50 hover:text-slate-950">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                <span>Buscar por RUT</span>
+              </button>
+
+              <button onclick="window.app.switchTab('tab-documentos')" data-target="tab-documentos"
+                class="nav-tab flex w-full items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-medium transition text-slate-600 hover:bg-slate-50 hover:text-slate-950">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></svg>
+                <span>Documentación</span>
+                <span id="navDocsCount" class="ml-auto rounded-full bg-teal-50 px-2 py-0.5 text-[11px] font-semibold text-teal-700">4</span>
+              </button>
+            </nav>
+          </div>
+
+          <div>
+            <div class="px-3.5 text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400 mb-1.5">
+              Pedagogía, PIE & Familia
+            </div>
+            <nav class="space-y-1">
               <button onclick="window.app.switchTab('tab-libro')" data-target="tab-libro"
-                class="nav-tab w-full flex items-center justify-between px-3 py-2.5 rounded-xl transition text-left text-slate-300 hover:bg-slate-800">
-                <span class="flex items-center gap-3"><span class="text-base">📖</span><span>3. Libro de Clases
-                    Digital</span></span>
-                <span
-                  class="text-[10px] bg-emerald-950 text-emerald-400 border border-emerald-800 px-1.5 py-0.5 rounded">PIN</span>
+                class="nav-tab flex w-full items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-medium transition text-slate-600 hover:bg-slate-50 hover:text-slate-950">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg>
+                <span>Libro de Clases Digital</span>
+                <span class="ml-auto text-[10px] bg-emerald-50 text-emerald-700 border border-emerald-200 px-1.5 py-0.5 rounded font-bold">PIN</span>
               </button>
-            </nav>
-          </div>
 
-          <div>
-            <div class="px-3 text-[10px] font-extrabold uppercase tracking-wider text-slate-500 mb-1.5">
-              II. Clínica, PIE y Convivencia
-            </div>
-            <nav class="space-y-1 text-xs font-semibold">
               <button onclick="window.app.switchTab('tab-clinico')" data-target="tab-clinico"
-                class="nav-tab w-full flex items-center justify-between px-3 py-2.5 rounded-xl transition text-left text-slate-300 hover:bg-slate-800">
-                <span class="flex items-center gap-3"><span class="text-base">🩺</span><span>4. Expediente Clínico &
-                    PIE</span></span>
-                <span
-                  class="text-[10px] bg-blue-950 text-blue-300 border border-blue-800 px-1.5 py-0.5 rounded font-mono">AES</span>
+                class="nav-tab flex w-full items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-medium transition text-slate-600 hover:bg-slate-50 hover:text-slate-950">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2"/></svg>
+                <span>Expediente Clínico & PIE</span>
+                <span class="ml-auto text-[10px] bg-sky-50 text-sky-700 border border-sky-200 px-1.5 py-0.5 rounded font-mono font-bold">AES</span>
               </button>
+
               <button onclick="window.app.switchTab('tab-paec')" data-target="tab-paec"
-                class="nav-tab w-full flex items-center justify-between px-3 py-2.5 rounded-xl transition text-left text-slate-300 hover:bg-slate-800">
-                <span class="flex items-center gap-3"><span class="text-base">🤝</span><span>5. Convivencia PAEC &
-                    SOS</span></span>
-                <span class="w-2 h-2 rounded-full bg-red-500"></span>
+                class="nav-tab flex w-full items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-medium transition text-slate-600 hover:bg-slate-50 hover:text-slate-950">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg>
+                <span>Convivencia PAEC & SOS</span>
+                <span class="ml-auto w-2 h-2 rounded-full bg-red-500"></span>
+              </button>
+
+              <button onclick="window.app.switchTab('tab-apoderados')" data-target="tab-apoderados"
+                class="nav-tab flex w-full items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-medium transition text-slate-600 hover:bg-slate-50 hover:text-slate-950">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                <span>Portal Familia & PDF</span>
+                <span class="ml-auto text-[10px] bg-rose-50 text-rose-700 px-1.5 py-0.5 rounded font-bold">PDF</span>
               </button>
             </nav>
           </div>
 
           <div>
-            <div class="px-3 text-[10px] font-extrabold uppercase tracking-wider text-slate-500 mb-1.5">
-              III. Familia & Seguridad Legal
+            <div class="px-3.5 text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400 mb-1.5">
+              Sistema & Seguridad
             </div>
-            <nav class="space-y-1 text-xs font-semibold">
-              <button onclick="window.app.switchTab('tab-apoderados')" data-target="tab-apoderados"
-                class="nav-tab w-full flex items-center justify-between px-3 py-2.5 rounded-xl transition text-left text-slate-300 hover:bg-slate-800">
-                <span class="flex items-center gap-3"><span class="text-base">👨‍👩‍👦</span><span>6. Portal Familia &
-                    PDF</span></span>
-                <span class="text-[10px] bg-rose-950 text-rose-300 px-1.5 py-0.5 rounded">PDF</span>
-              </button>
+            <nav class="space-y-1">
               <button onclick="window.app.switchTab('tab-auditoria')" data-target="tab-auditoria"
-                class="nav-tab w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition text-left text-slate-300 hover:bg-slate-800">
-                <span class="text-base">🛡️</span>
-                <span>7. RBAC & Auditoría 19.628</span>
+                class="nav-tab flex w-full items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-medium transition text-slate-600 hover:bg-slate-50 hover:text-slate-950">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 21a8 8 0 0 0-16 0"/><circle cx="10" cy="8" r="5"/><path d="M22 20c0-3.37-2-6.5-4-8a5 5 0 0 0-.45-8.3"/></svg>
+                <span>Administración & RBAC</span>
+              </button>
+
+              <button onclick="window.app.switchTab('tab-configuracion')" data-target="tab-configuracion"
+                class="nav-tab flex w-full items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-medium transition text-slate-600 hover:bg-slate-50 hover:text-slate-950">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+                <span>Configuración</span>
               </button>
             </nav>
           </div>
         </div>
       </div>
 
-      <!-- Pie de Sidebar: Simulador Rápido de Rol RBAC y Perfil Activo -->
-      <div class="p-4 border-t border-slate-800 bg-slate-950/60 space-y-3">
+      <!-- Pie de Sidebar (Estilo Figma + Simulador RBAC) -->
+      <div class="p-4 border-t border-slate-100 bg-white space-y-3">
+        <!-- Estado técnico MariaDB + AES-256 -->
+        <div class="px-3 py-2 rounded-xl bg-slate-50 border border-slate-200/70 flex items-center justify-between text-[11px]">
+          <span id="sidebarDbBadge" class="inline-flex items-center gap-1.5 font-semibold text-teal-800">
+            <span class="w-2 h-2 rounded-full bg-emerald-500"></span> MariaDB 11.4
+          </span>
+          <span class="font-mono text-[10px] text-teal-700 bg-teal-50 px-2 py-0.5 rounded border border-teal-200">AES-256</span>
+        </div>
+
+        <!-- Selector rápido de rol en vivo -->
         <div>
           <label class="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1">
-            ⚡ Cambiar Rol en Vivo (Test RBAC):
+            ⚡ Cambiar Rol en Vivo (RBAC):
           </label>
           <select id="quickRoleSwitcher" onchange="window.app.quickLogin(this.value)"
-            class="w-full bg-slate-800 text-slate-100 text-xs font-semibold rounded-lg border border-slate-700 px-2.5 py-1.5 focus:outline-none focus:border-blue-500">
+            class="w-full bg-slate-50 text-slate-700 text-xs font-semibold rounded-xl border border-slate-200 px-2.5 py-2 focus:outline-none focus:border-teal-600">
             <option value="cmunoz@apandi.cl">👩‍🏫 Docente Titular (Carolina Muñoz)</option>
             <option value="cvargas.pie@apandi.cl">🩺 Especialista PIE (Camila Vargas)</option>
             <option value="utp@apandi.cl">🎓 Directora / UTP (Marcela Rojas)</option>
@@ -325,238 +415,300 @@
           </select>
         </div>
 
-        <div class="flex items-center justify-between pt-1">
-          <div class="overflow-hidden">
-            <div id="sidebarUserName" class="text-xs font-bold text-white truncate">Carolina Muñoz Tapia</div>
-            <div id="sidebarUserRole" class="text-[11px] text-blue-400 font-semibold truncate">DOCENTE TITULAR</div>
+        <!-- Tarjeta Usuario Figma -->
+        <div class="flex items-center gap-3 rounded-xl bg-slate-50 p-3">
+          <div id="sidebarUserInitials"
+            class="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[#087c78] text-xs font-bold text-white">
+            CM
           </div>
-          <button onclick="window.app.logout()" title="Cerrar Sesión"
-            class="text-xs bg-slate-800 hover:bg-red-950 hover:text-red-300 text-slate-300 px-2.5 py-1.5 rounded-lg border border-slate-700 transition">
-            Salir
-          </button>
+          <div class="min-w-0 flex-1">
+            <p id="sidebarUserName" class="truncate text-sm font-semibold text-slate-800">Carolina Muñoz Tapia</p>
+            <p id="sidebarUserRole" class="truncate text-xs capitalize text-slate-500">Docente Titular</p>
+          </div>
         </div>
+
+        <button onclick="window.app.logout()"
+          class="flex w-full items-center gap-3 rounded-xl px-3.5 py-2 text-sm font-medium text-slate-500 hover:bg-red-50 hover:text-red-700 transition">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>
+          <span>Cerrar sesión</span>
+        </button>
       </div>
     </aside>
 
-    <!-- CONTENEDOR DERECHO: TOPBAR + ÁREA DE TRABAJO -->
+    <!-- CONTENEDOR DERECHO: TOPBAR FIGMA + ÁREA DE TRABAJO -->
     <div class="flex-1 flex flex-col overflow-hidden">
 
-      <!-- TOPBAR SUPERIOR EJECUTIVA -->
+      <!-- TOPBAR SUPERIOR (Estilo Figma Sticky Header + Buscador Global + Botón SOS) -->
       <header
-        class="bg-white border-b border-slate-200 px-4 lg:px-6 py-3 flex items-center justify-between gap-4 shrink-0 z-20 shadow-sm">
-        <!-- Selector Móvil + Buscador Global de Estudiantes -->
-        <div class="flex items-center gap-3 flex-1 max-w-xl">
-          <button
-            onclick="document.getElementById('appSidebar').classList.toggle('hidden'); document.getElementById('appSidebar').classList.toggle('fixed'); document.getElementById('appSidebar').classList.toggle('inset-y-0'); document.getElementById('appSidebar').classList.toggle('left-0'); document.getElementById('appSidebar').classList.toggle('z-40');"
-            class="lg:hidden p-2 rounded-lg bg-slate-100 text-slate-700 font-bold text-sm">
-            ☰
+        class="sticky top-0 z-20 flex h-[76px] items-center justify-between gap-4 border-b border-slate-200/80 bg-white/90 px-5 backdrop-blur md:px-8 shrink-0">
+        <div class="flex items-center gap-3 min-w-0">
+          <button onclick="window.app.toggleMobileSidebar()"
+            class="rounded-lg p-2 text-slate-600 hover:bg-slate-100 lg:hidden" aria-label="Abrir menú">
+            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/></svg>
           </button>
-
-          <div class="relative flex-1">
-            <input id="globalSearchInput" type="text" oninput="window.app.handleGlobalSearch(this.value)"
-              placeholder="🔍 Buscar estudiante por nombre, RUT o Taller Laboral (Grupo A / B)..."
-              class="w-full rounded-xl bg-slate-100 border border-slate-200/80 pl-4 pr-8 py-2 text-xs font-medium focus:bg-white focus:ring-2 focus:ring-apandi-600 focus:outline-none transition" />
-            <div id="globalSearchResults"
-              class="hidden absolute left-0 right-0 mt-1 bg-white rounded-xl shadow-2xl border border-slate-200 max-h-72 overflow-y-auto z-50 divide-y divide-slate-100">
-            </div>
+          <div class="truncate">
+            <p class="text-[11px] font-medium uppercase tracking-[0.12em] text-slate-400">
+              Sistema institucional
+            </p>
+            <h1 id="headerPageTitle" class="text-lg font-semibold text-slate-900 truncate">Panel principal</h1>
           </div>
         </div>
 
-        <!-- Indicadores de Hora Oficial Chile, Rol Activo y BOTÓN SOS EN AULA -->
-        <div class="flex items-center gap-3">
-          <div class="hidden xl:flex flex-col items-end text-right">
+        <!-- Buscador Global Instantáneo -->
+        <div class="relative flex-1 max-w-md hidden md:block">
+          <svg class="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+          <input id="globalSearchInput" type="text" oninput="window.app.handleGlobalSearch(this.value)"
+            placeholder="Buscar estudiante por nombre, RUT, curso o taller (Grupo A/B)..."
+            class="w-full rounded-xl bg-slate-100/80 border border-slate-200/80 pl-10 pr-4 py-2 text-xs font-medium text-slate-800 focus:bg-white focus:border-teal-600 focus:ring-4 focus:ring-teal-600/10 focus:outline-none transition" />
+          <div id="globalSearchResults"
+            class="hidden absolute left-0 right-0 mt-1.5 bg-white rounded-2xl shadow-2xl border border-slate-200 max-h-80 overflow-y-auto z-50 divide-y divide-slate-100">
+          </div>
+        </div>
+
+        <!-- Indicadores Derecha: Hora Oficial, Rol, Notificaciones y Botón SOS -->
+        <div class="flex items-center gap-2.5">
+          <div class="hidden xl:flex flex-col items-end text-right pr-1">
             <div id="liveChileClock" class="text-xs font-mono font-bold text-slate-800">--:--:-- hrs</div>
-            <div class="text-[10px] text-slate-500 font-medium">Horario Oficial MINEDUC Chile</div>
+            <div class="text-[10px] text-slate-400 font-medium">Horario Oficial Chile</div>
           </div>
 
-          <div class="hidden sm:flex items-center gap-2 bg-slate-100 px-3 py-1.5 rounded-xl border border-slate-200">
-            <span class="text-[10px] font-bold uppercase text-slate-500">Rol Activo:</span>
-            <span id="headerRoleBadge" class="text-xs font-extrabold text-apandi-800">DOCENTE</span>
+          <div class="hidden sm:flex items-center gap-1.5 bg-teal-50 px-3 py-1.5 rounded-xl border border-teal-200/60">
+            <span class="text-[10px] font-bold uppercase text-teal-700/70">Perfil:</span>
+            <span id="headerRoleBadge" class="text-xs font-bold text-teal-900">DOCENTE</span>
           </div>
+
+          <button onclick="window.app.switchTab('tab-dashboard'); document.getElementById('utpNotificationsList')?.scrollIntoView({behavior:'smooth'})"
+            title="Notificaciones y Alertas UTP"
+            class="relative rounded-xl border border-slate-200 p-2.5 text-slate-500 hover:bg-slate-50 transition">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+            <span class="absolute right-2 top-2 h-2 w-2 rounded-full bg-amber-500"></span>
+          </button>
 
           <!-- BOTÓN CRÍTICO SOS EN AULA -->
           <button onclick="window.app.openSosModal()"
-            class="sos-pulse bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 active:scale-95 text-white font-extrabold px-4 py-2 rounded-xl shadow-lg flex items-center gap-2 text-xs md:text-sm transition cursor-pointer">
-            <span>🚨 BOTÓN SOS AULA</span>
+            class="sos-pulse bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 active:scale-95 text-white font-bold px-3.5 py-2.5 rounded-xl shadow-lg flex items-center gap-2 text-xs transition">
+            <span>🚨 SOS AULA</span>
           </button>
         </div>
       </header>
 
-      <!-- Barra de Navegación Móvil (Visible en pantallas pequeñas) -->
-      <div
-        class="lg:hidden bg-slate-900 text-white px-3 py-2 flex items-center gap-1.5 overflow-x-auto text-xs font-semibold shrink-0">
-        <button onclick="window.app.switchTab('tab-dashboard')"
-          class="px-2.5 py-1 rounded bg-apandi-600 whitespace-nowrap">1. RRHH</button>
-        <button onclick="window.app.switchTab('tab-estudiantes')"
-          class="px-2.5 py-1 rounded bg-slate-800 whitespace-nowrap">2. Talleres A/B</button>
-        <button onclick="window.app.switchTab('tab-libro')"
-          class="px-2.5 py-1 rounded bg-slate-800 whitespace-nowrap">3. Libro PID</button>
-        <button onclick="window.app.switchTab('tab-clinico')"
-          class="px-2.5 py-1 rounded bg-slate-800 whitespace-nowrap">4. PIE AES-256</button>
-        <button onclick="window.app.switchTab('tab-paec')" class="px-2.5 py-1 rounded bg-slate-800 whitespace-nowrap">5.
-          PAEC SOS</button>
-        <button onclick="window.app.switchTab('tab-apoderados')"
-          class="px-2.5 py-1 rounded bg-slate-800 whitespace-nowrap">6. Familia PDF</button>
-        <button onclick="window.app.switchTab('tab-auditoria')"
-          class="px-2.5 py-1 rounded bg-slate-800 whitespace-nowrap">7. Auditoría</button>
+      <!-- Barra de Navegación Móvil Rápida -->
+      <div id="mobileNavStrip"
+        class="lg:hidden bg-[#073b3a] text-white px-3 py-2 flex items-center gap-1.5 overflow-x-auto text-xs font-semibold shrink-0">
+        <button onclick="window.app.switchTab('tab-dashboard')" class="px-2.5 py-1 rounded-lg bg-[#087c78] whitespace-nowrap">Panel</button>
+        <button onclick="window.app.switchTab('tab-estudiantes')" class="px-2.5 py-1 rounded-lg bg-white/10 whitespace-nowrap">Estudiantes</button>
+        <button onclick="window.app.switchTab('tab-buscar-rut')" class="px-2.5 py-1 rounded-lg bg-white/10 whitespace-nowrap">Buscar RUT</button>
+        <button onclick="window.app.switchTab('tab-documentos')" class="px-2.5 py-1 rounded-lg bg-white/10 whitespace-nowrap">Documentos</button>
+        <button onclick="window.app.switchTab('tab-libro')" class="px-2.5 py-1 rounded-lg bg-white/10 whitespace-nowrap">Libro PID</button>
+        <button onclick="window.app.switchTab('tab-clinico')" class="px-2.5 py-1 rounded-lg bg-white/10 whitespace-nowrap">Ficha PIE</button>
+        <button onclick="window.app.switchTab('tab-paec')" class="px-2.5 py-1 rounded-lg bg-white/10 whitespace-nowrap">PAEC SOS</button>
+        <button onclick="window.app.switchTab('tab-apoderados')" class="px-2.5 py-1 rounded-lg bg-white/10 whitespace-nowrap">Familia PDF</button>
+        <button onclick="window.app.switchTab('tab-auditoria')" class="px-2.5 py-1 rounded-lg bg-white/10 whitespace-nowrap">Admin & RBAC</button>
       </div>
 
-      <!-- ÁREA DE CONTENIDO SCROLLABLE -->
-      <main class="flex-1 overflow-y-auto p-4 lg:p-6 space-y-6">
+      <!-- ================================================================== -->
+      <!-- ÁREA DE CONTENIDO PRINCIPAL SCROLLABLE                             -->
+      <!-- ================================================================== -->
+      <main class="flex-1 overflow-y-auto p-5 md:p-8 space-y-6">
 
         <!-- ================================================================ -->
-        <!-- MÓDULO 1: DASHBOARD INSTITUCIONAL Y PORTAL DOCENTE / RRHH        -->
+        <!-- SECCIÓN 1: PANEL PRINCIPAL (DASHBOARD FIGMA + RRHH & DECRETO 83) -->
         <!-- ================================================================ -->
-        <section id="tab-dashboard" class="tab-section space-y-6">
-          <!-- Banner de Bienvenida Contextual -->
-          <div
-            class="bg-gradient-to-r from-apandi-900 via-apandi-800 to-blue-800 rounded-2xl p-6 text-white shadow-lg flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <section id="tab-dashboard" class="tab-section mx-auto max-w-[1480px] space-y-7">
+          <!-- Cabecera de Bienvenida Figma -->
+          <div class="flex flex-col justify-between gap-4 md:flex-row md:items-end">
             <div>
-              <div
-                class="inline-flex items-center gap-2 bg-white/10 border border-white/20 px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider mb-2">
-                <span>🏛️ Centro de Capacitación Laboral APANDI</span>
-                <span>•</span>
-                <span>Decreto Exento N° 83 / Decreto N° 170</span>
-              </div>
-              <h1 id="welcomeBannerTitle" class="text-xl md:text-2xl font-extrabold">Bienvenida, Carolina Andrea Muñoz
-                Tapia</h1>
-              <p class="text-xs md:text-sm text-blue-100 mt-1">
-                Panel de Control Docente, Reloj Control Geolocalizado, Cobertura Curricular PID y Alertas Tempranas de
-                UTP.
+              <p id="dashboardFullDate" class="mb-1 text-sm text-slate-500 capitalize">
+                Martes, 10 de noviembre de 2026
+              </p>
+              <h2 id="welcomeBannerTitle" class="text-3xl font-semibold tracking-[-0.035em] text-slate-950">
+                Buenos días, Carolina
+              </h2>
+              <p class="mt-2 text-slate-500">
+                Este es el estado general de la comunidad APANDI • Educación Especial Nivel Laboral (Decreto 83 / Decreto 170).
               </p>
             </div>
             <div class="flex flex-wrap items-center gap-2.5">
               <button onclick="window.app.switchTab('tab-libro')"
-                class="bg-white text-apandi-900 hover:bg-blue-50 font-extrabold px-4 py-2.5 rounded-xl text-xs shadow transition">
-                📖 Ir al Libro de Clases Digital
+                class="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50 transition">
+                📖 Libro de Clases Digital
               </button>
-              <button onclick="window.app.switchTab('tab-clinico')"
-                class="bg-blue-700/70 hover:bg-blue-700 text-white border border-blue-400/40 font-bold px-4 py-2.5 rounded-xl text-xs transition">
-                🩺 Consultar Fichas PIE (AES-256)
+              <button onclick="window.app.openNewStudentModal()"
+                class="inline-flex items-center justify-center gap-2 rounded-xl bg-[#087c78] px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-teal-900/10 hover:bg-[#066a67] transition">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+                <span>Registrar estudiante</span>
               </button>
             </div>
           </div>
 
-          <!-- 4 KPIs Institucionales -->
-          <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-            <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200/80 flex flex-col justify-between">
-              <div class="flex items-center justify-between">
-                <span class="text-xs font-bold text-slate-500 uppercase">Matrícula Nivel Laboral</span>
-                <span
-                  class="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center font-bold">🎓</span>
+          <!-- 4 Tarjetas de Métricas Institucionales (Diseño Figma Metric) -->
+          <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm shadow-slate-200/30">
+              <div class="flex items-start justify-between">
+                <div>
+                  <p class="text-sm font-medium text-slate-500">Total estudiantes</p>
+                  <p id="kpiTotalStudents" class="mt-3 text-3xl font-semibold tracking-tight text-slate-950">5</p>
+                </div>
+                <div class="rounded-xl p-3 bg-teal-50 text-teal-700">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 21a8 8 0 0 0-16 0"/><circle cx="10" cy="8" r="5"/><path d="M22 20c0-3.37-2-6.5-4-8a5 5 0 0 0-.45-8.3"/></svg>
+                </div>
               </div>
-              <div class="my-2">
-                <span id="kpiTotalStudents" class="text-2xl font-extrabold text-slate-900">5 Estudiantes</span>
-                <span class="text-xs text-emerald-600 font-bold ml-1">100% RND Activo</span>
-              </div>
-              <div class="text-[11px] text-slate-500 flex items-center justify-between pt-2 border-t border-slate-100">
-                <span>🟢 <strong>Grupo A:</strong> 3 alumnos</span>
-                <span>🟡 <strong>Grupo B:</strong> 2 alumnos</span>
-              </div>
+              <p id="kpiGroupBreakdown" class="mt-4 text-xs text-slate-400">Registros institucionales (Grupo A y B)</p>
             </div>
 
-            <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200/80 flex flex-col justify-between">
-              <div class="flex items-center justify-between">
-                <span class="text-xs font-bold text-slate-500 uppercase">Cobertura Curricular PID</span>
-                <span
-                  class="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">✍️</span>
+            <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm shadow-slate-200/30">
+              <div class="flex items-start justify-between">
+                <div>
+                  <p class="text-sm font-medium text-slate-500">Estudiantes activos</p>
+                  <p id="kpiActiveStudents" class="mt-3 text-3xl font-semibold tracking-tight text-slate-950">4</p>
+                </div>
+                <div class="rounded-xl p-3 bg-sky-50 text-sky-700">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2"/></svg>
+                </div>
               </div>
-              <div class="my-2">
-                <span class="text-2xl font-extrabold text-slate-900">91.4%</span>
-                <span class="text-xs text-emerald-600 font-bold ml-1">+4.2% este mes</span>
-              </div>
-              <div class="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
-                <div class="bg-emerald-500 h-full rounded-full" style="width: 91.4%"></div>
-              </div>
+              <p id="kpiActiveNote" class="mt-4 text-xs text-slate-400">80% de la matrícula • 100% RND Activo</p>
             </div>
 
-            <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200/80 flex flex-col justify-between">
-              <div class="flex items-center justify-between">
-                <span class="text-xs font-bold text-slate-500 uppercase">Asistencia Estudiantil</span>
-                <span
-                  class="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center font-bold">📋</span>
+            <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm shadow-slate-200/30">
+              <div class="flex items-start justify-between">
+                <div>
+                  <p class="text-sm font-medium text-slate-500">Egresados / Retirados</p>
+                  <p id="kpiRetiredStudents" class="mt-3 text-3xl font-semibold tracking-tight text-slate-950">1</p>
+                </div>
+                <div class="rounded-xl p-3 bg-amber-50 text-amber-700">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 0 0-16 0"/></svg>
+                </div>
               </div>
-              <div class="my-2">
-                <span class="text-2xl font-extrabold text-slate-900">89.5%</span>
-                <span class="text-xs text-amber-600 font-bold ml-1">1 Alerta UTP Activa</span>
-              </div>
-              <div class="text-[11px] text-slate-500 pt-2 border-t border-slate-100">
-                Monitoreo automático de faltas consecutivas
-              </div>
+              <p class="mt-4 text-xs text-slate-400">Historial y práctica dual conservados</p>
             </div>
 
-            <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200/80 flex flex-col justify-between">
-              <div class="flex items-center justify-between">
-                <span class="text-xs font-bold text-slate-500 uppercase">Blindaje Ley 19.628</span>
-                <span
-                  class="w-8 h-8 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center font-bold">🔒</span>
+            <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm shadow-slate-200/30">
+              <div class="flex items-start justify-between">
+                <div>
+                  <p class="text-sm font-medium text-slate-500">Documentos generados</p>
+                  <p id="kpiTotalDocs" class="mt-3 text-3xl font-semibold tracking-tight text-slate-950">4</p>
+                </div>
+                <div class="rounded-xl p-3 bg-violet-50 text-violet-700">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></svg>
+                </div>
               </div>
-              <div class="my-2">
-                <span class="text-2xl font-extrabold text-emerald-700">AES-256-GCM</span>
-              </div>
-              <div class="text-[11px] text-slate-500 pt-2 border-t border-slate-100 flex items-center justify-between">
-                <span>PIE / PAEC Encriptados</span>
-                <button onclick="window.app.switchTab('tab-auditoria')"
-                  class="text-apandi-600 font-bold hover:underline">Ver Logs →</button>
-              </div>
+              <p class="mt-4 text-xs text-slate-400">PAI, PAEC, PACI, IEP, IF, AN y PV</p>
             </div>
           </div>
 
-          <!-- Fila Central: Reloj Control RRHH + Horarios + Alertas Automáticas UTP -->
+          <!-- Grilla Principal Figma: Distribución por Curso + Próximas Reevaluaciones -->
+          <div class="grid gap-6 xl:grid-cols-[1.3fr_.7fr]">
+            <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm shadow-slate-200/30">
+              <div class="mb-6 flex items-center justify-between">
+                <div>
+                  <h3 class="font-semibold text-slate-900">Distribución por curso y taller laboral</h3>
+                  <p class="mt-1 text-sm text-slate-500">Estudiantes registrados por nivel Decreto Exento N° 83</p>
+                </div>
+                <button onclick="window.app.switchTab('tab-estudiantes')" class="text-sm font-semibold text-teal-700 hover:underline">
+                  Ver base completa
+                </button>
+              </div>
+              <div id="dashboardCourseDistribution" class="space-y-5"></div>
+            </div>
+
+            <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm shadow-slate-200/30">
+              <div class="mb-5 flex items-center gap-3">
+                <div class="rounded-xl bg-amber-50 p-2.5 text-amber-700">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 7.5V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h3.5"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h5"/><path d="M17.5 17.5 16 16.3V14"/><circle cx="16" cy="16" r="6"/></svg>
+                </div>
+                <div>
+                  <h3 class="font-semibold text-slate-900">Próximas reevaluaciones</h3>
+                  <p class="text-sm text-slate-500">Fechas programadas Decreto 170 / PIE</p>
+                </div>
+              </div>
+              <div id="dashboardUpcomingReevaluations" class="space-y-3"></div>
+            </div>
+          </div>
+
+          <!-- 4 Botones de Acción Rápida Figma (Quick) -->
+          <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <button onclick="window.app.switchTab('tab-buscar-rut')"
+              class="group flex items-center gap-3 rounded-2xl border border-slate-200 bg-white p-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-teal-200 hover:shadow-md">
+              <span class="rounded-xl bg-slate-50 p-2.5 text-slate-600 group-hover:bg-teal-50 group-hover:text-teal-700">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+              </span>
+              <span class="text-sm font-semibold text-slate-700">Buscar estudiante por RUT</span>
+            </button>
+
+            <button onclick="window.app.switchTab('tab-documentos')"
+              class="group flex items-center gap-3 rounded-2xl border border-slate-200 bg-white p-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-teal-200 hover:shadow-md">
+              <span class="rounded-xl bg-slate-50 p-2.5 text-slate-600 group-hover:bg-teal-50 group-hover:text-teal-700">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M4 7V4a2 2 0 0 1 2-2h9l5 5v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-3"/><path d="M3 15h6"/><path d="M6 12v6"/></svg>
+              </span>
+              <span class="text-sm font-semibold text-slate-700">Generar documento</span>
+            </button>
+
+            <button onclick="window.app.switchTab('tab-estudiantes'); document.getElementById('excelImportInput')?.click()"
+              class="group flex items-center gap-3 rounded-2xl border border-slate-200 bg-white p-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-teal-200 hover:shadow-md">
+              <span class="rounded-xl bg-slate-50 p-2.5 text-slate-600 group-hover:bg-teal-50 group-hover:text-teal-700">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
+              </span>
+              <span class="text-sm font-semibold text-slate-700">Importar registros Excel</span>
+            </button>
+
+            <button onclick="window.app.switchTab('tab-configuracion')"
+              class="group flex items-center gap-3 rounded-2xl border border-slate-200 bg-white p-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-teal-200 hover:shadow-md">
+              <span class="rounded-xl bg-slate-50 p-2.5 text-slate-600 group-hover:bg-teal-50 group-hover:text-teal-700">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+              </span>
+              <span class="text-sm font-semibold text-slate-700">Configuración y seguridad</span>
+            </button>
+          </div>
+
+          <!-- Fila Institucional SGI: Reloj Control RRHH + Alertas UTP + Horarios -->
           <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
             <!-- Terminal de Reloj Control Docente / RRHH -->
-            <div
-              class="lg:col-span-5 bg-white p-6 rounded-2xl shadow-sm border border-slate-200/80 flex flex-col justify-between space-y-4">
+            <div class="lg:col-span-5 bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col justify-between space-y-4">
               <div>
                 <div class="flex items-center justify-between">
                   <div>
-                    <h3 class="font-extrabold text-slate-900 text-base">⏱️ Terminal de Reloj Control RRHH</h3>
-                    <p class="text-xs text-slate-500">Control de asistencia biométrico y geolocalizado (Recinto Maipú).
-                    </p>
+                    <h3 class="font-semibold text-slate-900 text-base">⏱️ Terminal de Reloj Control RRHH</h3>
+                    <p class="text-xs text-slate-500">Control de asistencia biométrico y geolocalizado (Recinto Maipú).</p>
                   </div>
-                  <span
-                    class="text-[11px] bg-emerald-100 text-emerald-800 px-2.5 py-1 rounded-full font-bold border border-emerald-200">
+                  <span class="text-[11px] bg-emerald-50 text-emerald-700 px-2.5 py-1 rounded-full font-bold border border-emerald-200">
                     📍 GPS Activo
                   </span>
                 </div>
 
-                <!-- Tarjeta de Estado de Marcaje Hoy -->
-                <div class="mt-4 p-4 rounded-xl bg-slate-900 text-white space-y-2">
+                <div class="mt-4 p-4 rounded-2xl bg-[#073b3a] text-white space-y-2">
                   <div class="flex items-center justify-between text-xs">
-                    <span class="text-slate-400">Estado Jornada Hoy:</span>
-                    <span id="clockStatusText" class="font-bold text-emerald-400">PRESENTE (GEOLOCALIZADO)</span>
+                    <span class="text-teal-100/70">Estado Jornada Hoy:</span>
+                    <span id="clockStatusText" class="font-bold text-emerald-300">PRESENTE (GEOLOCALIZADO)</span>
                   </div>
-                  <div class="grid grid-cols-2 gap-3 pt-2 border-t border-slate-800 text-center">
-                    <div class="bg-slate-800/90 p-2.5 rounded-lg">
-                      <span class="text-[10px] text-slate-400 uppercase block">Hora Entrada</span>
+                  <div class="grid grid-cols-2 gap-3 pt-2 border-t border-white/10 text-center">
+                    <div class="bg-white/10 p-2.5 rounded-xl">
+                      <span class="text-[10px] text-teal-100/70 uppercase block">Hora Entrada</span>
                       <span id="clockInTime" class="font-mono text-base font-extrabold text-white">08:04:12</span>
                     </div>
-                    <div class="bg-slate-800/90 p-2.5 rounded-lg">
-                      <span class="text-[10px] text-slate-400 uppercase block">Hora Salida</span>
+                    <div class="bg-white/10 p-2.5 rounded-xl">
+                      <span class="text-[10px] text-teal-100/70 uppercase block">Hora Salida</span>
                       <span id="clockOutTime" class="font-mono text-base font-extrabold text-amber-300">--:--:--</span>
                     </div>
                   </div>
-                  <div id="clockGpsCoords" class="text-[10px] font-mono text-slate-400 text-center pt-1">
+                  <div id="clockGpsCoords" class="text-[10px] font-mono text-teal-100/60 text-center pt-1">
                     Coordenadas recinto: Lat -33.511240, Lng -70.758130 (Precisión ±8m)
                   </div>
                 </div>
 
-                <!-- Botones de Marcaje -->
                 <div class="grid grid-cols-2 gap-3 mt-4">
                   <button onclick="window.app.markStaffAttendance('ENTRADA', 'GEOLOCALIZADO')"
-                    class="bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold py-2.5 px-4 rounded-xl text-xs shadow transition flex items-center justify-center gap-1.5">
+                    class="bg-[#087c78] hover:bg-[#066a67] text-white font-semibold py-2.5 px-4 rounded-xl text-xs shadow transition flex items-center justify-center gap-1.5">
                     <span>📍 Marcar Entrada GPS</span>
                   </button>
                   <button onclick="window.app.markStaffAttendance('SALIDA', 'GEOLOCALIZADO')"
-                    class="bg-slate-800 hover:bg-slate-900 text-white font-extrabold py-2.5 px-4 rounded-xl text-xs shadow transition flex items-center justify-center gap-1.5">
+                    class="bg-slate-800 hover:bg-slate-900 text-white font-semibold py-2.5 px-4 rounded-xl text-xs shadow transition flex items-center justify-center gap-1.5">
                     <span>🏁 Marcar Salida</span>
                   </button>
                 </div>
               </div>
 
-              <!-- Historial de Asistencia del Personal en Vivo -->
               <div class="pt-4 border-t border-slate-100">
-                <h4 class="text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-2.5">
+                <h4 class="text-xs font-bold text-slate-600 uppercase tracking-wider mb-2.5">
                   👥 Registro de Asistencia del Personal Hoy
                 </h4>
                 <div id="staffAttendanceHistoryList" class="space-y-2 max-h-48 overflow-y-auto text-xs"></div>
@@ -565,28 +717,22 @@
 
             <!-- Centro de Notificaciones UTP y Horario Semanal -->
             <div class="lg:col-span-7 space-y-6">
-              <!-- Notificaciones UTP & Disparador Automático de Inasistencias -->
-              <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200/80">
+              <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
                 <div class="flex items-center justify-between mb-3">
                   <div>
-                    <h3 class="font-extrabold text-slate-900 text-base">🔔 Centro de Alertas UTP y Workflows Automáticos
-                    </h3>
-                    <p class="text-xs text-slate-500">Alertas de inasistencias reiteradas, avisos de firma digital y
-                      despachos SOS.</p>
+                    <h3 class="font-semibold text-slate-900 text-base">🔔 Centro de Alertas UTP y Workflows Automáticos</h3>
+                    <p class="text-xs text-slate-500">Alertas de inasistencias reiteradas, avisos de firma digital y despachos SOS.</p>
                   </div>
-                  <span
-                    class="text-[11px] font-bold bg-blue-50 text-blue-700 px-2.5 py-1 rounded-lg border border-blue-200">
+                  <span class="text-[11px] font-bold bg-teal-50 text-teal-700 px-2.5 py-1 rounded-lg border border-teal-200">
                     Tiempo Real
                   </span>
                 </div>
                 <div id="utpNotificationsList" class="space-y-2.5 max-h-56 overflow-y-auto"></div>
               </div>
 
-              <!-- Horario de Bloques de Taller del Funcionario -->
-              <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200/80">
+              <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
                 <div class="flex items-center justify-between mb-3">
-                  <h3 class="font-extrabold text-slate-900 text-base">📅 Carga Horaria y Bloques de Taller Asignados
-                  </h3>
+                  <h3 class="font-semibold text-slate-900 text-base">📅 Carga Horaria y Bloques de Taller Asignados</h3>
                   <span class="text-xs font-semibold text-slate-500">Contrato: 40 hrs cronológicas</span>
                 </div>
                 <div id="staffScheduleList" class="grid grid-cols-1 md:grid-cols-2 gap-2.5 text-xs"></div>
@@ -594,27 +740,20 @@
             </div>
           </div>
 
-          <!-- Fila de Gráficos Analíticos de Cobertura Curricular y Logros Decreto 83 -->
+          <!-- Fila de Gráficos Analíticos Decreto 83 -->
           <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-            <div class="lg:col-span-7 bg-white p-6 rounded-2xl shadow-sm border border-slate-200/80">
-              <div class="flex items-center justify-between mb-4">
-                <div>
-                  <h3 class="font-extrabold text-slate-900 text-sm uppercase tracking-wider">📈 Progresión de Logros
-                    Conceptuales por Dimensión (Decreto 83)</h3>
-                  <p class="text-xs text-slate-500">Comparativa de indicadores Logrados (L), En Desarrollo (ED) y En
-                    Inicio (EI).</p>
-                </div>
+            <div class="lg:col-span-7 bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+              <div class="mb-4">
+                <h3 class="font-semibold text-slate-900 text-sm">📈 Progresión de Logros Conceptuales por Dimensión (Decreto 83)</h3>
+                <p class="text-xs text-slate-500">Comparativa de indicadores Logrados (L), En Desarrollo (ED) y En Inicio (EI).</p>
               </div>
               <canvas id="chartDimensiones" height="120"></canvas>
             </div>
 
-            <div class="lg:col-span-5 bg-white p-6 rounded-2xl shadow-sm border border-slate-200/80">
-              <div class="flex items-center justify-between mb-4">
-                <div>
-                  <h3 class="font-extrabold text-slate-900 text-sm uppercase tracking-wider">🎯 Distribución de
-                    Evaluaciones Cualitativas</h3>
-                  <p class="text-xs text-slate-500">Consolidado semestral de talleres laborales.</p>
-                </div>
+            <div class="lg:col-span-5 bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+              <div class="mb-4">
+                <h3 class="font-semibold text-slate-900 text-sm">🎯 Distribución de Evaluaciones Cualitativas</h3>
+                <p class="text-xs text-slate-500">Consolidado semestral de talleres laborales.</p>
               </div>
               <canvas id="chartLogrosDoughnut" height="155"></canvas>
             </div>
@@ -622,93 +761,273 @@
         </section>
 
         <!-- ================================================================ -->
-        <!-- MÓDULO 2: CONTROL ESTUDIANTIL, MATRÍCULA Y TALLERES (GRUPO A/B)  -->
+        <!-- SECCIÓN 2: BASE DE ESTUDIANTES (DISEÑO FIGMA + TALLERES A/B)     -->
         <!-- ================================================================ -->
-        <section id="tab-estudiantes" class="tab-section hidden space-y-6">
-          <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200/80 space-y-5">
-            <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-slate-200">
-              <div>
-                <span class="text-[11px] font-bold uppercase tracking-wider text-apandi-600">Módulo Administrativo &
-                  SIGE Educación Especial</span>
-                <h2 class="text-xl font-extrabold text-slate-900 mt-0.5">🎓 Gestión de Matrícula, Talleres Laborales y
-                  Nivel de Funcionalidad</h2>
-                <p class="text-xs text-slate-500 mt-1">
-                  Articulación de talleres con categorización funcional: <strong>Grupo A (Mayor Funcionalidad /
-                    Autonomía)</strong> y <strong>Grupo B (Mayor Apoyo / Mediación)</strong>.
-                </p>
-              </div>
-              <div class="flex flex-wrap items-center gap-2.5">
-                <select id="filterWorkshopSelect" onchange="window.app.renderStudentsModule()"
-                  class="rounded-xl border border-slate-300 px-3 py-2 text-xs font-semibold bg-slate-50">
-                  <option value="ALL">Todos los Talleres Laborales</option>
-                  <option value="1">Taller Corte y Confección Textil</option>
-                  <option value="2">Taller Gastronomía y Panadería</option>
-                  <option value="3">Taller Horticultura y Vivero</option>
-                </select>
-                <select id="filterGroupSelect" onchange="window.app.renderStudentsModule()"
-                  class="rounded-xl border border-slate-300 px-3 py-2 text-xs font-semibold bg-slate-50">
-                  <option value="ALL">Ambos Grupos (Grupo A + Grupo B)</option>
-                  <option value="GRUPO_A">🟢 Solo Grupo A (Más Funcional)</option>
-                  <option value="GRUPO_B">🟡 Solo Grupo B (Mayor Apoyo)</option>
-                </select>
-                <button onclick="window.app.openNewStudentModal()"
-                  class="bg-apandi-700 hover:bg-apandi-800 text-white font-extrabold px-4 py-2 rounded-xl text-xs shadow transition">
-                  + Matricular Estudiante
-                </button>
-              </div>
+        <section id="tab-estudiantes" class="tab-section hidden mx-auto max-w-[1480px] space-y-5">
+          <!-- Encabezado y Acciones Figma (Exportar, Importar Excel, Nuevo Estudiante) -->
+          <div class="flex flex-col justify-between gap-4 md:flex-row md:items-center">
+            <div>
+              <h2 class="text-2xl font-semibold tracking-tight text-slate-950">Base de estudiantes</h2>
+              <p id="studentsCountSubtitle" class="mt-1 text-sm text-slate-500">5 registros centralizados • Categorización Funcional Grupo A y Grupo B</p>
             </div>
+            <div class="flex flex-wrap gap-2">
+              <button onclick="window.app.exportStudentsExcel()"
+                class="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition shadow-sm">
+                <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+                <span>Exportar Excel</span>
+              </button>
 
-            <!-- Tarjetas Resumen de los 3 Talleres Laborales -->
-            <div id="workshopsSummaryCards" class="grid grid-cols-1 md:grid-cols-3 gap-4"></div>
+              <input id="excelImportInput" type="file" accept=".xlsx,.xls" class="hidden"
+                onchange="window.app.importStudentsExcel(this.files[0]); this.value='';" />
+              <button onclick="document.getElementById('excelImportInput').click()"
+                class="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition shadow-sm">
+                <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
+                <span>Importar Excel</span>
+              </button>
 
-            <!-- Tabla Institucional Enriquecida de Estudiantes -->
-            <div class="overflow-x-auto rounded-xl border border-slate-200">
-              <table class="w-full text-left border-collapse text-xs">
-                <thead>
-                  <tr class="bg-slate-900 text-slate-200 uppercase text-[11px] tracking-wider">
-                    <th class="p-3.5">Matrícula / RUT</th>
-                    <th class="p-3.5">Estudiante & Edad</th>
-                    <th class="p-3.5">Taller Laboral Asignado</th>
-                    <th class="p-3.5">Nivel de Funcionalidad</th>
-                    <th class="p-3.5">Credencial RND / JUNAEB</th>
-                    <th class="p-3.5">Apoderado Titular</th>
-                    <th class="p-3.5">Profesional SOS (PAEC)</th>
-                    <th class="p-3.5 text-right">Expedientes</th>
+              <button onclick="window.app.openNewStudentModal()"
+                class="inline-flex items-center gap-2 rounded-xl bg-[#087c78] hover:bg-[#066a67] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition">
+                <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+                <span>Nuevo estudiante</span>
+              </button>
+            </div>
+          </div>
+
+          <div id="studentsActionMessage"
+            class="hidden rounded-xl border border-teal-200 bg-teal-50 px-4 py-3 text-sm font-medium text-teal-800">
+          </div>
+
+          <!-- Tarjetas Resumen de los 3 Talleres Laborales -->
+          <div id="workshopsSummaryCards" class="grid grid-cols-1 md:grid-cols-3 gap-4"></div>
+
+          <!-- Barra de Filtros Figma + SGI -->
+          <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <div class="grid gap-3 lg:grid-cols-[1.4fr_repeat(4,.55fr)]">
+              <div class="relative">
+                <svg class="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                <input id="studentSearchQuery" type="text" oninput="window.app.renderStudentsModule()"
+                  class="w-full rounded-xl border border-slate-200 py-2.5 pl-10 pr-4 text-sm outline-none focus:border-teal-600"
+                  placeholder="Buscar por nombre, RUT o diagnóstico…" />
+              </div>
+
+              <select id="filterCourseSelect" onchange="window.app.renderStudentsModule()"
+                class="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-600 outline-none focus:border-teal-600">
+                <option value="ALL">Todos los cursos</option>
+              </select>
+
+              <select id="filterWorkshopSelect" onchange="window.app.renderStudentsModule()"
+                class="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-600 outline-none focus:border-teal-600">
+                <option value="ALL">Todos los talleres</option>
+                <option value="1">Corte y Confección Textil</option>
+                <option value="2">Gastronomía y Panadería</option>
+                <option value="3">Horticultura y Vivero</option>
+              </select>
+
+              <select id="filterGroupSelect" onchange="window.app.renderStudentsModule()"
+                class="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-600 outline-none focus:border-teal-600">
+                <option value="ALL">Grupos A y B</option>
+                <option value="GRUPO_A">🟢 Grupo A (Más Funcional)</option>
+                <option value="GRUPO_B">🟡 Grupo B (Mayor Apoyo)</option>
+              </select>
+
+              <select id="filterStatusSelect" onchange="window.app.renderStudentsModule()"
+                class="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-600 outline-none focus:border-teal-600">
+                <option value="ALL">Todos los estados</option>
+                <option value="activo">Activo</option>
+                <option value="retirado">Retirado</option>
+                <option value="egresado">Egresado / Práctica</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Tabla Institucional de Estudiantes (Estilo Figma enriquecido) -->
+          <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+            <div class="overflow-x-auto">
+              <table class="w-full min-w-[980px] text-left">
+                <thead class="border-b border-slate-200 bg-slate-50/80 text-xs uppercase tracking-wider text-slate-500">
+                  <tr>
+                    <th class="px-5 py-4">Estudiante</th>
+                    <th class="px-4 py-4">RUT</th>
+                    <th class="px-4 py-4">Curso / Taller & Grupo</th>
+                    <th class="px-4 py-4">Diagnóstico & Red SOS</th>
+                    <th class="px-4 py-4">Estado</th>
+                    <th class="px-5 py-4 text-right">Acciones</th>
                   </tr>
                 </thead>
-                <tbody id="studentsTableBody" class="divide-y divide-slate-200 bg-white"></tbody>
+                <tbody id="studentsTableBody" class="divide-y divide-slate-100 bg-white"></tbody>
               </table>
             </div>
           </div>
         </section>
 
         <!-- ================================================================ -->
-        <!-- MÓDULO 3: LIBRO DE CLASES DIGITAL (DECRETO 83 + FIRMA PIN)       -->
+        <!-- SECCIÓN 3: BUSCAR POR RUT (VISTA DEDICADA FIGMA + MÓDULO 11)     -->
         <!-- ================================================================ -->
-        <section id="tab-libro" class="tab-section hidden space-y-6">
-          <!-- Cabecera y Sub-Navegación del Libro Digital -->
-          <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200/80">
+        <section id="tab-buscar-rut" class="tab-section hidden mx-auto max-w-4xl pt-4">
+          <div class="mb-8 text-center">
+            <div class="mx-auto mb-5 grid h-14 w-14 place-items-center rounded-2xl bg-teal-50 text-teal-700">
+              <svg xmlns="http://www.w3.org/2000/svg" width="27" height="27" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+            </div>
+            <h2 class="text-3xl font-semibold tracking-tight text-slate-950">Buscar estudiante por RUT</h2>
+            <p class="mt-2.5 text-slate-500">Puedes escribirlo con o sin puntos y guion. Verificación automática de dígito verificador chileno (Módulo 11).</p>
+          </div>
+
+          <div class="relative mx-auto max-w-2xl">
+            <svg class="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400" xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+            <input id="rutSearchInput" type="text" oninput="window.app.handleRutViewSearch(this.value)"
+              class="w-full rounded-2xl border border-slate-200 bg-white py-5 pl-14 pr-5 text-lg font-mono shadow-lg shadow-slate-200/40 outline-none focus:border-teal-600 focus:ring-4 focus:ring-teal-600/10"
+              placeholder="Ej: 22.345.678-2" />
+          </div>
+
+          <!-- Accesos rápidos a RUTs matriculados para prueba inmediata -->
+          <div class="mt-3 flex flex-wrap items-center justify-center gap-2 text-xs">
+            <span class="text-slate-400 font-medium">Probar con RUT institucional:</span>
+            <button onclick="window.app.setRutSearchExample('22.345.678-2')" class="rounded-lg bg-white border border-slate-200 px-2.5 py-1 font-mono text-slate-600 hover:border-teal-500 hover:text-teal-700">22.345.678-2 (Matías)</button>
+            <button onclick="window.app.setRutSearchExample('23.456.789-6')" class="rounded-lg bg-white border border-slate-200 px-2.5 py-1 font-mono text-slate-600 hover:border-teal-500 hover:text-teal-700">23.456.789-6 (Valentina)</button>
+            <button onclick="window.app.setRutSearchExample('21.987.321-0')" class="rounded-lg bg-white border border-slate-200 px-2.5 py-1 font-mono text-slate-600 hover:border-teal-500 hover:text-teal-700">21.987.321-0 (Benjamín)</button>
+            <button onclick="window.app.setRutSearchExample('22.765.432-5')" class="rounded-lg bg-white border border-slate-200 px-2.5 py-1 font-mono text-slate-600 hover:border-teal-500 hover:text-teal-700">22.765.432-5 (Florencia)</button>
+          </div>
+
+          <p id="rutValidationError" class="hidden mt-4 text-center text-sm font-medium text-red-600">
+            El RUT ingresado no tiene un dígito verificador válido.
+          </p>
+
+          <div id="rutSearchResultsList" class="mt-8 space-y-3"></div>
+        </section>
+
+        <!-- ================================================================ -->
+        <!-- SECCIÓN 4: DOCUMENTACIÓN INSTITUCIONAL (7 FORMATOS FIGMA)        -->
+        <!-- ================================================================ -->
+        <section id="tab-documentos" class="tab-section hidden mx-auto max-w-[1480px]">
+          <!-- Vista Catálogo de Plantillas y Documentos Recientes -->
+          <div id="documentsCatalogView" class="space-y-8">
+            <div>
+              <h2 class="text-2xl font-semibold tracking-tight text-slate-950">Documentación institucional</h2>
+              <p class="mt-1 text-sm text-slate-500">
+                Selecciona un formato oficial (PAI, PAEC, PACI, IEP, IF, AN o PV); los datos del estudiante se completarán automáticamente.
+              </p>
+            </div>
+
+            <!-- Grilla de 7 Plantillas Figma -->
+            <div id="documentTemplatesGrid" class="grid gap-4 md:grid-cols-2 xl:grid-cols-3"></div>
+
+            <!-- Historial de Documentos Recientes -->
+            <div>
+              <div class="mb-4 flex items-end justify-between">
+                <div>
+                  <h3 class="text-lg font-semibold text-slate-900">Documentos recientes</h3>
+                  <p class="text-sm text-slate-500">Historial generado y auditado por el equipo multiprofesional</p>
+                </div>
+              </div>
+              <div id="recentDocumentsList" class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"></div>
+            </div>
+          </div>
+
+          <!-- Vista Editor de Documento Institucional (DocumentEditor de Figma) -->
+          <div id="documentEditorView" class="hidden mx-auto max-w-5xl">
+            <button onclick="window.app.closeDocumentEditor()" class="mb-5 inline-flex items-center gap-1 text-sm font-semibold text-teal-700 hover:underline">
+              ← Volver a formatos
+            </button>
+            <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+              <div class="border-b border-slate-200 bg-[#073b3a] p-6 text-white">
+                <div class="flex items-start gap-4">
+                  <span id="docEditorShort" class="rounded-xl bg-white/10 px-3 py-2 text-xs font-bold">PAI</span>
+                  <div>
+                    <h2 id="docEditorTitle" class="text-xl font-semibold">Plan de Apoyo Individual</h2>
+                    <p class="mt-1 text-sm text-teal-50/70">Formato institucional editable con exportación a PDF, Word e Impresión</p>
+                  </div>
+                </div>
+              </div>
+
+              <form id="documentEditorForm" class="space-y-7 p-6 md:p-8">
+                <input type="hidden" id="docEditorTemplateId" value="pai" />
+                <div class="grid gap-4 md:grid-cols-2">
+                  <label class="block text-sm font-medium text-slate-700">
+                    Estudiante
+                    <select id="docEditorStudentSelect" onchange="window.app.onDocEditorStudentChange(this.value)" required
+                      class="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm outline-none transition focus:border-teal-600 focus:ring-4 focus:ring-teal-600/10">
+                    </select>
+                  </label>
+                  <label class="block text-sm font-medium text-slate-700">
+                    Fecha del documento
+                    <input id="docEditorDate" type="date" required
+                      class="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm outline-none transition focus:border-teal-600 focus:ring-4 focus:ring-teal-600/10" />
+                  </label>
+                </div>
+
+                <!-- Resumen Autocompletado del Estudiante Seleccionado -->
+                <div id="docEditorStudentSummary" class="grid gap-3 rounded-2xl bg-slate-50 p-4 text-sm md:grid-cols-3 border border-slate-200/60"></div>
+
+                <!-- Apartados Dinámicos de la Plantilla -->
+                <div id="docEditorSectionsContainer" class="space-y-5"></div>
+
+                <div class="grid gap-4 md:grid-cols-2">
+                  <label class="block text-sm font-medium text-slate-700">
+                    Responsable / firma
+                    <input id="docEditorResponsible" type="text" placeholder="Nombre y cargo profesional"
+                      class="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm outline-none transition focus:border-teal-600 focus:ring-4 focus:ring-teal-600/10" />
+                  </label>
+                  <label class="block text-sm font-medium text-slate-700">
+                    Observaciones adicionales
+                    <textarea id="docEditorObservations" rows="3" placeholder="Observaciones o acuerdos..."
+                      class="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm outline-none transition resize-y focus:border-teal-600 focus:ring-4 focus:ring-teal-600/10"></textarea>
+                  </label>
+                </div>
+
+                <div id="docEditorMessage" class="hidden rounded-xl bg-teal-50 border border-teal-200 px-4 py-3 text-sm font-medium text-teal-800"></div>
+
+                <div class="flex flex-wrap items-center gap-2 border-t border-slate-100 pt-6">
+                  <select id="docEditorStatus"
+                    class="rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm font-medium text-slate-700 outline-none focus:border-teal-600">
+                    <option value="borrador">Guardar como borrador</option>
+                    <option value="finalizado">Marcar finalizado</option>
+                  </select>
+                  <button type="submit"
+                    class="rounded-xl bg-[#087c78] hover:bg-[#066a67] px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition">
+                    Guardar documento
+                  </button>
+
+                  <button type="button" onclick="window.app.exportCurrentDocument('pdf')"
+                    class="ml-auto inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 px-4 py-2.5 text-sm font-semibold text-slate-700 transition">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+                    <span>PDF</span>
+                  </button>
+                  <button type="button" onclick="window.app.exportCurrentDocument('word')"
+                    class="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 px-4 py-2.5 text-sm font-semibold text-slate-700 transition">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></svg>
+                    <span>Word</span>
+                  </button>
+                  <button type="button" onclick="window.print()"
+                    class="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 px-4 py-2.5 text-sm font-semibold text-slate-700 transition">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><path d="M6 9V3a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v6"/><rect x="6" y="14" width="12" height="8" rx="1"/></svg>
+                    <span>Imprimir</span>
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </section>
+
+        <!-- ================================================================ -->
+        <!-- SECCIÓN 5: LIBRO DE CLASES DIGITAL (DECRETO 83 + FIRMA PIN)      -->
+        <!-- ================================================================ -->
+        <section id="tab-libro" class="tab-section hidden mx-auto max-w-[1480px] space-y-6">
+          <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
             <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-5 border-b border-slate-200">
               <div>
                 <div class="flex items-center gap-2">
-                  <span
-                    class="bg-apandi-100 text-apandi-800 text-[11px] font-extrabold px-2.5 py-0.5 rounded-full">Circular
-                    Superintendencia de Educación</span>
-                  <span class="bg-emerald-100 text-emerald-800 text-[11px] font-extrabold px-2.5 py-0.5 rounded-full">✍️
-                    Firma Electrónica Simple Activa</span>
+                  <span class="bg-teal-50 text-teal-800 border border-teal-200 text-[11px] font-bold px-2.5 py-0.5 rounded-full">Circular Superintendencia de Educación</span>
+                  <span class="bg-emerald-50 text-emerald-800 border border-emerald-200 text-[11px] font-bold px-2.5 py-0.5 rounded-full">✍️ Firma Electrónica Simple Activa</span>
                 </div>
-                <h2 class="text-xl font-extrabold text-slate-900 mt-1">📖 Libro de Clases Digital — Educación Especial
-                  Nivel Laboral</h2>
-                <p class="text-xs text-slate-500">
-                  Gestión integrada de Asistencia Diaria, Planificación Interdisciplinaria Diversificada (PID Grupo A/B)
-                  y Evaluaciones Conceptuales Decreto 83.
+                <h2 class="text-xl font-semibold text-slate-900 mt-1.5">📖 Libro de Clases Digital — Educación Especial Nivel Laboral</h2>
+                <p class="text-xs text-slate-500 mt-0.5">
+                  Gestión integrada de Asistencia Diaria, Planificación Interdisciplinaria Diversificada (PID Grupo A/B) y Evaluaciones Conceptuales Decreto 83.
                 </p>
               </div>
 
-              <!-- Selector de Sub-módulo del Libro -->
               <div class="flex bg-slate-100 p-1 rounded-xl border border-slate-200 text-xs font-bold">
                 <button onclick="window.app.switchBookSubtab('book-pid')" id="btnSubtabPid"
-                  class="book-subtab bg-white text-apandi-900 shadow-sm px-3.5 py-2 rounded-lg transition">
+                  class="book-subtab bg-white text-teal-900 shadow-sm px-3.5 py-2 rounded-lg transition">
                   1. Planificación PID (Grupo A/B)
                 </button>
                 <button onclick="window.app.switchBookSubtab('book-asistencia')" id="btnSubtabAsist"
@@ -722,19 +1041,16 @@
               </div>
             </div>
 
-            <!-- SUB-PESTAÑA 3.1: PLANIFICACIÓN INTERDISCIPLINARIA DIVERSIFICADA (PID) + FIRMA PIN -->
+            <!-- SUB-PESTAÑA 5.1: PLANIFICACIÓN PID + FIRMA PIN -->
             <div id="book-pid" class="book-subpanel pt-5 grid grid-cols-1 lg:grid-cols-12 gap-6">
-              <div class="lg:col-span-5 bg-slate-50 p-5 rounded-2xl border border-slate-200/90">
-                <h3 class="font-extrabold text-slate-900 text-sm uppercase tracking-wider">✍️ Nueva Clase PID
-                  Diversificada y Firma PIN</h3>
-                <p class="text-xs text-slate-500 mt-1">Diseña actividades diferenciadas por nivel de funcionalidad y
-                  sella el registro con tu PIN electrónico.</p>
+              <div class="lg:col-span-5 bg-slate-50 p-5 rounded-2xl border border-slate-200">
+                <h3 class="font-bold text-slate-900 text-sm uppercase tracking-wider">✍️ Nueva Clase PID Diversificada y Firma PIN</h3>
+                <p class="text-xs text-slate-500 mt-1">Diseña actividades diferenciadas por nivel de funcionalidad y sella el registro con tu PIN electrónico.</p>
 
                 <form id="pidForm" class="mt-4 space-y-3.5 text-xs">
                   <div>
                     <label class="font-bold text-slate-700">Taller Laboral</label>
-                    <select id="pidTaller"
-                      class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 bg-white font-semibold">
+                    <select id="pidTaller" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 bg-white font-semibold">
                       <option value="1">TL-CORTE-01 • Taller de Corte y Confección Textil</option>
                       <option value="2">TL-GASTRO-02 • Taller de Gastronomía y Panadería</option>
                       <option value="3">TL-HORTI-03 • Taller de Horticultura y Vivero</option>
@@ -742,111 +1058,89 @@
                   </div>
                   <div>
                     <label class="font-bold text-slate-700">Unidad Temática Semestral</label>
-                    <input id="pidUnidad" type="text" required
-                      value="Unidad 4: Confección de Bolsos Reutilizables y Control de Calidad"
+                    <input id="pidUnidad" type="text" required value="Unidad 4: Confección de Bolsos Reutilizables y Control de Calidad"
                       class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 bg-white" />
                   </div>
                   <div>
                     <label class="font-bold text-slate-700">Objetivo de Aprendizaje (OA Nivel Laboral)</label>
-                    <input id="pidObjetivo" type="text" required
-                      value="OA 05: Unir piezas textiles aplicando costuras de refuerzo, control de pedal y normas de higiene y seguridad."
+                    <input id="pidObjetivo" type="text" required value="OA 05: Unir piezas textiles aplicando costuras de refuerzo, control de pedal y normas de higiene y seguridad."
                       class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 bg-white" />
                   </div>
 
                   <div class="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200">
-                    <label class="font-extrabold text-emerald-950 block">🟢 Actividad Diversificada GRUPO A (Mayor
-                      Funcionalidad)</label>
-                    <textarea id="pidGrupoA" rows="2" required
-                      class="mt-1.5 w-full rounded-lg border border-emerald-300 p-2 bg-white text-slate-800">Realizan costura de asas reforzadas en máquina recta industrial y verifican simetría con cinta métrica estándar.</textarea>
+                    <label class="font-extrabold text-emerald-950 block">🟢 Actividad Diversificada GRUPO A (Mayor Funcionalidad)</label>
+                    <textarea id="pidGrupoA" rows="2" required class="mt-1.5 w-full rounded-lg border border-emerald-300 p-2 bg-white text-slate-800">Realizan costura de asas reforzadas en máquina recta industrial y verifican simetría con cinta métrica estándar.</textarea>
                   </div>
 
                   <div class="p-3.5 rounded-xl bg-amber-50 border border-amber-200">
-                    <label class="font-extrabold text-amber-950 block">🟡 Actividad Diversificada GRUPO B (Mayor Apoyo y
-                      Mediación)</label>
-                    <textarea id="pidGrupoB" rows="2" required
-                      class="mt-1.5 w-full rounded-lg border border-amber-300 p-2 bg-white text-slate-800">Posicionan asas utilizando plantilla acrílica con topes táctiles, fijan con clips ergonómicos de color y realizan unión asistida.</textarea>
+                    <label class="font-extrabold text-amber-950 block">🟡 Actividad Diversificada GRUPO B (Mayor Apoyo y Mediación)</label>
+                    <textarea id="pidGrupoB" rows="2" required class="mt-1.5 w-full rounded-lg border border-amber-300 p-2 bg-white text-slate-800">Posicionan asas utilizando plantilla acrílica con topes táctiles, fijan con clips ergonómicos de color y realizan unión asistida.</textarea>
                   </div>
 
                   <div>
                     <label class="font-bold text-slate-700">Recursos DUA / Apoyos Visuales y Sensoriales</label>
-                    <input id="pidRecursos" type="text"
-                      value="Secuencia pictográfica ARASAAC, moldes táctiles de alto contraste y protectores auditivos."
+                    <input id="pidRecursos" type="text" value="Secuencia pictográfica ARASAAC, moldes táctiles de alto contraste y protectores auditivos."
                       class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 bg-white" />
                   </div>
 
-                  <!-- Caja de Firma Electrónica Simple (PIN/Token) -->
-                  <div class="p-3.5 rounded-xl bg-blue-950 text-white flex items-center justify-between gap-3">
+                  <div class="p-3.5 rounded-xl bg-[#073b3a] text-white flex items-center justify-between gap-3">
                     <div>
-                      <span class="font-extrabold text-xs text-blue-200 block">🔐 Firma Electrónica Simple (PIN /
-                        Token)</span>
-                      <span class="text-[11px] text-blue-300/80">Genera sello SHA-256 inmutable (PIN Institucional:
-                        <code>849206</code>)</span>
+                      <span class="font-extrabold text-xs text-teal-100 block">🔐 Firma Electrónica Simple (PIN / Token)</span>
+                      <span class="text-[11px] text-teal-200/80">Genera sello SHA-256 inmutable (PIN Institucional: <code>849206</code>)</span>
                     </div>
                     <input id="pidPin" type="password" maxlength="6" value="849206" required
-                      class="w-24 text-center font-mono text-sm font-extrabold rounded-lg border border-blue-400 px-2 py-2 bg-slate-900 text-emerald-400" />
+                      class="w-24 text-center font-mono text-sm font-extrabold rounded-lg border border-teal-400 px-2 py-2 bg-slate-900 text-emerald-400" />
                   </div>
 
                   <button type="submit"
-                    class="w-full bg-apandi-700 hover:bg-apandi-800 text-white font-extrabold py-3 rounded-xl shadow-md transition">
+                    class="w-full bg-[#087c78] hover:bg-[#066a67] text-white font-semibold py-3 rounded-xl shadow-md transition">
                     ✍️ Validar PIN y Firmar Clase en Libro Digital
                   </button>
                 </form>
               </div>
 
-              <!-- Historial de Clases PID Firmadas -->
               <div class="lg:col-span-7 space-y-4">
                 <div class="flex items-center justify-between">
-                  <h3 class="font-extrabold text-slate-900 text-sm uppercase tracking-wider">📚 Registro Histórico de
-                    Leccionario PID Firmado</h3>
+                  <h3 class="font-bold text-slate-900 text-sm uppercase tracking-wider">📚 Registro Histórico de Leccionario PID Firmado</h3>
                   <span class="text-xs text-slate-500">Verificación Criptográfica SHA-256</span>
                 </div>
                 <div id="pidClassesList" class="space-y-4"></div>
               </div>
             </div>
 
-            <!-- SUB-PESTAÑA 3.2: TOMA DE ASISTENCIA DIARIA MOBILE-FIRST -->
+            <!-- SUB-PESTAÑA 5.2: TOMA DE ASISTENCIA DIARIA -->
             <div id="book-asistencia" class="book-subpanel hidden pt-5 space-y-4">
-              <div
-                class="p-4 rounded-xl bg-blue-50 border border-blue-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+              <div class="p-4 rounded-xl bg-teal-50 border border-teal-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
                 <div>
-                  <strong class="text-blue-950 block text-sm">📋 Toma de Asistencia Digital — Disparador Automático de
-                    Retención Escolar</strong>
-                  <span class="text-blue-800">Al registrar a un estudiante como <strong>AUSENTE</strong>, el sistema
-                    emite automáticamente una alerta inmediata a UTP y Convivencia Escolar.</span>
+                  <strong class="text-teal-950 block text-sm">📋 Toma de Asistencia Digital — Disparador Automático de Retención Escolar</strong>
+                  <span class="text-teal-800">Al registrar a un estudiante como <strong>AUSENTE</strong>, el sistema emite automáticamente una alerta inmediata a UTP y Convivencia Escolar.</span>
                 </div>
-                <span
-                  class="font-mono font-bold bg-white text-blue-900 px-3 py-1.5 rounded-lg border border-blue-300 shrink-0">
+                <span class="font-mono font-bold bg-white text-teal-900 px-3 py-1.5 rounded-lg border border-teal-300 shrink-0">
                   Fecha: Hoy (Cerrado con PIN)
                 </span>
               </div>
 
-              <div id="attendanceStudentList"
-                class="divide-y divide-slate-200 border border-slate-200 rounded-xl bg-white"></div>
+              <div id="attendanceStudentList" class="divide-y divide-slate-200 border border-slate-200 rounded-xl bg-white"></div>
             </div>
 
-            <!-- SUB-PESTAÑA 3.3: CALIFICACIONES CONCEPTUALES CUALITATIVAS (DECRETO 83) -->
+            <!-- SUB-PESTAÑA 5.3: CALIFICACIONES CONCEPTUALES CUALITATIVAS (DECRETO 83) -->
             <div id="book-evaluaciones" class="book-subpanel hidden pt-5 space-y-5">
-              <form id="evalForm"
-                class="p-5 rounded-2xl bg-slate-50 border border-slate-200 grid grid-cols-1 md:grid-cols-12 gap-3 text-xs">
+              <form id="evalForm" class="p-5 rounded-2xl bg-slate-50 border border-slate-200 grid grid-cols-1 md:grid-cols-12 gap-3 text-xs">
                 <div class="md:col-span-4">
                   <label class="font-bold text-slate-700 block mb-1">Estudiante Evaluado</label>
-                  <select id="evalEstudiante"
-                    class="w-full rounded-xl border border-slate-300 px-3 py-2 bg-white font-semibold"></select>
+                  <select id="evalEstudiante" class="w-full rounded-xl border border-slate-300 px-3 py-2 bg-white font-semibold"></select>
                 </div>
                 <div class="md:col-span-4">
                   <label class="font-bold text-slate-700 block mb-1">Dimensión Formativa Nivel Laboral</label>
-                  <select id="evalDimension"
-                    class="w-full rounded-xl border border-slate-300 px-3 py-2 bg-white font-semibold">
+                  <select id="evalDimension" class="w-full rounded-xl border border-slate-300 px-3 py-2 bg-white font-semibold">
                     <option value="TECNICA_VOCACIONAL">1. Competencia Técnica Vocacional</option>
                     <option value="AUTONOMIA_PERSONAL">2. Autonomía Personal y Seguridad (EPP)</option>
-                    <option value="HABILIDADES_SOCIOLABORALES">3. Habilidades Sociolaborales y Trabajo en Equipo
-                    </option>
+                    <option value="HABILIDADES_SOCIOLABORALES">3. Habilidades Sociolaborales y Trabajo en Equipo</option>
                   </select>
                 </div>
                 <div class="md:col-span-4">
                   <label class="font-bold text-slate-700 block mb-1">Concepto Cualitativo (Decreto 83)</label>
-                  <select id="evalLogro"
-                    class="w-full rounded-xl border border-slate-300 px-3 py-2 bg-white font-extrabold text-emerald-800">
+                  <select id="evalLogro" class="w-full rounded-xl border border-slate-300 px-3 py-2 bg-white font-extrabold text-emerald-800">
                     <option value="LOGRADO">🟢 LOGRADO (L) — Desempeño Autónomo</option>
                     <option value="EN_DESARROLLO">🔵 EN DESARROLLO (ED) — Con Apoyo Ocasional</option>
                     <option value="EN_INICIO">🟡 EN INICIO (EI) — Requiere Mediación Permanente</option>
@@ -855,19 +1149,16 @@
                 </div>
                 <div class="md:col-span-5">
                   <label class="font-bold text-slate-700 block mb-1">Indicador de Competencia Evaluado (PID)</label>
-                  <input id="evalIndicador" type="text" required
-                    value="Reconoce y utiliza herramientas de corte respetando demarcación de seguridad industrial"
+                  <input id="evalIndicador" type="text" required value="Reconoce y utiliza herramientas de corte respetando demarcación de seguridad industrial"
                     class="w-full rounded-xl border border-slate-300 px-3 py-2 bg-white" />
                 </div>
                 <div class="md:col-span-5">
                   <label class="font-bold text-slate-700 block mb-1">Observación Cualitativa / Evidencia</label>
-                  <input id="evalComentario" type="text"
-                    value="Evidencia avance sostenido trabajando con apoyos visuales en su estación."
+                  <input id="evalComentario" type="text" value="Evidencia avance sostenido trabajando con apoyos visuales en su estación."
                     class="w-full rounded-xl border border-slate-300 px-3 py-2 bg-white" />
                 </div>
                 <div class="md:col-span-2 flex items-end">
-                  <button type="submit"
-                    class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold py-2 px-3 rounded-xl shadow transition">
+                  <button type="submit" class="w-full bg-[#087c78] hover:bg-[#066a67] text-white font-semibold py-2 px-3 rounded-xl shadow transition">
                     + Guardar Logro
                   </button>
                 </div>
@@ -879,46 +1170,39 @@
         </section>
 
         <!-- ================================================================ -->
-        <!-- MÓDULO 4: EXPEDIENTE CLÍNICO Y PIE (ENCRIPTADO AES-256 LEY 19.628)-->
+        <!-- SECCIÓN 6: EXPEDIENTE CLÍNICO Y PIE (AES-256 LEY 19.628)         -->
         <!-- ================================================================ -->
-        <section id="tab-clinico" class="tab-section hidden space-y-6">
-          <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200/80 space-y-5">
-            <!-- Cabecera y Selector de Estudiante -->
+        <section id="tab-clinico" class="tab-section hidden mx-auto max-w-[1480px] space-y-6">
+          <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-5">
             <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-slate-200">
               <div>
                 <div class="flex flex-wrap items-center gap-2">
-                  <span
-                    class="bg-emerald-100 text-emerald-900 text-[11px] font-extrabold px-2.5 py-0.5 rounded-full border border-emerald-300">
+                  <span class="bg-emerald-50 text-emerald-900 text-[11px] font-bold px-2.5 py-0.5 rounded-full border border-emerald-200">
                     🔒 Cifrado AES-256-GCM en Reposo (Ley N° 19.628)
                   </span>
-                  <span id="clinicalPermissionBadge"
-                    class="px-2.5 py-0.5 rounded-full text-[11px] font-extrabold"></span>
+                  <span id="clinicalPermissionBadge" class="px-2.5 py-0.5 rounded-full text-[11px] font-bold"></span>
                 </div>
-                <h2 class="text-xl font-extrabold text-slate-900 mt-1">🩺 Expediente Clínico Digital, PAI (DUA) y PACI
-                </h2>
+                <h2 class="text-xl font-semibold text-slate-900 mt-1.5">🩺 Expediente Clínico Digital, PAI (DUA) y PACI</h2>
                 <p class="text-xs text-slate-500">
-                  Acceso restringido por RBAC: <strong>Equipo PIE</strong> y <strong>Dirección/UTP</strong>
-                  (Lectura/Escritura) • <strong>Docente Titular</strong> (Modo Solo Lectura) • <strong>Monitor</strong>
-                  (Acceso Bloqueado).
+                  Acceso restringido por RBAC: <strong>Equipo PIE</strong> y <strong>Dirección/UTP</strong> (Lectura/Escritura) • <strong>Docente Titular</strong> (Modo Solo Lectura) • <strong>Monitor</strong> (Acceso Bloqueado).
                 </p>
               </div>
 
-              <div class="flex items-center gap-3 bg-slate-100 p-2 rounded-xl border border-slate-200">
-                <label class="text-xs font-extrabold text-slate-700 pl-2">Seleccionar Alumno:</label>
+              <div class="flex items-center gap-3 bg-slate-50 p-2 rounded-xl border border-slate-200">
+                <label class="text-xs font-bold text-slate-700 pl-2">Seleccionar Alumno:</label>
                 <select id="clinicalStudentSelect" onchange="window.app.loadClinicalRecord(this.value)"
                   class="rounded-lg border border-slate-300 px-3 py-2 text-xs font-bold bg-white"></select>
               </div>
             </div>
 
-            <!-- Pantalla de Bloqueo RBAC Ley 19.628 (cuando intenta entrar un Monitor o Apoderado) -->
-            <div id="clinicalAccessDeniedBox"
-              class="hidden p-8 rounded-2xl bg-red-50 border-2 border-red-200 text-center space-y-3">
+            <!-- Pantalla de Bloqueo RBAC Ley 19.628 -->
+            <div id="clinicalAccessDeniedBox" class="hidden p-8 rounded-2xl bg-red-50 border-2 border-red-200 text-center space-y-3">
               <div class="text-4xl">🛑</div>
               <h3 class="text-lg font-extrabold text-red-900">Acceso Denegado por Normativa Legal (Ley N° 19.628)</h3>
               <p id="clinicalDeniedText" class="text-xs text-red-800 max-w-xl mx-auto leading-relaxed"></p>
               <div class="pt-2">
                 <button onclick="window.app.quickLogin('cvargas.pie@apandi.cl')"
-                  class="bg-emerald-700 hover:bg-emerald-800 text-white font-bold px-4 py-2 rounded-xl text-xs shadow">
+                  class="bg-[#087c78] hover:bg-[#066a67] text-white font-bold px-4 py-2.5 rounded-xl text-xs shadow">
                   🩺 Cambiar a Perfil Especialista PIE para Desencriptar y Editar
                 </button>
               </div>
@@ -926,78 +1210,60 @@
 
             <!-- Contenido Desencriptado del Expediente Clínico y PIE -->
             <div id="clinicalContentBox" class="space-y-6">
-              <!-- Inspector Criptográfico AES-256 en Vivo -->
-              <div
-                class="p-4 rounded-xl bg-slate-900 text-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs">
+              <div class="p-4 rounded-xl bg-[#073b3a] text-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs">
                 <div class="space-y-1 overflow-hidden">
                   <div class="flex items-center gap-2">
-                    <span class="text-emerald-400 font-bold uppercase tracking-wider text-[11px]">⚡ Inspector
-                      Criptográfico MariaDB (AES-256-GCM):</span>
-                    <span class="text-[11px] text-slate-400">Formato
-                      <code>IV_Hex : AuthTag_Hex : CipherText_Hex</code></span>
+                    <span class="text-emerald-300 font-bold uppercase tracking-wider text-[11px]">⚡ Inspector Criptográfico MariaDB (AES-256-GCM):</span>
+                    <span class="text-[11px] text-teal-100/70">Formato <code>IV_Hex : AuthTag_Hex : CipherText_Hex</code></span>
                   </div>
                   <div id="clinicalCipherPreview" class="font-mono text-[11px] text-emerald-300 truncate"></div>
                 </div>
-                <span
-                  class="shrink-0 text-[11px] bg-slate-800 text-blue-300 px-3 py-1 rounded-lg border border-slate-700 font-mono">
+                <span class="shrink-0 text-[11px] bg-white/10 text-teal-100 px-3 py-1 rounded-lg border border-white/15 font-mono">
                   Auditado en apx_sec_trazabilidad_forense
                 </span>
               </div>
 
               <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-                <!-- Columna Izquierda: Ficha Clínica y Anamnesis (Decreto 170) -->
                 <div class="lg:col-span-6 bg-slate-50 p-5 rounded-2xl border border-slate-200 space-y-4 text-xs">
                   <div class="flex items-center justify-between">
-                    <h3 class="font-extrabold text-slate-900 text-sm uppercase tracking-wider">🧬 1. Ficha Médica,
-                      Diagnóstico y Anamnesis</h3>
+                    <h3 class="font-bold text-slate-900 text-sm uppercase tracking-wider">🧬 1. Ficha Médica, Diagnóstico y Anamnesis</h3>
                     <span class="text-[11px] font-bold text-slate-500">Decreto N° 170</span>
                   </div>
 
                   <div>
-                    <label class="font-bold text-slate-700 block">Diagnóstico Clínico Principal (Desencriptado
-                      AES-256):</label>
-                    <textarea id="clinDiagnostico" rows="2"
-                      class="mt-1 w-full rounded-xl border border-slate-300 p-3 bg-white font-medium text-slate-900"></textarea>
+                    <label class="font-bold text-slate-700 block">Diagnóstico Clínico Principal (Desencriptado AES-256):</label>
+                    <textarea id="clinDiagnostico" rows="2" class="mt-1 w-full rounded-xl border border-slate-300 p-3 bg-white font-medium text-slate-900"></textarea>
                   </div>
 
                   <div>
-                    <label class="font-bold text-slate-700 block">Síntesis de Anamnesis Evolutiva, Familiar y
-                      Sensorial:</label>
-                    <textarea id="clinAnamnesis" rows="3"
-                      class="mt-1 w-full rounded-xl border border-slate-300 p-3 bg-white font-medium text-slate-900"></textarea>
+                    <label class="font-bold text-slate-700 block">Síntesis de Anamnesis Evolutiva, Familiar y Sensorial:</label>
+                    <textarea id="clinAnamnesis" rows="3" class="mt-1 w-full rounded-xl border border-slate-300 p-3 bg-white font-medium text-slate-900"></textarea>
                   </div>
 
                   <div>
-                    <label class="font-bold text-slate-700 block mb-1.5">Farmacoterapia, Alergias y Perfil Sensorial
-                      (Columna JSON):</label>
-                    <div id="clinMedicamentosBox" class="p-3.5 bg-white rounded-xl border border-slate-200 space-y-2">
-                    </div>
+                    <label class="font-bold text-slate-700 block mb-1.5">Farmacoterapia, Alergias y Perfil Sensorial (Columna JSON):</label>
+                    <div id="clinMedicamentosBox" class="p-3.5 bg-white rounded-xl border border-slate-200 space-y-2"></div>
                   </div>
 
                   <button id="btnSaveClinical" onclick="window.app.saveClinicalRecord()"
-                    class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold py-3 rounded-xl shadow-md transition">
+                    class="w-full bg-[#087c78] hover:bg-[#066a67] text-white font-semibold py-3 rounded-xl shadow-md transition">
                     💾 Encriptar con AES-256-GCM y Guardar en MariaDB
                   </button>
                 </div>
 
-                <!-- Columna Derecha: PAI (Estrategias DUA) y PACI -->
                 <div class="lg:col-span-6 space-y-5 text-xs">
-                  <div class="p-5 rounded-2xl bg-blue-50/70 border border-blue-200 space-y-3">
+                  <div class="p-5 rounded-2xl bg-teal-50/60 border border-teal-200 space-y-3">
                     <div class="flex items-center justify-between">
-                      <h3 class="font-extrabold text-blue-950 text-sm uppercase tracking-wider">🧩 2. Plan de Apoyo
-                        Individual (PAI) & Estrategias DUA</h3>
-                      <span class="bg-blue-200/80 text-blue-950 font-bold px-2 py-0.5 rounded text-[10px]">Equipo
-                        PIE</span>
+                      <h3 class="font-bold text-teal-950 text-sm uppercase tracking-wider">🧩 2. Plan de Apoyo Individual (PAI) & Estrategias DUA</h3>
+                      <span class="bg-teal-100 text-teal-900 font-bold px-2 py-0.5 rounded text-[10px]">Equipo PIE</span>
                     </div>
                     <div id="paiContentBox" class="space-y-3 text-slate-700"></div>
                   </div>
 
-                  <div class="p-5 rounded-2xl bg-purple-50/70 border border-purple-200 space-y-3">
+                  <div class="p-5 rounded-2xl bg-sky-50/60 border border-sky-200 space-y-3">
                     <div class="flex items-center justify-between">
-                      <h3 class="font-extrabold text-purple-950 text-sm uppercase tracking-wider">📑 3. Plan de
-                        Adecuación Curricular Individual (PACI)</h3>
-                      <span class="bg-purple-200/80 text-purple-950 font-bold px-2 py-0.5 rounded text-[10px]">Visado
-                        por UTP</span>
+                      <h3 class="font-bold text-sky-950 text-sm uppercase tracking-wider">📑 3. Plan de Adecuación Curricular Individual (PACI)</h3>
+                      <span class="bg-sky-100 text-sky-900 font-bold px-2 py-0.5 rounded text-[10px]">Visado por UTP</span>
                     </div>
                     <div id="paciContentBox" class="space-y-2.5 text-slate-700"></div>
                   </div>
@@ -1008,36 +1274,29 @@
         </section>
 
         <!-- ================================================================ -->
-        <!-- MÓDULO 5: CONVIVENCIA ESCOLAR (PAEC Y CENTRO DE COMANDO SOS)     -->
+        <!-- SECCIÓN 7: CONVIVENCIA ESCOLAR (PAEC Y COMANDO SOS EN AULA)      -->
         <!-- ================================================================ -->
-        <section id="tab-paec" class="tab-section hidden space-y-6">
+        <section id="tab-paec" class="tab-section hidden mx-auto max-w-[1480px] space-y-6">
           <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-            <!-- Ficha PAEC Encriptada -->
-            <div class="lg:col-span-5 bg-white p-6 rounded-2xl shadow-sm border border-slate-200/80 space-y-4 text-xs">
+            <div class="lg:col-span-5 bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-4 text-xs">
               <div class="flex items-center justify-between pb-3 border-b border-slate-100">
                 <div>
-                  <span class="text-[10px] font-extrabold uppercase tracking-wider text-red-600">Orientaciones DEC
-                    MINEDUC</span>
-                  <h3 class="font-extrabold text-slate-900 text-base">🤝 Plan de Acompañamiento Emocional y Conductual
-                    (PAEC)</h3>
+                  <span class="text-[10px] font-bold uppercase tracking-wider text-red-600">Orientaciones DEC MINEDUC</span>
+                  <h3 class="font-semibold text-slate-900 text-base">🤝 Plan de Acompañamiento Emocional y Conductual (PAEC)</h3>
                 </div>
                 <span class="bg-slate-100 text-slate-700 font-mono text-[10px] px-2 py-1 rounded">AES-256</span>
               </div>
               <div id="paecDetailCard" class="space-y-3"></div>
             </div>
 
-            <!-- Bitácora de Incidencias y Comando SOS en Aula -->
-            <div class="lg:col-span-7 bg-white p-6 rounded-2xl shadow-sm border border-slate-200/80 space-y-4">
-              <div
-                class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+            <div class="lg:col-span-7 bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-4">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
                 <div>
-                  <h3 class="font-extrabold text-slate-900 text-base">🚨 Bitácora de Incidencias DEC y Despachos SOS en
-                    Aula</h3>
-                  <p class="text-xs text-slate-500">Registro cronológico cifrado de episodios conductuales y tiempos de
-                    respuesta del Profesional SOS.</p>
+                  <h3 class="font-semibold text-slate-900 text-base">🚨 Bitácora de Incidencias DEC y Despachos SOS en Aula</h3>
+                  <p class="text-xs text-slate-500">Registro cronológico cifrado de episodios conductuales y tiempos de respuesta del Profesional SOS.</p>
                 </div>
                 <button onclick="window.app.openSosModal()"
-                  class="bg-red-600 hover:bg-red-700 text-white font-extrabold px-4 py-2 rounded-xl text-xs shadow">
+                  class="bg-red-600 hover:bg-red-700 text-white font-bold px-4 py-2 rounded-xl text-xs shadow">
                   🚨 Disparar Alerta SOS Ahora
                 </button>
               </div>
@@ -1047,20 +1306,18 @@
         </section>
 
         <!-- ================================================================ -->
-        <!-- MÓDULO 6: PORTAL APODERADOS Y MOTOR GENERADOR DE INFORMES PDF    -->
+        <!-- SECCIÓN 8: PORTAL APODERADOS Y GENERADOR DE INFORMES PDF         -->
         <!-- ================================================================ -->
-        <section id="tab-apoderados" class="tab-section hidden space-y-6">
-          <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200/80 space-y-6">
+        <section id="tab-apoderados" class="tab-section hidden mx-auto max-w-[1480px] space-y-6">
+          <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-6">
             <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-slate-200">
               <div>
-                <span class="bg-rose-100 text-rose-800 text-[11px] font-extrabold px-2.5 py-0.5 rounded-full uppercase">
+                <span class="bg-rose-50 text-rose-700 border border-rose-200 text-[11px] font-bold px-2.5 py-0.5 rounded-full uppercase">
                   👨‍👩‍👦 Vista Exclusiva para la Familia (Modo Solo Lectura)
                 </span>
-                <h2 class="text-xl font-extrabold text-slate-900 mt-1">Portal de Apoderados & Generador Automático del
-                  "Informe para la Familia"</h2>
+                <h2 class="text-xl font-semibold text-slate-900 mt-1.5">Portal de Apoderados & Generador Automático del "Informe para la Familia"</h2>
                 <p class="text-xs text-slate-500">
-                  Extrae en tiempo real la Asistencia, las Evaluaciones Cualitativas del PID y los avances del PAI/PAEC
-                  para consolidar el documento oficial en PDF.
+                  Extrae en tiempo real la Asistencia, las Evaluaciones Cualitativas del PID y los avances del PAI/PAEC para consolidar el documento oficial en PDF.
                 </p>
               </div>
 
@@ -1068,13 +1325,12 @@
                 <select id="guardianStudentSelect" onchange="window.app.loadGuardianPortal(this.value)"
                   class="rounded-xl border border-slate-300 px-3.5 py-2.5 text-xs font-bold bg-slate-50"></select>
                 <button onclick="window.app.generateOfficialFamilyPDF()"
-                  class="bg-gradient-to-r from-apandi-700 to-blue-600 hover:from-apandi-800 hover:to-blue-700 text-white font-extrabold px-5 py-2.5 rounded-xl shadow-lg flex items-center gap-2 text-xs transition">
+                  class="bg-[#087c78] hover:bg-[#066a67] text-white font-semibold px-5 py-2.5 rounded-xl shadow-lg flex items-center gap-2 text-xs transition">
                   <span>📄 Descargar PDF Oficial "Informe para la Familia"</span>
                 </button>
               </div>
             </div>
 
-            <!-- Vista Previa Oficial Tipo Hoja A4 del Informe para la Familia -->
             <div id="guardianPortalContent"
               class="max-w-4xl mx-auto bg-white rounded-2xl border-2 border-slate-200 shadow-inner p-6 md:p-8 space-y-6 text-xs">
             </div>
@@ -1082,33 +1338,48 @@
         </section>
 
         <!-- ================================================================ -->
-        <!-- MÓDULO 7: SEGURIDAD RBAC Y CONSOLA DE AUDITORÍA LEY 19.628       -->
+        <!-- SECCIÓN 9: ADMINISTRACIÓN (USERSVIEW FIGMA + RBAC & AUDITORÍA)   -->
         <!-- ================================================================ -->
-        <section id="tab-auditoria" class="tab-section hidden space-y-6">
-          <!-- Matriz de Roles y Permisos RBAC -->
-          <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200/80 space-y-4">
-            <div class="flex items-center justify-between">
+        <section id="tab-auditoria" class="tab-section hidden mx-auto max-w-[1480px] space-y-7">
+          <!-- Sub-bloque 1: Cuentas del Equipo (UsersView exportado de Figma) -->
+          <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-5">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
-                <h2 class="text-lg font-extrabold text-slate-900">🔐 Matriz de Control de Acceso Basado en Roles (RBAC
-                  Institucional)</h2>
-                <p class="text-xs text-slate-500">Definición granular de privilegios según cargos MINEDUC y resguardo de
-                  datos sensibles Ley 19.628.</p>
+                <h2 class="text-2xl font-semibold tracking-tight text-slate-950">Cuentas del equipo</h2>
+                <p class="mt-1 text-sm text-slate-500">Perfiles y permisos de acceso institucional (Administradores, Docentes, Equipo PIE y Monitores)</p>
               </div>
+              <button onclick="window.app.openCreateUserModal()"
+                class="inline-flex items-center gap-2 rounded-xl bg-[#087c78] hover:bg-[#066a67] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" x2="19" y1="8" y2="14"/><line x1="22" x2="16" y1="11" y2="11"/></svg>
+                <span>Crear cuenta</span>
+              </button>
+            </div>
+
+            <div id="usersViewMessage" class="hidden rounded-xl bg-teal-50 border border-teal-200 px-4 py-3 text-sm font-medium text-teal-800"></div>
+
+            <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+              <div id="teamUsersList" class="divide-y divide-slate-100"></div>
+            </div>
+          </div>
+
+          <!-- Sub-bloque 2: Matriz de Control de Acceso Basado en Roles (RBAC) -->
+          <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-4">
+            <div>
+              <h3 class="text-lg font-semibold text-slate-900">🔐 Matriz de Control de Acceso Basado en Roles (RBAC Institucional)</h3>
+              <p class="text-xs text-slate-500">Definición granular de privilegios según cargos MINEDUC y resguardo de datos sensibles Ley 19.628.</p>
             </div>
             <div id="rbacRolesGrid" class="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs"></div>
           </div>
 
-          <!-- Tabla de Logs de Auditoría -->
-          <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200/80 space-y-4">
+          <!-- Sub-bloque 3: Tabla de Logs de Auditoría Forense -->
+          <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-4">
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-200">
               <div>
-                <h3 class="text-lg font-extrabold text-slate-900">🛡️ Registro Inmutable de Auditoría (Trazabilidad Ley
-                  N° 19.628)</h3>
-                <p class="text-xs text-slate-500">Bitácora forense de cada acceso a Fichas Clínicas, desencriptación
-                  AES-256, firmas PID y alertas SOS.</p>
+                <h3 class="text-lg font-semibold text-slate-900">🛡️ Registro Inmutable de Auditoría (Trazabilidad Ley N° 19.628)</h3>
+                <p class="text-xs text-slate-500">Bitácora forense de cada acceso a Fichas Clínicas, desencriptación AES-256, firmas PID, documentos y alertas SOS.</p>
               </div>
               <button onclick="window.app.loadAuditLogs()"
-                class="bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold px-4 py-2 rounded-xl">
+                class="bg-[#073b3a] hover:bg-slate-800 text-white text-xs font-semibold px-4 py-2 rounded-xl transition">
                 🔄 Refrescar Logs en Vivo
               </button>
             </div>
@@ -1116,17 +1387,75 @@
             <div class="overflow-x-auto rounded-xl border border-slate-200">
               <table class="w-full text-left border-collapse text-xs">
                 <thead>
-                  <tr class="bg-slate-900 text-slate-200 uppercase text-[11px]">
-                    <th class="p-3">ID / Fecha y Hora</th>
-                    <th class="p-3">Funcionario / Rol</th>
-                    <th class="p-3">Módulo Auditado</th>
-                    <th class="p-3">Operación</th>
-                    <th class="p-3">Detalle de Trazabilidad Legal</th>
-                    <th class="p-3">IP Origen</th>
+                  <tr class="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase text-[11px]">
+                    <th class="p-3.5">ID / Fecha y Hora</th>
+                    <th class="p-3.5">Funcionario / Rol</th>
+                    <th class="p-3.5">Módulo Auditado</th>
+                    <th class="p-3.5">Operación</th>
+                    <th class="p-3.5">Detalle de Trazabilidad Legal</th>
+                    <th class="p-3.5">IP Origen</th>
                   </tr>
                 </thead>
-                <tbody id="auditTableBody" class="divide-y divide-slate-200 bg-white"></tbody>
+                <tbody id="auditTableBody" class="divide-y divide-slate-100 bg-white"></tbody>
               </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- ================================================================ -->
+        <!-- SECCIÓN 10: CONFIGURACIÓN (SETTINGSVIEW FIGMA)                   -->
+        <!-- ================================================================ -->
+        <section id="tab-configuracion" class="tab-section hidden mx-auto max-w-4xl space-y-6">
+          <div>
+            <h2 class="text-2xl font-semibold tracking-tight text-slate-950">Configuración</h2>
+            <p class="mt-1 text-sm text-slate-500">Seguridad, cifrado institucional y preferencias de plataforma</p>
+          </div>
+
+          <div class="grid gap-5 md:grid-cols-2">
+            <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+              <div class="mb-4 w-fit rounded-xl bg-teal-50 p-2.5 text-teal-700">
+                <svg xmlns="http://www.w3.org/2000/svg" width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></svg>
+              </div>
+              <h3 class="font-semibold text-slate-900">Seguridad de la cuenta</h3>
+              <p id="settingsUserSummary" class="mt-2 text-sm leading-6 text-slate-500">
+                Sesión protegida por 8 horas con token JWT firmado (HMAC-SHA256) y bloqueo automático ante intentos fallidos.
+              </p>
+            </div>
+
+            <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+              <div class="mb-4 w-fit rounded-xl bg-teal-50 p-2.5 text-teal-700">
+                <svg xmlns="http://www.w3.org/2000/svg" width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5V19A9 3 0 0 0 21 19V5"/><path d="M3 12A9 3 0 0 0 21 12"/></svg>
+              </div>
+              <h3 class="font-semibold text-slate-900">Base de datos y Criptografía</h3>
+              <p class="mt-2 text-sm leading-6 text-slate-500">
+                Información centralizada en MariaDB 11.4 con cifrado autenticado <strong>AES-256-GCM</strong> en reposo (Ley N° 19.628) y control de acceso por rol.
+              </p>
+            </div>
+
+            <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+              <div class="mb-4 w-fit rounded-xl bg-teal-50 p-2.5 text-teal-700">
+                <svg xmlns="http://www.w3.org/2000/svg" width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2"/></svg>
+              </div>
+              <h3 class="font-semibold text-slate-900">Trazabilidad forense</h3>
+              <p class="mt-2 text-sm leading-6 text-slate-500">
+                Las altas, modificaciones, eliminaciones, importaciones Excel, firmas PID y descargas de documentos quedan auditadas.
+              </p>
+              <button onclick="window.app.switchTab('tab-auditoria')" class="mt-3 text-xs font-semibold text-teal-700 hover:underline">
+                Abrir consola de auditoría →
+              </button>
+            </div>
+
+            <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+              <div class="mb-4 w-fit rounded-xl bg-teal-50 p-2.5 text-teal-700">
+                <svg xmlns="http://www.w3.org/2000/svg" width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+              </div>
+              <h3 class="font-semibold text-slate-900">Copias y exportación</h3>
+              <p class="mt-2 text-sm leading-6 text-slate-500">
+                Exporta la base estudiantil completa en formato Excel (.xlsx) o importa planillas institucionales en cualquier momento.
+              </p>
+              <button onclick="window.app.exportStudentsExcel()" class="mt-3 text-xs font-semibold text-teal-700 hover:underline">
+                Descargar respaldo Excel ahora →
+              </button>
             </div>
           </div>
         </section>
@@ -1139,30 +1468,26 @@
   <!-- MODAL 1: BOTÓN SOS EN AULA (DESREGULACIÓN SEVERA PAEC)               -->
   <!-- ==================================================================== -->
   <div id="sosModal"
-    class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    class="hidden fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
     <div class="bg-white rounded-3xl max-w-lg w-full p-6 md:p-8 shadow-2xl border-t-8 border-red-600">
       <div class="flex items-center justify-between">
-        <span class="bg-red-100 text-red-800 font-extrabold text-[11px] px-3 py-1 rounded-full uppercase">Protocolo de
-          Emergencia DEC Etapa 3</span>
-        <button onclick="window.app.closeSosModal()"
-          class="text-slate-400 hover:text-slate-700 font-bold text-xl">✕</button>
+        <span class="bg-red-100 text-red-800 font-extrabold text-[11px] px-3 py-1 rounded-full uppercase">Protocolo de Emergencia DEC Etapa 3</span>
+        <button onclick="window.app.closeSosModal()" class="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100">✕</button>
       </div>
       <h3 class="text-xl font-extrabold text-red-700 mt-2">🚨 Activar Botón SOS en Aula</h3>
       <p class="text-xs text-slate-600 mt-1">
-        Notifica instantáneamente al <strong>Profesional SOS designado en el PAEC</strong> del alumno, despliega en
-        pantalla el protocolo de contención personalizado y registra el evento encriptado en la bitácora.
+        Notifica instantáneamente al <strong>Profesional SOS designado en el PAEC</strong> del alumno, despliega en pantalla el protocolo de contención personalizado y registra el evento encriptado en la bitácora.
       </p>
 
       <form id="sosForm" class="mt-5 space-y-4 text-xs">
         <div>
           <label class="font-bold text-slate-700 block">Estudiante en Episodio de Desregulación Severa:</label>
-          <select id="sosStudentSelect"
-            class="mt-1 w-full rounded-xl border border-slate-300 px-3.5 py-2.5 font-bold bg-slate-50"></select>
+          <select id="sosStudentSelect" class="mt-1 w-full rounded-xl border border-slate-300 px-3.5 py-2.5 font-bold bg-slate-50"></select>
         </div>
         <div>
           <label class="font-bold text-slate-700 block">Sala / Taller de Ubicación Actual:</label>
-          <input id="sosUbicacion" type="text" value="Pabellón Técnico - Sala T1 (Taller de Corte y Confección)"
-            required class="mt-1 w-full rounded-xl border border-slate-300 px-3.5 py-2.5" />
+          <input id="sosUbicacion" type="text" value="Pabellón Técnico - Sala T1 (Taller de Corte y Confección)" required
+            class="mt-1 w-full rounded-xl border border-slate-300 px-3.5 py-2.5" />
         </div>
         <div>
           <label class="font-bold text-slate-700 block">Descripción Breve del Gatillante Observado:</label>
@@ -1171,7 +1496,7 @@
         </div>
         <div class="flex justify-end gap-2.5 pt-2">
           <button type="button" onclick="window.app.closeSosModal()"
-            class="px-4 py-2.5 rounded-xl border border-slate-300 text-slate-700 font-bold">
+            class="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-700 font-semibold">
             Cancelar
           </button>
           <button type="submit"
@@ -1184,94 +1509,346 @@
   </div>
 
   <!-- ==================================================================== -->
-  <!-- MODAL 2: NUEVA MATRÍCULA DE ESTUDIANTE (GRUPO A / GRUPO B)           -->
+  <!-- MODAL 2: CREAR / EDITAR FICHA DEL ESTUDIANTE (STUDENTMODAL FIGMA)    -->
   <!-- ==================================================================== -->
   <div id="newStudentModal"
-    class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-    <div class="bg-white rounded-3xl max-w-xl w-full p-6 md:p-8 shadow-2xl border-t-8 border-apandi-700">
-      <div class="flex items-center justify-between">
-        <span class="bg-blue-100 text-blue-800 font-extrabold text-[11px] px-3 py-1 rounded-full uppercase">Admisión y
-          Matrícula 2026</span>
-        <button onclick="document.getElementById('newStudentModal').classList.add('hidden')"
-          class="text-slate-400 hover:text-slate-700 font-bold text-xl">✕</button>
+    class="hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-3 backdrop-blur-sm">
+    <div class="max-h-[94vh] w-full max-w-6xl overflow-y-auto rounded-2xl bg-white shadow-2xl">
+      <div class="sticky top-0 z-10 flex items-start justify-between border-b border-slate-100 bg-white px-6 py-5">
+        <div>
+          <h2 id="studentModalTitle" class="text-xl font-semibold tracking-tight text-slate-950">Registrar estudiante</h2>
+          <p class="mt-1 text-sm text-slate-500">Ficha institucional completa • Los campos marcados con * son obligatorios</p>
+        </div>
+        <button type="button" onclick="window.app.closeStudentModal()" class="rounded-lg p-2 text-slate-400 hover:bg-slate-100">
+          ✕
+        </button>
       </div>
-      <h3 class="text-xl font-extrabold text-slate-900 mt-2">🎓 Matricular Estudiante y Asignar Taller Laboral</h3>
 
-      <form id="newStudentForm" class="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3.5 text-xs">
-        <div>
-          <label class="font-bold text-slate-700">RUT del Estudiante</label>
-          <input id="newEstRut" type="text" required placeholder="22.876.543-1"
-            oninput="this.value = window.app.formatRutInput(this.value)"
-            class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 font-mono" />
-        </div>
-        <div>
-          <label class="font-bold text-slate-700">Fecha de Nacimiento</label>
-          <input id="newEstNacimiento" type="date" value="2007-08-15" required
-            class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" />
-        </div>
-        <div>
-          <label class="font-bold text-slate-700">Nombres</label>
-          <input id="newEstNombres" type="text" required placeholder="Lucas Mateo"
-            class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" />
-        </div>
-        <div>
-          <label class="font-bold text-slate-700">Apellidos</label>
-          <input id="newEstApellidos" type="text" required placeholder="González Rojas"
-            class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" />
-        </div>
-        <div>
-          <label class="font-bold text-slate-700">Taller Laboral Asignado</label>
-          <select id="newEstTaller" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 font-semibold">
-            <option value="1">Taller de Corte y Confección Textil</option>
-            <option value="2">Taller de Gastronomía y Panadería</option>
-            <option value="3">Taller de Horticultura y Vivero</option>
-          </select>
-        </div>
-        <div>
-          <label class="font-bold text-slate-700">Categorización Funcional (Decreto 83)</label>
-          <select id="newEstGrupo"
-            class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 font-bold text-apandi-800">
-            <option value="GRUPO_A">🟢 GRUPO A (Mayor Funcionalidad)</option>
-            <option value="GRUPO_B">🟡 GRUPO B (Mayor Apoyo)</option>
-          </select>
-        </div>
-        <div>
-          <label class="font-bold text-slate-700">% Discapacidad RND / COMPIN</label>
-          <input id="newEstPct" type="number" min="10" max="100" value="55" required
-            class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" />
-        </div>
-        <div>
-          <label class="font-bold text-slate-700">Comuna de Residencia</label>
-          <input id="newEstComuna" type="text" value="Maipú" required
-            class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" />
-        </div>
-        <div class="sm:col-span-2">
-          <label class="font-bold text-slate-700">Observaciones Pedagógicas de Ingreso</label>
-          <textarea id="newEstObs" rows="2"
-            class="mt-1 w-full rounded-xl border border-slate-300 p-2">Estudiante derivado con evaluación diagnóstica integral Decreto 170 al día.</textarea>
-        </div>
-        <div class="sm:col-span-2 flex justify-end gap-2 pt-2">
-          <button type="button" onclick="document.getElementById('newStudentModal').classList.add('hidden')"
-            class="px-4 py-2 rounded-xl border border-slate-300 font-bold">
-            Cancelar
-          </button>
-          <button type="submit"
-            class="bg-apandi-700 hover:bg-apandi-800 text-white font-extrabold px-5 py-2 rounded-xl shadow">
-            Confirmar Matrícula Oficial
-          </button>
-        </div>
-      </form>
+      <div class="p-6">
+        <form id="newStudentForm" class="space-y-7">
+          <input type="hidden" id="editEstId" value="" />
+
+          <!-- Sección 1: Identificación personal -->
+          <section>
+            <div class="mb-4 flex items-center gap-3">
+              <span class="h-5 w-1 rounded-full bg-teal-600"></span>
+              <h3 class="font-semibold text-slate-900">Identificación personal</h3>
+            </div>
+            <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+              <label class="block text-sm font-medium text-slate-700">
+                N° de registro / matrícula *
+                <input id="newEstRegistro" type="text" required placeholder="MAT-2026-006"
+                  class="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm outline-none focus:border-teal-600 focus:ring-4 focus:ring-teal-600/10" />
+              </label>
+              <label class="block text-sm font-medium text-slate-700">
+                RUT *
+                <input id="newEstRut" type="text" required placeholder="22.345.678-2"
+                  oninput="this.value = window.app.formatRutInput(this.value)"
+                  class="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm font-mono outline-none focus:border-teal-600 focus:ring-4 focus:ring-teal-600/10" />
+              </label>
+              <label class="block text-sm font-medium text-slate-700">
+                Nombres *
+                <input id="newEstNombres" type="text" required placeholder="Lucas Mateo"
+                  class="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm outline-none focus:border-teal-600 focus:ring-4 focus:ring-teal-600/10" />
+              </label>
+              <label class="block text-sm font-medium text-slate-700">
+                Apellido paterno *
+                <input id="newEstApellidoPaterno" type="text" required placeholder="González"
+                  class="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm outline-none focus:border-teal-600 focus:ring-4 focus:ring-teal-600/10" />
+              </label>
+              <label class="block text-sm font-medium text-slate-700">
+                Apellido materno
+                <input id="newEstApellidoMaterno" type="text" placeholder="Rojas"
+                  class="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm outline-none focus:border-teal-600 focus:ring-4 focus:ring-teal-600/10" />
+              </label>
+              <label class="block text-sm font-medium text-slate-700">
+                Nombre social
+                <input id="newEstNombreSocial" type="text" placeholder="Opcional"
+                  class="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm outline-none focus:border-teal-600 focus:ring-4 focus:ring-teal-600/10" />
+              </label>
+              <label class="block text-sm font-medium text-slate-700">
+                Fecha de nacimiento *
+                <input id="newEstNacimiento" type="date" value="2007-08-15" required
+                  class="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm outline-none focus:border-teal-600 focus:ring-4 focus:ring-teal-600/10" />
+              </label>
+              <label class="block text-sm font-medium text-slate-700">
+                Género
+                <select id="newEstGenero"
+                  class="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm outline-none focus:border-teal-600">
+                  <option value="Masculino">Masculino</option>
+                  <option value="Femenino">Femenino</option>
+                  <option value="No binario">No binario</option>
+                  <option value="Prefiere no indicar">Prefiere no indicar</option>
+                </select>
+              </label>
+              <label class="block text-sm font-medium text-slate-700">
+                Nacionalidad
+                <input id="newEstNacionalidad" type="text" value="Chilena"
+                  class="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm outline-none focus:border-teal-600" />
+              </label>
+            </div>
+          </section>
+
+          <!-- Sección 2: Información académica y taller laboral -->
+          <section>
+            <div class="mb-4 flex items-center gap-3">
+              <span class="h-5 w-1 rounded-full bg-teal-600"></span>
+              <h3 class="font-semibold text-slate-900">Información académica y Taller Laboral</h3>
+            </div>
+            <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+              <label class="block text-sm font-medium text-slate-700">
+                Curso *
+                <input id="newEstCurso" type="text" value="Nivel Laboral 2A" required
+                  class="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm outline-none focus:border-teal-600" />
+              </label>
+              <label class="block text-sm font-medium text-slate-700">
+                Nivel Decreto 83
+                <input id="newEstNivel" type="text" value="Nivel Laboral 2 (Decreto Exento N° 83)"
+                  class="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm outline-none focus:border-teal-600" />
+              </label>
+              <label class="block text-sm font-medium text-slate-700">
+                Taller laboral asignado *
+                <select id="newEstTaller"
+                  class="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm outline-none focus:border-teal-600">
+                  <option value="1">Taller Laboral de Corte y Confección Textil</option>
+                  <option value="2">Taller Laboral de Gastronomía, Panadería y Repostería</option>
+                  <option value="3">Taller Laboral de Horticultura, Vivero y Paisajismo</option>
+                </select>
+              </label>
+              <label class="block text-sm font-medium text-slate-700">
+                Categorización Funcional (Grupo A/B) *
+                <select id="newEstGrupo"
+                  class="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm font-semibold text-teal-800 outline-none focus:border-teal-600">
+                  <option value="GRUPO_A">🟢 GRUPO A (Mayor Funcionalidad / Autonomía)</option>
+                  <option value="GRUPO_B">🟡 GRUPO B (Mayor Apoyo y Mediación)</option>
+                </select>
+              </label>
+              <label class="block text-sm font-medium text-slate-700">
+                % Discapacidad RND / COMPIN
+                <input id="newEstPct" type="number" min="10" max="100" value="55"
+                  class="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm outline-none focus:border-teal-600" />
+              </label>
+              <label class="block text-sm font-medium text-slate-700">
+                Año de matrícula *
+                <input id="newEstAnioMatricula" type="number" value="2026" required
+                  class="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm outline-none focus:border-teal-600" />
+              </label>
+              <label class="block text-sm font-medium text-slate-700">
+                Estado
+                <select id="newEstEstado"
+                  class="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm outline-none focus:border-teal-600">
+                  <option value="activo">Activo</option>
+                  <option value="retirado">Retirado</option>
+                  <option value="egresado">Egresado / Práctica</option>
+                </select>
+              </label>
+              <label class="block text-sm font-medium text-slate-700">
+                Fecha de evaluación
+                <input id="newEstFechaEval" type="date" value="2026-03-15"
+                  class="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm outline-none focus:border-teal-600" />
+              </label>
+              <label class="block text-sm font-medium text-slate-700">
+                Fecha de reevaluación
+                <input id="newEstFechaReeval" type="date" value="2026-11-30"
+                  class="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm outline-none focus:border-teal-600" />
+              </label>
+            </div>
+          </section>
+
+          <!-- Sección 3: Antecedentes familiares y contacto -->
+          <section>
+            <div class="mb-4 flex items-center gap-3">
+              <span class="h-5 w-1 rounded-full bg-teal-600"></span>
+              <h3 class="font-semibold text-slate-900">Antecedentes familiares y contacto</h3>
+            </div>
+            <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+              <label class="block text-sm font-medium text-slate-700">
+                Domicilio
+                <input id="newEstDireccion" type="text" placeholder="Av. Los Pajaritos 3450"
+                  class="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm outline-none focus:border-teal-600" />
+              </label>
+              <label class="block text-sm font-medium text-slate-700">
+                Comuna
+                <input id="newEstComuna" type="text" value="Maipú"
+                  class="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm outline-none focus:border-teal-600" />
+              </label>
+              <label class="block text-sm font-medium text-slate-700">
+                Teléfono estudiante / recados
+                <input id="newEstTelefono" type="text" placeholder="+56 9 8765 4321"
+                  class="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm outline-none focus:border-teal-600" />
+              </label>
+              <label class="block text-sm font-medium text-slate-700">
+                Nombre del apoderado titular
+                <input id="newEstApoderadoNombre" type="text" placeholder="Patricia Elena Gómez Díaz"
+                  class="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm outline-none focus:border-teal-600" />
+              </label>
+              <label class="block text-sm font-medium text-slate-700">
+                RUT del apoderado
+                <input id="newEstApoderadoRut" type="text" placeholder="12.345.678-5"
+                  oninput="this.value = window.app.formatRutInput(this.value)"
+                  class="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm font-mono outline-none focus:border-teal-600" />
+              </label>
+              <label class="block text-sm font-medium text-slate-700">
+                Teléfono del apoderado
+                <input id="newEstApoderadoTel" type="text" placeholder="+56 9 8666 7788"
+                  class="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm outline-none focus:border-teal-600" />
+              </label>
+              <label class="block text-sm font-medium text-slate-700">
+                Correo del apoderado
+                <input id="newEstApoderadoEmail" type="email" placeholder="familia@correo.cl"
+                  class="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm outline-none focus:border-teal-600" />
+              </label>
+            </div>
+          </section>
+
+          <!-- Sección 4: Antecedentes educativos y diagnósticos -->
+          <section>
+            <div class="mb-4 flex items-center gap-3">
+              <span class="h-5 w-1 rounded-full bg-teal-600"></span>
+              <h3 class="font-semibold text-slate-900">Antecedentes educativos y diagnósticos (Cifrado Ley 19.628)</h3>
+            </div>
+            <div class="grid gap-4 md:grid-cols-2">
+              <label class="block text-sm font-medium text-slate-700">
+                Diagnóstico principal (Decreto 170)
+                <input id="newEstDiagPrincipal" type="text" placeholder="Ej: Discapacidad Intelectual Leve / TEA"
+                  class="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm outline-none focus:border-teal-600" />
+              </label>
+              <label class="block text-sm font-medium text-slate-700">
+                Diagnóstico secundario
+                <input id="newEstDiagSecundario" type="text" placeholder="Opcional"
+                  class="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm outline-none focus:border-teal-600" />
+              </label>
+              <label class="block text-sm font-medium text-slate-700">
+                Necesidades de apoyo (DUA / PIE)
+                <textarea id="newEstApoyos" rows="3"
+                  class="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm outline-none resize-y focus:border-teal-600">Anticipación visual con pictogramas ARASAAC y mediación paso a paso en taller.</textarea>
+              </label>
+              <label class="block text-sm font-medium text-slate-700">
+                Fortalezas del estudiante
+                <textarea id="newEstFortalezas" rows="3"
+                  class="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm outline-none resize-y focus:border-teal-600">Excelente disposición para actividades prácticas y respeto por normas de higiene y seguridad.</textarea>
+              </label>
+              <label class="block text-sm font-medium text-slate-700">
+                Observaciones pedagógicas
+                <textarea id="newEstObs" rows="3"
+                  class="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm outline-none resize-y focus:border-teal-600">Estudiante derivado con evaluación diagnóstica integral Decreto 170 al día.</textarea>
+              </label>
+              <label class="block text-sm font-medium text-slate-700">
+                Antecedentes relevantes / Anamnesis
+                <textarea id="newEstAntecedentes" rows="3"
+                  class="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm outline-none resize-y focus:border-teal-600">Escolaridad previa en modalidad de Educación Especial con apoyo familiar constante.</textarea>
+              </label>
+            </div>
+          </section>
+
+          <div id="studentModalError" class="hidden rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700"></div>
+
+          <div class="sticky bottom-0 flex justify-end gap-2 border-t border-slate-100 bg-white py-4">
+            <button type="button" onclick="window.app.closeStudentModal()"
+              class="rounded-xl border border-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-50">
+              Cancelar
+            </button>
+            <button type="submit"
+              class="rounded-xl bg-[#087c78] hover:bg-[#066a67] px-5 py-2.5 text-sm font-semibold text-white shadow-sm">
+              Guardar ficha
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   </div>
 
   <!-- ==================================================================== -->
-  <!-- MODAL 3: NOTIFICACIÓN TOAST FLOTANTE                                 -->
+  <!-- MODAL 3: FICHA INDIVIDUAL DEL ESTUDIANTE (STUDENTPROFILE FIGMA)      -->
+  <!-- ==================================================================== -->
+  <div id="studentProfileModal"
+    class="hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-3 backdrop-blur-sm">
+    <div class="max-h-[94vh] w-full max-w-6xl overflow-y-auto rounded-2xl bg-white shadow-2xl">
+      <div class="sticky top-0 z-10 flex items-start justify-between border-b border-slate-100 bg-white px-6 py-5">
+        <div>
+          <h2 class="text-xl font-semibold tracking-tight text-slate-950">Ficha individual del estudiante</h2>
+          <p id="profileModalSubtitle" class="mt-1 text-sm text-slate-500">Registro MAT-2026-001</p>
+        </div>
+        <button type="button" onclick="window.app.closeStudentProfileModal()" class="rounded-lg p-2 text-slate-400 hover:bg-slate-100">
+          ✕
+        </button>
+      </div>
+
+      <div id="studentProfileModalBody" class="p-6"></div>
+    </div>
+  </div>
+
+  <!-- ==================================================================== -->
+  <!-- MODAL 4: CREAR CUENTA DE USUARIO DEL EQUIPO (USERSVIEW FIGMA)        -->
+  <!-- ==================================================================== -->
+  <div id="createUserModal"
+    class="hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-3 backdrop-blur-sm">
+    <div class="max-h-[94vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white shadow-2xl">
+      <div class="sticky top-0 z-10 flex items-start justify-between border-b border-slate-100 bg-white px-6 py-5">
+        <div>
+          <h2 class="text-xl font-semibold tracking-tight text-slate-950">Crear cuenta de usuario</h2>
+          <p class="mt-1 text-sm text-slate-500">La contraseña temporal debe tener al menos 10 caracteres</p>
+        </div>
+        <button type="button" onclick="document.getElementById('createUserModal').classList.add('hidden')" class="rounded-lg p-2 text-slate-400 hover:bg-slate-100">
+          ✕
+        </button>
+      </div>
+      <div class="p-6">
+        <form id="createUserForm" class="space-y-4">
+          <label class="block text-sm font-medium text-slate-700">
+            Nombre completo *
+            <input id="newUserName" type="text" required placeholder="Ej: Francisca Morales Soto"
+              class="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm outline-none focus:border-teal-600" />
+          </label>
+          <label class="block text-sm font-medium text-slate-700">
+            Nombre de usuario *
+            <input id="newUserUsername" type="text" required placeholder="ej. fmorales"
+              class="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm outline-none focus:border-teal-600" />
+          </label>
+          <label class="block text-sm font-medium text-slate-700">
+            Correo institucional *
+            <input id="newUserEmail" type="email" required placeholder="fmorales@apandi.cl"
+              class="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm outline-none focus:border-teal-600" />
+          </label>
+          <label class="block text-sm font-medium text-slate-700">
+            RUT del funcionario
+            <input id="newUserRut" type="text" placeholder="18.765.432-1"
+              oninput="this.value = window.app.formatRutInput(this.value)"
+              class="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm font-mono outline-none focus:border-teal-600" />
+          </label>
+          <label class="block text-sm font-medium text-slate-700">
+            Contraseña temporal *
+            <input id="newUserPassword" type="password" value="Ap4nd1#S3cV4ult!2026_Cl" required placeholder="Mínimo 10 caracteres"
+              class="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm outline-none focus:border-teal-600" />
+          </label>
+          <label class="block text-sm font-medium text-slate-700">
+            Perfil institucional *
+            <select id="newUserRole"
+              class="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm outline-none focus:border-teal-600">
+              <option value="docente">Docente Titular</option>
+              <option value="profesor">Profesor / Co-Docente</option>
+              <option value="especialista_pie">Especialista PIE</option>
+              <option value="administrador">Administrador / UTP</option>
+              <option value="monitor">Monitor de Taller</option>
+            </select>
+          </label>
+          <button type="submit"
+            class="w-full rounded-xl bg-[#087c78] hover:bg-[#066a67] py-3 text-sm font-semibold text-white shadow-sm transition">
+            Crear cuenta
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================================================================== -->
+  <!-- MODAL 5: NOTIFICACIÓN TOAST FLOTANTE                                 -->
   <!-- ==================================================================== -->
   <div id="toastContainer" class="fixed bottom-5 right-5 z-50 space-y-2 max-w-sm"></div>
 
-  <!-- Cargar Motor JS API y Controlador de Aplicación -->
-  <script src="/js/api-sdk.js?v=3.0"></script>
-  <script src="/js/app.js?v=3.0"></script>
+  <!-- Cargar Motor JS API y Controlador Principal de la Aplicación -->
+  <script src="/js/api-sdk.js?v=4.0"></script>
+  <script src="/js/app.js?v=4.0"></script>
 </body>
 
 </html>
