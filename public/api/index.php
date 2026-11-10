@@ -54,6 +54,10 @@ loadEnvConfig();
 $tz = getenv('TZ') ?: ($_ENV['TZ'] ?? 'America/Santiago');
 date_default_timezone_set($tz);
 
+# Constantes para control de intentos y tiempo de espera para login | considerar agregarlos a .env para más seguridad
+const LOGIN_MAX_FAILED_ATTEMPTS = 10;
+const LOGIN_LOCKOUT_MINUTES = 15;
+
 // Lectura estricta desde .env sin credenciales ni llaves hardcodeadas en el código fuente
 $dbHost = getenv('DB_HOST') ?: ($_ENV['DB_HOST'] ?? 'localhost');
 $dbPort = getenv('DB_PORT') ?: ($_ENV['DB_PORT'] ?? '3306');
@@ -387,8 +391,11 @@ if ($route === 'auth/login' && $method === 'POST') {
     $pdo->beginTransaction();
     try {
         $stmt = $pdo->prepare("
-            SELECT u.*, r.codigo AS rol_codigo, r.nombre AS rol_nombre, r.permisos_json,
-                   TIMESTAMPDIFF(SECOND, NOW(), u.bloqueado_hasta) AS segundos_bloqueo
+            SELECT u.id_usuario, u.rut, u.nombres, u.apellidos, u.email, u.password_hash,
+                   u.especialidad, u.horas_contrato, u.debe_cambiar_clave, u.activo, u.id_rol,
+                   u.intentos_fallidos, u.bloqueado_hasta,
+                   TIMESTAMPDIFF(SECOND, NOW(), u.bloqueado_hasta) AS segundos_bloqueo,
+                   r.codigo AS rol_codigo, r.nombre AS rol_nombre, r.permisos_json
             FROM apx_sec_cuentas_acceso u
             INNER JOIN apx_sec_rbac_perfiles r ON u.id_rol = r.id_rol
             WHERE (u.email = ? OR u.rut = ? OR REPLACE(u.rut, '.', '') = ?)
