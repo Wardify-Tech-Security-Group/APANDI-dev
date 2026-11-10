@@ -147,6 +147,32 @@ try {
     }
 }
 
+// Sincronización estricta de Huso Horario entre PHP y MariaDB (Prevención de desfases en bloqueado_hasta)
+try {
+    $tzOffset = date('P');
+    $pdo->exec("SET time_zone = '$tzOffset'");
+} catch (Throwable $e) {
+    // Continuar si la instancia MariaDB no permite modificación de time_zone
+}
+
+// Asegurar existencia de columnas de seguridad Anti-Brute Force en MariaDB
+function ensureSecurityColumns(PDO $pdo): void {
+    try {
+        $cols = $pdo->query("SHOW COLUMNS FROM apx_sec_cuentas_acceso LIKE 'bloqueado_hasta'")->fetch();
+        if (!$cols) {
+            $pdo->exec("
+                ALTER TABLE apx_sec_cuentas_acceso 
+                ADD COLUMN intentos_fallidos INT NOT NULL DEFAULT 0 COMMENT 'Contador de intentos fallidos Anti-Brute Force',
+                ADD COLUMN bloqueado_hasta TIMESTAMP NULL DEFAULT NULL COMMENT 'Timestamp de bloqueo temporal tras 5 intentos fallidos (15 min)'
+            ");
+        }
+    } catch (Throwable $e) {
+        // Ignorar si ya existen las columnas o el entorno es de solo lectura
+    }
+}
+
+ensureSecurityColumns($pdo);
+
 // Sembrar registros clínicos encriptados con AES-256-GCM real si están vacíos
 function ensureEncryptedClinicalSeed(PDO $pdo, string $aesHexKey): void {
     $count = (int)$pdo->query("SELECT COUNT(*) FROM apx_med_dossier_clinico_enc")->fetchColumn();
@@ -227,27 +253,100 @@ function logAudit(PDO $pdo, int $idUsuario, ?int $idEstudiante, string $modulo, 
     $stmt->execute([$idUsuario, $idEstudiante, $modulo, $accion, $detalle, $ip, $ua]);
 }
 
-// Registra el fallo, reinicia el contador tras un bloqueo vencido y aplica el bloqueo al alcanzar el umbral.
-function recordFailedLogin(PDO $pdo, int $idUsuario): void {
+// =============================================================================
+// MOTOR DE SEGURIDAD ANTI-BRUTE FORCE Y CONTROL DE ACCESO (OWASP ASVS)
+// Umbral: 5 intentos fallidos | Bloqueo: 15 minutos | Lock pesimista (FOR UPDATE)
+// =============================================================================
+const AUTH_MAX_FAILED_ATTEMPTS = 5;
+const AUTH_LOCKOUT_MINUTES = 15;
 
-    $sql = sprintf(
-        "
-        UPDATE apx_sec_cuentas_acceso
-        SET intentos_fallidos = CASE
-                WHEN bloqueado_hasta IS NOT NULL AND bloqueado_hasta <= NOW() THEN 1
-                ELSE LEAST(COALESCE(intentos_fallidos, 0) + 1, %d)
-            END,
-            bloqueado_hasta = CASE
-                WHEN bloqueado_hasta IS NOT NULL AND bloqueado_hasta <= NOW() THEN NULL
-                WHEN intentos_fallidos >= %d THEN DATE_ADD(NOW(), INTERVAL %d MINUTE)
-                ELSE bloqueado_hasta
-            END
-        WHERE id_usuario = ? AND (bloqueado_hasta IS NULL OR bloqueado_hasta <= NOW())
-        ",
-        LOGIN_MAX_FAILED_ATTEMPTS,
-        LOGIN_MAX_FAILED_ATTEMPTS,
-        LOGIN_LOCKOUT_MINUTES
-    );
+/**
+ * Verifica si la cuenta de usuario se encuentra temporalmente bloqueada.
+ * Se debe ejecutar de forma preventiva ANTES de verificar Password o PIN.
+ */
+function checkUserLockout(array $user): ?array {
+    $segundosBloqueo = isset($user['segundos_bloqueo']) ? (int)$user['segundos_bloqueo'] : 0;
+    $estaBloqueado = !empty($user['bloqueado_hasta']) && $segundosBloqueo > 0;
+
+    if ($estaBloqueado) {
+        $minutosRestantes = max(1, (int)ceil($segundosBloqueo / 60));
+        return [
+            'bloqueado' => true,
+            'segundos_restantes' => $segundosBloqueo,
+            'minutos_restantes' => $minutosRestantes,
+            'bloqueado_hasta' => $user['bloqueado_hasta']
+        ];
+    }
+    return null;
+}
+
+/**
+ * Registra un intento fallido y activa bloqueo temporal a 15 minutos en el 5to intento.
+ */
+function recordFailedAttempt(PDO $pdo, array $user, string $tipoCredencial = 'password'): void {
+    $segundosBloqueo = isset($user['segundos_bloqueo']) ? (int)$user['segundos_bloqueo'] : 0;
+    $bloqueoPrevioExpirado = !empty($user['bloqueado_hasta']) && $segundosBloqueo <= 0;
+    $intentosActuales = $bloqueoPrevioExpirado ? 0 : (int)($user['intentos_fallidos'] ?? 0);
+    $nuevosIntentos = $intentosActuales + 1;
+
+    if ($nuevosIntentos >= AUTH_MAX_FAILED_ATTEMPTS) {
+        $stmtLock = $pdo->prepare("
+            UPDATE apx_sec_cuentas_acceso
+            SET intentos_fallidos = ?,
+                bloqueado_hasta = DATE_ADD(NOW(), INTERVAL " . AUTH_LOCKOUT_MINUTES . " MINUTE)
+            WHERE id_usuario = ?
+        ");
+        $stmtLock->execute([AUTH_MAX_FAILED_ATTEMPTS, $user['id_usuario']]);
+
+        $modulo = ($tipoCredencial === 'pin') ? 'LIBRO_CLASES_PID' : 'SEGURIDAD_AUTH';
+        logAudit($pdo, (int)$user['id_usuario'], null, $modulo, 'ACTUALIZACION', "Cuenta bloqueada temporalmente por 15 minutos tras 5 intentos fallidos ($tipoCredencial).");
+        $pdo->commit();
+
+        http_response_code(429);
+        header('Retry-After: 900');
+        echo json_encode([
+            'ok' => false,
+            'error' => 'Ha superado el límite de 5 intentos fallidos. Su cuenta ha sido bloqueada temporalmente por 15 minutos.',
+            'codigo' => 'ACCOUNT_LOCKED_THRESHOLD_EXCEEDED',
+            'intentos_fallidos' => AUTH_MAX_FAILED_ATTEMPTS,
+            'segundos_restantes' => 900
+        ]);
+        exit;
+    } else {
+        $stmtInc = $pdo->prepare("
+            UPDATE apx_sec_cuentas_acceso
+            SET intentos_fallidos = ?,
+                bloqueado_hasta = NULL
+            WHERE id_usuario = ?
+        ");
+        $stmtInc->execute([$nuevosIntentos, $user['id_usuario']]);
+        $pdo->commit();
+
+        $intentosRestantes = AUTH_MAX_FAILED_ATTEMPTS - $nuevosIntentos;
+        $httpCode = ($tipoCredencial === 'pin') ? 403 : 401;
+        $mensaje = ($tipoCredencial === 'pin')
+            ? "PIN de Firma Electrónica Simple inválido para su cuenta institucional. Intentos restantes antes del bloqueo: {$intentosRestantes}."
+            : "Credenciales inválidas o usuario inactivo. Intentos restantes antes del bloqueo: {$intentosRestantes}.";
+
+        http_response_code($httpCode);
+        echo json_encode([
+            'ok' => false,
+            'error' => $mensaje,
+            'intentos_restantes' => $intentosRestantes
+        ]);
+        exit;
+    }
+}
+
+/**
+ * Reinicia el contador de intentos fallidos a 0 y libera el estado de bloqueo tras autenticación exitosa.
+ */
+function resetFailedAttempts(PDO $pdo, int $idUsuario, bool $updateUltimoAcceso = false): void {
+    $sql = "UPDATE apx_sec_cuentas_acceso SET intentos_fallidos = 0, bloqueado_hasta = NULL";
+    if ($updateUltimoAcceso) {
+        $sql .= ", ultimo_acceso = NOW()";
+    }
+    $sql .= " WHERE id_usuario = ?";
     $stmt = $pdo->prepare($sql);
     $stmt->execute([$idUsuario]);
 }
@@ -277,63 +376,94 @@ if ($route === 'health' && $method === 'GET') {
     exit;
 }
 
-// 1. Login con verificación estricta Bcrypt Cost 12 y emisión de JWT
+// 1. Login con verificación estricta Bcrypt Cost 12, Anti-Brute Force y emisión de JWT
 if ($route === 'auth/login' && $method === 'POST') {
     $emailOrRut = trim($body['emailOrRut'] ?? ($body['rut'] ?? ''));
     $rutSinPuntos = str_replace('.', '', $emailOrRut);
     $password = (string)($body['password'] ?? '');
 
-    // Recupera solo los datos necesarios y calcula si el bloqueo sigue vigente.
-    $stmt = $pdo->prepare("
-        SELECT u.id_usuario, u.rut, u.nombres, u.apellidos, u.email, u.password_hash,
-               u.especialidad, u.horas_contrato, u.debe_cambiar_clave,
-               u.intentos_fallidos, u.bloqueado_hasta,
-               (u.bloqueado_hasta IS NOT NULL AND u.bloqueado_hasta > NOW()) AS cuenta_bloqueada,
-               r.codigo AS rol_codigo, r.nombre AS rol_nombre
-        FROM apx_sec_cuentas_acceso u
-        INNER JOIN apx_sec_rbac_perfiles r ON u.id_rol = r.id_rol
-        WHERE (u.email = ? OR u.rut = ? OR REPLACE(u.rut, '.', '') = ?) AND u.activo = 1
-        LIMIT 1
-    ");
-    $stmt->execute([$emailOrRut, $emailOrRut, $rutSinPuntos]);
-    $user = $stmt->fetch();
-
-    // Rechaza credenciales inválidas o cuentas bloqueadas y contabiliza el fallo si corresponde.
-    if (!$user || (int)$user['cuenta_bloqueada'] === 1 || !password_verify($password, $user['password_hash'])) {
-        if ($user && (int)$user['cuenta_bloqueada'] !== 1) {
-            recordFailedLogin($pdo, (int)$user['id_usuario']);
-        }
-        http_response_code(401);
-        echo json_encode(['ok' => false, 'error' => 'Credenciales inválidas o usuario inactivo.']);
+    if ($emailOrRut === '' || $password === '') {
+        http_response_code(400);
+        echo json_encode(['ok' => false, 'error' => 'Debe ingresar su correo/RUT y contraseña.']);
         exit;
     }
 
-    // Al autenticar correctamente, actualiza el último acceso y limpia el estado de bloqueo.
-    $pdo->prepare("
-        UPDATE apx_sec_cuentas_acceso
-        SET ultimo_acceso = NOW(), intentos_fallidos = 0, bloqueado_hasta = NULL
-        WHERE id_usuario = ?
-    ")->execute([$user['id_usuario']]);
+    $pdo->beginTransaction();
+    try {
+        $stmt = $pdo->prepare("
+            SELECT u.id_usuario, u.rut, u.nombres, u.apellidos, u.email, u.password_hash,
+                   u.especialidad, u.horas_contrato, u.debe_cambiar_clave, u.activo, u.id_rol,
+                   u.intentos_fallidos, u.bloqueado_hasta,
+                   TIMESTAMPDIFF(SECOND, NOW(), u.bloqueado_hasta) AS segundos_bloqueo,
+                   r.codigo AS rol_codigo, r.nombre AS rol_nombre, r.permisos_json
+            FROM apx_sec_cuentas_acceso u
+            INNER JOIN apx_sec_rbac_perfiles r ON u.id_rol = r.id_rol
+            WHERE (u.email = ? OR u.rut = ? OR REPLACE(u.rut, '.', '') = ?)
+            LIMIT 1
+            FOR UPDATE
+        ");
+        $stmt->execute([$emailOrRut, $emailOrRut, $rutSinPuntos]);
+        $user = $stmt->fetch();
 
-    // Informa al cliente si la cuenta requiere que el usuario cambie su clave.
-    $userPayload = [
-        'id_usuario' => (int)$user['id_usuario'],
-        'rut' => $user['rut'],
-        'nombre_completo' => $user['nombres'] . ' ' . $user['apellidos'],
-        'email' => $user['email'],
-        'rol_codigo' => $user['rol_codigo'],
-        'rol_nombre' => $user['rol_nombre'],
-        'especialidad' => $user['especialidad'],
-        'horas_contrato' => (int)$user['horas_contrato'],
-        'debe_cambiar_clave' => (bool)$user['debe_cambiar_clave']
-    ];
+        if (!$user || (int)$user['activo'] !== 1) {
+            $pdo->commit();
+            // Mitigación de timing attack para usuarios inexistentes o inactivos
+            password_verify($password, '$2y$12$cLrJlhPwVUG1PYmVQmma1egZiaAPKT5uGuIjcmQ4Za057tmUBAiz2');
+            http_response_code(401);
+            echo json_encode(['ok' => false, 'error' => 'Credenciales inválidas o usuario inactivo.']);
+            exit;
+        }
 
-    echo json_encode([
-        'ok' => true,
-        'token' => createJWT($userPayload, $jwtSecret),
-        'user' => $userPayload
-    ]);
-    exit;
+        // CRITERIO OBLIGATORIO: Interceptar ANTES de verificar contraseña si la cuenta está bloqueada
+        $lockInfo = checkUserLockout($user);
+        if ($lockInfo !== null) {
+            $pdo->commit();
+            http_response_code(429);
+            header('Retry-After: ' . $lockInfo['segundos_restantes']);
+            echo json_encode([
+                'ok' => false,
+                'error' => "Cuenta temporalmente bloqueada por exceso de intentos fallidos. Intente nuevamente en {$lockInfo['minutos_restantes']} minuto(s).",
+                'codigo' => 'ACCOUNT_TEMPORARILY_LOCKED',
+                'bloqueado_hasta' => $lockInfo['bloqueado_hasta'],
+                'segundos_restantes' => $lockInfo['segundos_restantes']
+            ]);
+            exit;
+        }
+
+        // Verificar contraseña con Bcrypt Cost 12
+        if (!password_verify($password, (string)$user['password_hash'])) {
+            recordFailedAttempt($pdo, $user, 'password');
+        }
+
+        // CRITERIO OBLIGATORIO: Reiniciar contador y limpiar bloqueo tras login exitoso
+        resetFailedAttempts($pdo, (int)$user['id_usuario'], true);
+        $pdo->commit();
+
+        $userPayload = [
+            'id_usuario' => (int)$user['id_usuario'],
+            'rut' => $user['rut'],
+            'nombre_completo' => $user['nombres'] . ' ' . $user['apellidos'],
+            'email' => $user['email'],
+            'rol_codigo' => $user['rol_codigo'],
+            'rol_nombre' => $user['rol_nombre'],
+            'especialidad' => $user['especialidad'],
+            'horas_contrato' => (int)$user['horas_contrato']
+        ];
+
+        echo json_encode([
+            'ok' => true,
+            'token' => createJWT($userPayload, $jwtSecret),
+            'user' => $userPayload
+        ]);
+        exit;
+    } catch (Throwable $e) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        http_response_code(500);
+        echo json_encode(['ok' => false, 'error' => 'Error en el proceso de autenticación.']);
+        exit;
+    }
 }
 
 // Verificar autenticación JWT para el resto de los endpoints
@@ -538,41 +668,91 @@ if ($route === 'pedagogico/libro' && $method === 'GET') {
 if ($route === 'pedagogico/pid' && $method === 'POST') {
     $pin = trim((string)($body['pin_firma'] ?? ''));
 
-    $stmtPin = $pdo->prepare("SELECT pin_firma_hash FROM apx_sec_cuentas_acceso WHERE id_usuario = ?");
-    $stmtPin->execute([$authUser['id_usuario']]);
-    $pinHash = $stmtPin->fetchColumn();
-
-    if (!$pinHash || !password_verify($pin, (string)$pinHash)) {
-        http_response_code(403);
-        echo json_encode(['ok' => false, 'error' => 'PIN de Firma Electrónica Simple inválido para su cuenta institucional.']);
+    if ($pin === '') {
+        http_response_code(400);
+        echo json_encode(['ok' => false, 'error' => 'Debe ingresar el PIN de 6 dígitos para la Firma Electrónica Simple.']);
         exit;
     }
 
-    $hashFirma = hash('sha256', $authUser['id_usuario'] . '|' . ($body['unidad_tematica'] ?? '') . '|' . microtime(true));
-    $stmt = $pdo->prepare("
-        INSERT INTO apx_ped_leccionario_pid
-        (id_taller, id_docente, fecha_clase, unidad_tematica, objetivo_aprendizaje, actividad_grupo_a, actividad_grupo_b, recursos_dua, firmado, hash_firma_electronica, fecha_firma)
-        VALUES (?, ?, CURDATE(), ?, ?, ?, ?, ?, 1, ?, NOW())
-    ");
-    $stmt->execute([
-        (int)($body['id_taller'] ?? 1),
-        $authUser['id_usuario'],
-        $body['unidad_tematica'],
-        $body['objetivo_aprendizaje'],
-        $body['actividad_grupo_a'],
-        $body['actividad_grupo_b'],
-        $body['recursos_dua'] ?? '',
-        $hashFirma
-    ]);
+    $pdo->beginTransaction();
+    try {
+        $stmtUser = $pdo->prepare("
+            SELECT id_usuario, rut, pin_firma_hash, activo, intentos_fallidos, bloqueado_hasta,
+                   TIMESTAMPDIFF(SECOND, NOW(), bloqueado_hasta) AS segundos_bloqueo
+            FROM apx_sec_cuentas_acceso
+            WHERE id_usuario = ?
+            FOR UPDATE
+        ");
+        $stmtUser->execute([$authUser['id_usuario']]);
+        $user = $stmtUser->fetch();
 
-    logAudit($pdo, $authUser['id_usuario'], null, 'LIBRO_CLASES_PID', 'FIRMA_DIGITAL', "Clase PID firmada con PIN electrónico Bcrypt. Sello SHA-256: " . substr($hashFirma, 0, 16));
+        if (!$user || (int)$user['activo'] !== 1) {
+            $pdo->commit();
+            http_response_code(401);
+            echo json_encode(['ok' => false, 'error' => 'Usuario no encontrado o sesión no válida.']);
+            exit;
+        }
 
-    echo json_encode([
-        'ok' => true,
-        'mensaje' => 'Planificación Interdisciplinaria Diversificada (PID) registrada y sellada con Firma Electrónica Simple.',
-        'hash_firma' => $hashFirma
-    ]);
-    exit;
+        // CRITERIO OBLIGATORIO: Interceptar ANTES de verificar PIN si la cuenta está bloqueada
+        $lockInfo = checkUserLockout($user);
+        if ($lockInfo !== null) {
+            $pdo->commit();
+            http_response_code(429);
+            header('Retry-After: ' . $lockInfo['segundos_restantes']);
+            echo json_encode([
+                'ok' => false,
+                'error' => "Cuenta temporalmente bloqueada por exceso de intentos fallidos. Intente nuevamente en {$lockInfo['minutos_restantes']} minuto(s).",
+                'codigo' => 'ACCOUNT_TEMPORARILY_LOCKED',
+                'bloqueado_hasta' => $lockInfo['bloqueado_hasta'],
+                'segundos_restantes' => $lockInfo['segundos_restantes']
+            ]);
+            exit;
+        }
+
+        // Verificar PIN de 6 dígitos con Bcrypt Cost 12
+        $pinValido = !empty($user['pin_firma_hash']) && password_verify($pin, (string)$user['pin_firma_hash']);
+        if (!$pinValido) {
+            recordFailedAttempt($pdo, $user, 'pin');
+        }
+
+        // CRITERIO OBLIGATORIO: Reiniciar contador y limpiar bloqueo tras firma exitosa
+        resetFailedAttempts($pdo, (int)$user['id_usuario'], false);
+
+        $hashFirma = hash('sha256', $authUser['id_usuario'] . '|' . ($body['unidad_tematica'] ?? '') . '|' . microtime(true));
+        $stmt = $pdo->prepare("
+            INSERT INTO apx_ped_leccionario_pid
+            (id_taller, id_docente, fecha_clase, unidad_tematica, objetivo_aprendizaje, actividad_grupo_a, actividad_grupo_b, recursos_dua, firmado, hash_firma_electronica, fecha_firma)
+            VALUES (?, ?, CURDATE(), ?, ?, ?, ?, ?, 1, ?, NOW())
+        ");
+        $stmt->execute([
+            (int)($body['id_taller'] ?? 1),
+            $authUser['id_usuario'],
+            $body['unidad_tematica'] ?? '',
+            $body['objetivo_aprendizaje'] ?? '',
+            $body['actividad_grupo_a'] ?? '',
+            $body['actividad_grupo_b'] ?? '',
+            $body['recursos_dua'] ?? '',
+            $hashFirma
+        ]);
+
+        logAudit($pdo, $authUser['id_usuario'], null, 'LIBRO_CLASES_PID', 'FIRMA_DIGITAL', "Clase PID firmada con PIN electrónico Bcrypt. Sello SHA-256: " . substr($hashFirma, 0, 16));
+
+        $pdo->commit();
+
+        echo json_encode([
+            'ok' => true,
+            'mensaje' => 'Planificación Interdisciplinaria Diversificada (PID) registrada y sellada con Firma Electrónica Simple.',
+            'hash_firma' => $hashFirma
+        ]);
+        exit;
+    } catch (Throwable $e) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        http_response_code(500);
+        echo json_encode(['ok' => false, 'error' => 'Error al procesar la firma electrónica del PID: ' . $e->getMessage()]);
+        exit;
+    }
 }
 
 if ($route === 'pedagogico/asistencia' && $method === 'POST') {
@@ -922,7 +1102,7 @@ if ($route === 'seguridad/auditoria' && $method === 'GET') {
 
     $roles = $pdo->query("SELECT * FROM apx_sec_rbac_perfiles ORDER BY id_rol ASC")->fetchAll();
     $usuarios = $pdo->query("
-        SELECT u.id_usuario, u.rut, u.nombres, u.apellidos, u.email, u.telefono, u.especialidad, u.horas_contrato, u.activo, u.ultimo_acceso, r.codigo AS rol_codigo, r.nombre AS rol_nombre
+        SELECT u.id_usuario, u.rut, u.nombres, u.apellidos, u.email, u.telefono, u.especialidad, u.horas_contrato, u.activo, u.ultimo_acceso, u.intentos_fallidos, u.bloqueado_hasta, r.codigo AS rol_codigo, r.nombre AS rol_nombre
         FROM apx_sec_cuentas_acceso u
         INNER JOIN apx_sec_rbac_perfiles r ON u.id_rol = r.id_rol
         ORDER BY u.id_rol ASC

@@ -39,6 +39,8 @@ CREATE TABLE IF NOT EXISTS apx_sec_cuentas_acceso (
     especialidad VARCHAR(100) NULL COMMENT 'Ej: Ed. Diferencial, Psicólogo, Terapeuta Ocupacional, Fonoaudiólogo',
     horas_contrato INT DEFAULT 44,
     activo TINYINT(1) DEFAULT 1,
+    intentos_fallidos INT NOT NULL DEFAULT 0 COMMENT 'Contador de intentos fallidos Anti-Brute Force',
+    bloqueado_hasta TIMESTAMP NULL DEFAULT NULL COMMENT 'Timestamp de bloqueo temporal tras 5 intentos fallidos (15 min)',
     ultimo_acceso TIMESTAMP NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
