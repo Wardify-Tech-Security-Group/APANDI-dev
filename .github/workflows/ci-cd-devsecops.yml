@@ -151,9 +151,11 @@ jobs:
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-latest
     environment: production
+    env:
+      PROD_SSH_HOST: ${{ secrets.PROD_SSH_HOST }}
     steps:
       - name: Despliegue automatizado vía SSH con generación segura de .env
-        if: ${{ secrets.PROD_SSH_HOST != '' }}
+        if: env.PROD_SSH_HOST != ''
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.PROD_SSH_HOST }}
