@@ -58,10 +58,10 @@ jobs:
       mariadb:
         image: mariadb:11.4
         env:
-          MARIADB_ROOT_PASSWORD: CiRt9_vN3_zX9_pL5_mK2_qW7_bC4_jF6dG0
+          MARIADB_ROOT_PASSWORD: ${{ secrets.CI_DB_ROOT_PASSWORD || 'CiRt9#vN3!zX9_pL5@mK2*qW7&bC4^jF6dG0' }}
           MARIADB_DATABASE: apandi_vault_ci_db
           MARIADB_USER: apx_ci_sec_usr
-          MARIADB_PASSWORD: CiDv9_mK4_xP8_qL2_zR7_wN5_vB3_tY6cH1
+          MARIADB_PASSWORD: ${{ secrets.CI_DB_PASSWORD || 'CiDv9#mK4!xP8_qL2@zR7*wN5&vB3^tY6cH1' }}
         ports:
           - 3306:3306
         options: >-
@@ -76,12 +76,12 @@ jobs:
       DB_HOST: 127.0.0.1
       DB_PORT: 3306
       DB_USER: apx_ci_sec_usr
-      DB_PASSWORD: CiDv9_mK4_xP8_qL2_zR7_wN5_vB3_tY6cH1
+      DB_PASSWORD: ${{ secrets.CI_DB_PASSWORD || 'CiDv9#mK4!xP8_qL2@zR7*wN5&vB3^tY6cH1' }}
       DB_NAME: apandi_vault_ci_db
-      AES_MASTER_KEY: c4f9a2e7b1d803659a4e7f2c8b1d60395e8a2f4c7b1d9036a5e8c2f4b7d10963
-      JWT_SECRET: 7f4a9c2e8b1d6035a9e4c7f2b8d16039e5a2c8f4b7d19036a5e8c2f4b7d10963c4f9a2e7b1d80365
-      APP_DEFAULT_USER_PASSWORD: Ap4nd1#S3cV4ult!2026_Cl
-      APP_DEFAULT_SIGNATURE_PIN: "849206"
+      AES_MASTER_KEY: ${{ secrets.CI_AES_MASTER_KEY || 'c4f9a2e7b1d803659a4e7f2c8b1d60395e8a2f4c7b1d9036a5e8c2f4b7d10963' }}
+      JWT_SECRET: ${{ secrets.CI_JWT_SECRET || '7f4a9c2e8b1d6035a9e4c7f2b8d16039e5a2c8f4b7d19036a5e8c2f4b7d10963c4f9a2e7b1d80365' }}
+      APP_DEFAULT_USER_PASSWORD: ${{ secrets.CI_DEFAULT_USER_PASSWORD || 'Ap4nd1#S3cV4ult!2026_Cl' }}
+      APP_DEFAULT_SIGNATURE_PIN: ${{ secrets.CI_DEFAULT_SIGNATURE_PIN || '849206' }}
 
     steps:
       - name: Checkout del código
@@ -150,20 +150,37 @@ jobs:
     needs: docker-build-and-verify
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-latest
+    environment: production
+    env:
+      PROD_SSH_HOST: ${{ secrets.PROD_SSH_HOST }}
     steps:
-      - name: Verificar y ejecutar despliegue seguro a Producción
-        env:
-          PROD_SSH_HOST: ${{ secrets.PROD_SSH_HOST }}
-          PROD_SSH_USER: ${{ secrets.PROD_SSH_USER }}
-          PROD_DB_NAME: ${{ secrets.PROD_DB_NAME }}
-          PROD_DB_USER: ${{ secrets.PROD_DB_USER }}
-          PROD_DB_PASSWORD: ${{ secrets.PROD_DB_PASSWORD }}
-          PROD_DB_ROOT_PASSWORD: ${{ secrets.PROD_DB_ROOT_PASSWORD }}
-          PROD_AES_MASTER_KEY: ${{ secrets.PROD_AES_MASTER_KEY }}
-          PROD_JWT_SECRET: ${{ secrets.PROD_JWT_SECRET }}
-        run: |
-          if [ -z "$PROD_SSH_HOST" ]; then
-            echo "ℹ️ Secret PROD_SSH_HOST no configurado aún en el repositorio; artefactos validados y listos para despliegue en cPanel / Docker."
-            exit 0
-          fi
-          echo "🚀 Iniciando despliegue seguro hacia $PROD_SSH_HOST..."
+      - name: Despliegue automatizado vía SSH con generación segura de .env
+        if: env.PROD_SSH_HOST != ''
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.PROD_SSH_HOST }}
+          username: ${{ secrets.PROD_SSH_USER }}
+          key: ${{ secrets.PROD_SSH_PRIVATE_KEY }}
+          script: |
+            set -e
+            cd /opt/apandi-sgi
+
+            umask 077
+            cat <<EOF > .env
+            APP_ENV=production
+            APP_PORT=80
+            TZ=America/Santiago
+            DB_HOST=mariadb
+            DB_PORT=3306
+            DB_NAME=${{ secrets.PROD_DB_NAME }}
+            DB_USER=${{ secrets.PROD_DB_USER }}
+            DB_PASSWORD=${{ secrets.PROD_DB_PASSWORD }}
+            DB_ROOT_PASSWORD=${{ secrets.PROD_DB_ROOT_PASSWORD }}
+            AES_MASTER_KEY=${{ secrets.PROD_AES_MASTER_KEY }}
+            JWT_SECRET=${{ secrets.PROD_JWT_SECRET }}
+            JWT_EXPIRES_IN=4h
+            APP_DEFAULT_USER_PASSWORD=${{ secrets.PROD_DEFAULT_USER_PASSWORD }}
+            APP_DEFAULT_SIGNATURE_PIN=${{ secrets.PROD_DEFAULT_SIGNATURE_PIN }}
+            EOF
+
+            docker compose up -d --build --remove-orphans
