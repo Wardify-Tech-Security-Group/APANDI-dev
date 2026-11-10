@@ -36,6 +36,7 @@ CREATE TABLE IF NOT EXISTS apx_sec_cuentas_acceso (
     especialidad VARCHAR(100) NULL COMMENT 'Ej: Ed. Diferencial, Psicólogo, Terapeuta Ocupacional, Fonoaudiólogo',
     horas_contrato INT DEFAULT 44,
     activo TINYINT(1) DEFAULT 1,
+    debe_cambiar_clave TINYINT(1) DEFAULT 1 COMMENT '1 = cambio obligatorio de clave, 0 = clave actualizada',
     ultimo_acceso TIMESTAMP NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
