@@ -398,6 +398,32 @@ CREATE TABLE IF NOT EXISTS apx_conv_bitacora_sos_enc (
     CONSTRAINT fk_apx_sos_interviniente FOREIGN KEY (id_profesional_interviniente) REFERENCES apx_sec_cuentas_acceso (id_usuario)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS apx_conv_informes_post_sos_enc (
+    id_informe BIGINT AUTO_INCREMENT PRIMARY KEY,
+    id_incidencia INT NOT NULL,
+    id_autor INT NOT NULL,
+    que_sucedio_enc LONGTEXT NOT NULL,
+    factores_desencadenantes_enc LONGTEXT NOT NULL,
+    abordaje_por_etapas_enc LONGTEXT NOT NULL COMMENT 'JSON cifrado con las etapas del abordaje',
+    medidas_adoptadas_enc LONGTEXT NOT NULL,
+    acuerdos_familia_enc LONGTEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uk_apx_informe_sos_incidencia (id_incidencia),
+    CONSTRAINT fk_apx_informe_sos_incidencia FOREIGN KEY (id_incidencia) REFERENCES apx_conv_bitacora_sos_enc (id_incidencia) ON DELETE CASCADE,
+    CONSTRAINT fk_apx_informe_sos_autor FOREIGN KEY (id_autor) REFERENCES apx_sec_cuentas_acceso (id_usuario)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS apx_conv_informe_sos_profesionales (
+    id_informe BIGINT NOT NULL,
+    id_usuario INT NOT NULL,
+    funcion VARCHAR(120) NOT NULL,
+    detalle_intervencion_enc TEXT NULL,
+    PRIMARY KEY (id_informe, id_usuario),
+    CONSTRAINT fk_apx_informe_prof_informe FOREIGN KEY (id_informe) REFERENCES apx_conv_informes_post_sos_enc (id_informe) ON DELETE CASCADE,
+    CONSTRAINT fk_apx_informe_prof_usuario FOREIGN KEY (id_usuario) REFERENCES apx_sec_cuentas_acceso (id_usuario)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
 -- =============================================================================
 -- DATOS SEMILLA INICIALES (CON HASHES BCRYPT COST 12 Y ESQUEMA DE TABLAS NUEVO)
 -- =============================================================================
@@ -445,6 +471,13 @@ VALUES
         'Apoderado / Familia',
         'Portal familiar de solo lectura: asistencia, logros conceptuales PID, acuerdos PAEC y descarga de Informe PDF',
         '{"portal_apoderado": "r"}'
+    ),
+    (
+        7,
+        'CONVIVENCIA_ESCOLAR',
+        'Convivencia Escolar',
+        'Acceso de lectura y registro a protocolos PAEC, alertas SOS e informes post-alerta',
+        '{"estudiantes": "r", "paec": "rw", "convivencia": "rw"}'
     );
 
 -- Hashes Bcrypt Cost 12 generados criptográficamente (sin contraseñas ni PINs en texto plano)
