@@ -143,6 +143,19 @@ try {
     }
 }
 
+// Asegurar existencia de columnas de seguridad en la tabla de cuentas de acceso
+function ensureSecurityColumns(PDO $pdo): void {
+    try {
+        $cols = $pdo->query("SHOW COLUMNS FROM apx_sec_cuentas_acceso LIKE 'debe_cambiar_clave'")->fetch();
+        if (!$cols) {
+            $pdo->exec("ALTER TABLE apx_sec_cuentas_acceso ADD COLUMN debe_cambiar_clave TINYINT(1) NOT NULL DEFAULT 1 COMMENT 'Obliga cambio de contraseña'");
+        }
+    } catch (Throwable $e) {
+        // En entornos de solo lectura o donde ya exista la estructura, continuar
+    }
+}
+ensureSecurityColumns($pdo);
+
 // Sembrar registros clínicos encriptados con AES-256-GCM real si están vacíos
 function ensureEncryptedClinicalSeed(PDO $pdo, string $aesHexKey): void {
     $count = (int)$pdo->query("SELECT COUNT(*) FROM apx_med_dossier_clinico_enc")->fetchColumn();
@@ -296,6 +309,180 @@ $authUser = verifyJWT($jwtSecret);
 if (!$authUser) {
     http_response_code(401);
     echo json_encode(['ok' => false, 'error' => 'Sesión no válida o expirada. Inicie sesión nuevamente.']);
+    exit;
+}
+
+// =============================================================================
+// GESTIÓN DE SEGURIDAD DEL USUARIO AUTENTICADO (SELF-SERVICE)
+// Endpoints: PUT /usuario/password, PUT /usuario/pin, GET /usuario/sesiones
+// =============================================================================
+
+// 1.1 Actualización de contraseña por el usuario autenticado
+if ($route === 'usuario/password' && $method === 'PUT') {
+    $currentPassword = (string)($body['current_password'] ?? '');
+    $newPassword = (string)($body['new_password'] ?? '');
+
+    if ($currentPassword === '' || $newPassword === '') {
+        http_response_code(400);
+        echo json_encode(['ok' => false, 'error' => 'Debe ingresar la contraseña actual y la nueva contraseña.']);
+        exit;
+    }
+
+    if ($currentPassword === $newPassword) {
+        http_response_code(422);
+        echo json_encode(['ok' => false, 'error' => 'La nueva contraseña no puede ser idéntica a la contraseña actual.']);
+        exit;
+    }
+
+    // Validación de robustez de contraseña: mínimo 10 caracteres, mayúsculas, minúsculas, números y símbolos
+    $hasMinLength = strlen($newPassword) >= 10;
+    $hasUpper = preg_match('/[A-Z]/', $newPassword);
+    $hasLower = preg_match('/[a-z]/', $newPassword);
+    $hasNumber = preg_match('/[0-9]/', $newPassword);
+    $hasSymbol = preg_match('/[!@#$%^&*()\-_=+{};:,<.>\/?]/', $newPassword);
+
+    if (!$hasMinLength || !$hasUpper || !$hasLower || !$hasNumber || !$hasSymbol) {
+        http_response_code(422);
+        echo json_encode([
+            'ok' => false,
+            'error' => 'La nueva contraseña no cumple con la política de seguridad: debe tener al menos 10 caracteres e incluir mayúsculas, minúsculas, números y caracteres especiales.'
+        ]);
+        exit;
+    }
+
+    $stmt = $pdo->prepare("SELECT id_usuario, password_hash FROM apx_sec_cuentas_acceso WHERE id_usuario = ? AND activo = 1 LIMIT 1");
+    $stmt->execute([$authUser['id_usuario']]);
+    $user = $stmt->fetch();
+
+    if (!$user) {
+        http_response_code(404);
+        echo json_encode(['ok' => false, 'error' => 'Usuario no encontrado o inactivo.']);
+        exit;
+    }
+
+    if (!password_verify($currentPassword, $user['password_hash'])) {
+        http_response_code(401);
+        echo json_encode(['ok' => false, 'error' => 'La contraseña actual ingresada es incorrecta.']);
+        exit;
+    }
+
+    $newHash = password_hash($newPassword, PASSWORD_BCRYPT, ['cost' => 12]);
+    $stmtUp = $pdo->prepare("
+        UPDATE apx_sec_cuentas_acceso
+        SET password_hash = ?, debe_cambiar_clave = 0, intentos_fallidos = 0, bloqueado_hasta = NULL
+        WHERE id_usuario = ?
+    ");
+    $stmtUp->execute([$newHash, $authUser['id_usuario']]);
+
+    logAudit($pdo, $authUser['id_usuario'], null, 'SEGURIDAD_CUENTA', 'ACTUALIZACION', 'Actualización voluntaria de contraseña institucional');
+
+    echo json_encode([
+        'ok' => true,
+        'mensaje' => 'Contraseña actualizada exitosamente.',
+        'debe_cambiar_clave' => 0
+    ]);
+    exit;
+}
+
+// 1.2 Actualización o configuración de PIN de Firma Electrónica Simple
+if ($route === 'usuario/pin' && $method === 'PUT') {
+    $currentPin = trim((string)($body['current_pin'] ?? ''));
+    $newPin = trim((string)($body['new_pin'] ?? ''));
+
+    if ($newPin === '') {
+        http_response_code(400);
+        echo json_encode(['ok' => false, 'error' => 'Debe ingresar el nuevo PIN de firma electrónica.']);
+        exit;
+    }
+
+    // Validación estricta: exactamente 6 dígitos numéricos
+    if (!preg_match('/^\d{6}$/', $newPin)) {
+        http_response_code(422);
+        echo json_encode(['ok' => false, 'error' => 'El PIN debe estar compuesto exactamente por 6 dígitos numéricos (0-9).']);
+        exit;
+    }
+
+    // Validación contra patrones débiles / secuenciales
+    $weakPins = [
+        '000000', '111111', '222222', '333333', '444444',
+        '555555', '666666', '777777', '888888', '999999',
+        '123456', '654321', '012345', '543210', '123123'
+    ];
+    if (in_array($newPin, $weakPins, true)) {
+        http_response_code(422);
+        echo json_encode(['ok' => false, 'error' => 'El PIN ingresado es demasiado predecible o secuencial. Elija una combinación segura.']);
+        exit;
+    }
+
+    $stmt = $pdo->prepare("SELECT id_usuario, pin_firma_hash FROM apx_sec_cuentas_acceso WHERE id_usuario = ? AND activo = 1 LIMIT 1");
+    $stmt->execute([$authUser['id_usuario']]);
+    $user = $stmt->fetch();
+
+    if (!$user) {
+        http_response_code(404);
+        echo json_encode(['ok' => false, 'error' => 'Usuario no encontrado o inactivo.']);
+        exit;
+    }
+
+    // Si el usuario ya cuenta con un PIN configurado, validar el PIN actual
+    $hasCurrentPin = !empty($user['pin_firma_hash']);
+    if ($hasCurrentPin) {
+        if ($currentPin === '') {
+            http_response_code(400);
+            echo json_encode(['ok' => false, 'error' => 'Debe ingresar su PIN actual para autorizar la modificación.']);
+            exit;
+        }
+
+        if (!password_verify($currentPin, (string)$user['pin_firma_hash'])) {
+            http_response_code(401);
+            echo json_encode(['ok' => false, 'error' => 'El PIN actual ingresado es incorrecto.']);
+            exit;
+        }
+
+        if ($currentPin === $newPin) {
+            http_response_code(422);
+            echo json_encode(['ok' => false, 'error' => 'El nuevo PIN no puede ser idéntico al PIN actual.']);
+            exit;
+        }
+    }
+
+    $newPinHash = password_hash($newPin, PASSWORD_BCRYPT, ['cost' => 12]);
+    $stmtUp = $pdo->prepare("UPDATE apx_sec_cuentas_acceso SET pin_firma_hash = ? WHERE id_usuario = ?");
+    $stmtUp->execute([$newPinHash, $authUser['id_usuario']]);
+
+    logAudit($pdo, $authUser['id_usuario'], null, 'SEGURIDAD_CUENTA', 'ACTUALIZACION', 'Actualización de PIN de Firma Electrónica Simple');
+
+    echo json_encode([
+        'ok' => true,
+        'mensaje' => 'PIN de Firma Electrónica Simple actualizado exitosamente.'
+    ]);
+    exit;
+}
+
+// 1.3 Historial de auditoría y sesiones recientes del usuario autenticado
+if ($route === 'usuario/sesiones' && $method === 'GET') {
+    $uid = (int)$authUser['id_usuario'];
+
+    $stmtUser = $pdo->prepare("SELECT ultimo_acceso FROM apx_sec_cuentas_acceso WHERE id_usuario = ?");
+    $stmtUser->execute([$uid]);
+    $ultimoAcceso = $stmtUser->fetchColumn() ?: null;
+
+    $stmtLogs = $pdo->prepare("
+        SELECT id_log, ip_origen AS ip_address, user_agent, fecha_hora AS created_at,
+               modulo, accion, detalle
+        FROM apx_sec_trazabilidad_forense
+        WHERE id_usuario = ?
+        ORDER BY fecha_hora DESC, id_log DESC
+        LIMIT 10
+    ");
+    $stmtLogs->execute([$uid]);
+    $sesiones = $stmtLogs->fetchAll();
+
+    echo json_encode([
+        'ok' => true,
+        'ultimo_acceso' => $ultimoAcceso,
+        'sesiones' => $sesiones
+    ]);
     exit;
 }
 
