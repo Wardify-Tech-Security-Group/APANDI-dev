@@ -150,6 +150,10 @@ function ensureSecurityColumns(PDO $pdo): void {
         if (!$cols) {
             $pdo->exec("ALTER TABLE apx_sec_cuentas_acceso ADD COLUMN debe_cambiar_clave TINYINT(1) NOT NULL DEFAULT 1 COMMENT 'Obliga cambio de contraseña'");
         }
+        $colsBloq = $pdo->query("SHOW COLUMNS FROM apx_sec_cuentas_acceso LIKE 'bloqueado_hasta'")->fetch();
+        if (!$colsBloq) {
+            $pdo->exec("ALTER TABLE apx_sec_cuentas_acceso ADD COLUMN intentos_fallidos TINYINT NOT NULL DEFAULT 0, ADD COLUMN bloqueado_hasta TIMESTAMP NULL");
+        }
     } catch (Throwable $e) {
         // En entornos de solo lectura o donde ya exista la estructura, continuar
     }
@@ -293,7 +297,8 @@ if ($route === 'auth/login' && $method === 'POST') {
         'rol_codigo' => $user['rol_codigo'],
         'rol_nombre' => $user['rol_nombre'],
         'especialidad' => $user['especialidad'],
-        'horas_contrato' => (int)$user['horas_contrato']
+        'horas_contrato' => (int)$user['horas_contrato'],
+        'debe_cambiar_clave' => (bool)($user['debe_cambiar_clave'] ?? false)
     ];
 
     echo json_encode([
