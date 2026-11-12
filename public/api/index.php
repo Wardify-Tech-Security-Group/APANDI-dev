@@ -253,6 +253,10 @@ function logAudit(PDO $pdo, int $idUsuario, ?int $idEstudiante, string $modulo, 
     $stmt->execute([$idUsuario, $idEstudiante, $modulo, $accion, $detalle, $ip, $ua]);
 }
 
+function canAccessPaecSos(array $authUser): bool {
+    return in_array($authUser['rol_codigo'] ?? '', ['ESPECIALISTA_PIE', 'CONVIVENCIA_ESCOLAR', 'DIRECTOR_UTP', 'ADMIN'], true);
+}
+
 // =============================================================================
 // MOTOR DE SEGURIDAD ANTI-BRUTE FORCE Y CONTROL DE ACCESO (OWASP ASVS)
 // Umbral: 5 intentos fallidos | Bloqueo: 15 minutos | Lock pesimista (FOR UPDATE)
@@ -424,7 +428,9 @@ if ($route === 'auth/login' && $method === 'POST') {
         // CRITERIO OBLIGATORIO: Interceptar ANTES de verificar contraseña si la cuenta está bloqueada
         $lockInfo = checkUserLockout($user);
         if ($lockInfo !== null) {
-            $pdo->commit();
+            if ($pdo->inTransaction()) {
+                $pdo->commit();
+            }
             http_response_code(429);
             header('Retry-After: ' . $lockInfo['segundos_restantes']);
             echo json_encode([
@@ -444,7 +450,9 @@ if ($route === 'auth/login' && $method === 'POST') {
 
         // CRITERIO OBLIGATORIO: Reiniciar contador y limpiar bloqueo tras login exitoso
         resetFailedAttempts($pdo, (int)$user['id_usuario'], true);
-        $pdo->commit();
+        if ($pdo->inTransaction()) {
+            $pdo->commit();
+        }
 
         $userPayload = [
             'id_usuario' => (int)$user['id_usuario'],
@@ -463,14 +471,6 @@ if ($route === 'auth/login' && $method === 'POST') {
             'user' => $userPayload
         ]);
         exit;
-    } catch (Throwable $e) {
-        if ($pdo->inTransaction()) {
-            $pdo->rollBack();
-        }
-        http_response_code(500);
-        echo json_encode(['ok' => false, 'error' => 'Error en el proceso de autenticación.']);
-        exit;
-    }
 }
 
 // Verificar autenticación JWT para el resto de los endpoints
@@ -699,7 +699,25 @@ if ($route === 'rrhh/reloj-control' && $method === 'POST') {
 
 // 3. Módulo Administrativo: Estudiantes, Matrícula y Talleres (Grupo A / B) + Ficha Integral Figma
 if ($route === 'estudiantes' && $method === 'GET') {
-    $estudiantes = $pdo->query("
+    $anioEscolar = filter_var($_GET['anio_escolar'] ?? '2026', FILTER_VALIDATE_INT);
+    if ($anioEscolar === false || $anioEscolar < 1901 || $anioEscolar > 2155) {
+        http_response_code(400);
+        echo json_encode(['ok' => false, 'error' => 'El parámetro anio_escolar debe ser un año válido entre 1901 y 2155.']);
+        exit;
+    }
+
+    $curso = null;
+    if (isset($_GET['curso'])) {
+        $curso = filter_var($_GET['curso'], FILTER_VALIDATE_INT);
+        if ($curso === false || $curso < 1) {
+            http_response_code(400);
+            echo json_encode(['ok' => false, 'error' => 'El parámetro curso debe ser un id_taller válido.']);
+            exit;
+        }
+    }
+
+    $rut = trim((string)($_GET['rut'] ?? ''));
+    $sqlEstudiantes = "
         SELECT 
             e.*,
             m.numero_matricula,
@@ -725,15 +743,33 @@ if ($route === 'estudiantes' && $method === 'GET') {
             pai.barreras_aprendizaje,
             pai.objetivos_transicion_vida_adulta
         FROM apx_acad_expedientes_alumnos e
-        LEFT JOIN apx_acad_inscripciones_anuales m ON e.id_estudiante = m.id_estudiante AND m.anio_escolar = 2026
+        LEFT JOIN apx_acad_inscripciones_anuales m ON e.id_estudiante = m.id_estudiante AND m.anio_escolar = ?
         LEFT JOIN apx_acad_unidades_laborales t ON m.id_taller = t.id_taller
         LEFT JOIN apx_fam_tutores_legales a ON e.id_apoderado_titular = a.id_apoderado
         LEFT JOIN apx_conv_protocolos_paec_enc p ON e.id_estudiante = p.id_estudiante
         LEFT JOIN apx_sec_cuentas_acceso psos ON p.id_profesional_sos = psos.id_usuario
         LEFT JOIN apx_med_dossier_clinico_enc fc ON e.id_estudiante = fc.id_estudiante
-        LEFT JOIN apx_pie_planes_apoyo_ind pai ON e.id_estudiante = pai.id_estudiante AND pai.anio_escolar = 2026
-        ORDER BY e.apellidos ASC
-    ")->fetchAll();
+        LEFT JOIN apx_pie_planes_apoyo_ind pai ON e.id_estudiante = pai.id_estudiante AND pai.anio_escolar = ?
+    ";
+    $params = [$anioEscolar, $anioEscolar];
+    $conditions = [];
+
+    if ($curso !== null) {
+        $conditions[] = 'm.id_taller = ?';
+        $params[] = $curso;
+    }
+    if ($rut !== '') {
+        $conditions[] = "REPLACE(e.rut, '.', '') LIKE ?";
+        $params[] = '%' . str_replace('.', '', $rut) . '%';
+    }
+    if ($conditions) {
+        $sqlEstudiantes .= ' WHERE ' . implode(' AND ', $conditions);
+    }
+    $sqlEstudiantes .= ' ORDER BY e.apellidos ASC';
+
+    $stmtEstudiantes = $pdo->prepare($sqlEstudiantes);
+    $stmtEstudiantes->execute($params);
+    $estudiantes = $stmtEstudiantes->fetchAll();
 
     $canSeeClinical = in_array($authUser['rol_codigo'], ['ESPECIALISTA_PIE', 'DIRECTOR_UTP', 'DOCENTE', 'ADMIN']);
     foreach ($estudiantes as &$estRow) {
@@ -1275,19 +1311,24 @@ if (preg_match('#^clinico/expediente/(\d+)$#', $route, $m)) {
             'updated_at' => $fichaRaw['updated_at']
         ] : null;
 
-        $paec = $paecRaw ? [
-            'id_paec' => $paecRaw['id_paec'],
-            'profesional_sos_nombre' => $paecRaw['profesional_sos_nombre'],
-            'profesional_sos_telefono' => $paecRaw['profesional_sos_telefono'],
-            'profesional_sos_especialidad' => $paecRaw['profesional_sos_especialidad'],
-            'cipher_paec_preview' => substr($paecRaw['gatillantes_dec_enc'], 0, 56) . '...',
-            'gatillantes_dec' => decryptAES256($paecRaw['gatillantes_dec_enc'], $aesHexKey),
-            'senales_previas' => decryptAES256($paecRaw['senales_previas_enc'], $aesHexKey),
-            'estrategias_contencion' => decryptAES256($paecRaw['estrategias_contencion_enc'], $aesHexKey),
-            'acuerdos_familia' => $paecRaw['acuerdos_familia']
-        ] : null;
+        $paec = null;
+        if (canAccessPaecSos($authUser)) {
+            $paec = $paecRaw ? [
+                'id_paec' => $paecRaw['id_paec'],
+                'profesional_sos_nombre' => $paecRaw['profesional_sos_nombre'],
+                'profesional_sos_telefono' => $paecRaw['profesional_sos_telefono'],
+                'profesional_sos_especialidad' => $paecRaw['profesional_sos_especialidad'],
+                'cipher_paec_preview' => substr($paecRaw['gatillantes_dec_enc'], 0, 56) . '...',
+                'gatillantes_dec' => decryptAES256($paecRaw['gatillantes_dec_enc'], $aesHexKey),
+                'senales_previas' => decryptAES256($paecRaw['senales_previas_enc'], $aesHexKey),
+                'estrategias_contencion' => decryptAES256($paecRaw['estrategias_contencion_enc'], $aesHexKey),
+                'acuerdos_familia' => $paecRaw['acuerdos_familia']
+            ] : null;
+        } elseif ($paecRaw) {
+            logAudit($pdo, (int)$authUser['id_usuario'], $idEst, 'PAEC_PROTOCOLO_SOS', 'LECTURA', "INTENTO DENEGADO de acceso al protocolo por rol no autorizado ($rol)");
+        }
 
-        $soloLectura = in_array($rol, ['DOCENTE', 'ADMIN']);
+        $soloLectura = !in_array($rol, ['ESPECIALISTA_PIE', 'DIRECTOR_UTP'], true);
 
         echo json_encode([
             'ok' => true,
@@ -1355,12 +1396,303 @@ if (preg_match('#^clinico/expediente/(\d+)$#', $route, $m)) {
 }
 
 // 6. Botón SOS en Aula y Bitácora de Incidencias (PAEC)
+if (preg_match('#^paec/sos/(\d+)/protocolo$#', $route, $m) && $method === 'GET') {
+    $idIncidencia = (int)$m[1];
+    if (!canAccessPaecSos($authUser)) {
+        logAudit($pdo, (int)$authUser['id_usuario'], null, 'PAEC_PROTOCOLO_SOS', 'LECTURA', "INTENTO DENEGADO por rol no autorizado (" . ($authUser['rol_codigo'] ?? 'DESCONOCIDO') . ")");
+        http_response_code(403);
+        echo json_encode(['ok' => false, 'error' => 'No tiene permisos para consultar protocolos PAEC asociados a alertas SOS.']);
+        exit;
+    }
+
+    $stmtPaecSos = $pdo->prepare("
+        SELECT b.id_estudiante, p.id_paec, p.gatillantes_dec_enc, p.senales_previas_enc,
+               p.estrategias_contencion_enc, p.acuerdos_familia, p.updated_at,
+               CONCAT(u.nombres, ' ', u.apellidos) AS profesional_sos_nombre,
+               u.telefono AS profesional_sos_telefono, u.especialidad AS profesional_sos_especialidad
+        FROM apx_conv_bitacora_sos_enc b
+        INNER JOIN apx_conv_protocolos_paec_enc p ON p.id_estudiante = b.id_estudiante AND p.vigente = 1
+        INNER JOIN apx_sec_cuentas_acceso u ON p.id_profesional_sos = u.id_usuario
+        WHERE b.id_incidencia = ? AND b.tipo_incidencia = 'DESREGULACION_SEVERA_SOS'
+        LIMIT 1
+    ");
+    $stmtPaecSos->execute([$idIncidencia]);
+    $paecRaw = $stmtPaecSos->fetch();
+    if (!$paecRaw) {
+        http_response_code(404);
+        echo json_encode(['ok' => false, 'error' => 'No se encontró una alerta SOS con protocolo PAEC vigente.']);
+        exit;
+    }
+
+    logAudit($pdo, (int)$authUser['id_usuario'], (int)$paecRaw['id_estudiante'], 'PAEC_PROTOCOLO_SOS', 'LECTURA', "Consulta autorizada del protocolo PAEC para incidencia SOS #$idIncidencia");
+    echo json_encode([
+        'ok' => true,
+        'id_incidencia' => $idIncidencia,
+        'id_estudiante' => (int)$paecRaw['id_estudiante'],
+        'paec' => [
+            'id_paec' => (int)$paecRaw['id_paec'],
+            'profesional_sos_nombre' => $paecRaw['profesional_sos_nombre'],
+            'profesional_sos_telefono' => $paecRaw['profesional_sos_telefono'],
+            'profesional_sos_especialidad' => $paecRaw['profesional_sos_especialidad'],
+            'gatillantes_dec' => decryptAES256($paecRaw['gatillantes_dec_enc'], $aesHexKey),
+            'senales_previas' => decryptAES256($paecRaw['senales_previas_enc'], $aesHexKey),
+            'estrategias_contencion' => decryptAES256($paecRaw['estrategias_contencion_enc'], $aesHexKey),
+            'acuerdos_familia' => $paecRaw['acuerdos_familia'],
+            'updated_at' => $paecRaw['updated_at']
+        ]
+    ]);
+    exit;
+}
+
+if (preg_match('#^paec/sos/(\d+)/informe$#', $route, $m) && $method === 'POST') {
+    $idIncidencia = (int)$m[1];
+    if (!canAccessPaecSos($authUser)) {
+        logAudit($pdo, (int)$authUser['id_usuario'], null, 'INFORME_POST_SOS', 'CREACION', "INTENTO DENEGADO por rol no autorizado (" . ($authUser['rol_codigo'] ?? 'DESCONOCIDO') . ")");
+        http_response_code(403);
+        echo json_encode(['ok' => false, 'error' => 'No tiene permisos para registrar informes post-alerta SOS.']);
+        exit;
+    }
+
+    $stmtIncidencia = $pdo->prepare("
+        SELECT id_estudiante FROM apx_conv_bitacora_sos_enc
+        WHERE id_incidencia = ? AND tipo_incidencia = 'DESREGULACION_SEVERA_SOS'
+        LIMIT 1
+    ");
+    $stmtIncidencia->execute([$idIncidencia]);
+    $idEstudiante = $stmtIncidencia->fetchColumn();
+    if ($idEstudiante === false) {
+        http_response_code(404);
+        echo json_encode(['ok' => false, 'error' => 'No se encontró la alerta SOS indicada.']);
+        exit;
+    }
+
+    $requiredFields = ['que_sucedio', 'factores_desencadenantes', 'abordaje_por_etapas', 'medidas_adoptadas', 'acuerdos_familia'];
+    foreach ($requiredFields as $field) {
+        if (!array_key_exists($field, $body)) {
+            http_response_code(400);
+            echo json_encode(['ok' => false, 'error' => "Falta el campo obligatorio: $field."]);
+            exit;
+        }
+    }
+
+    foreach (['que_sucedio', 'factores_desencadenantes', 'medidas_adoptadas', 'acuerdos_familia'] as $field) {
+        if (!is_string($body[$field]) || trim($body[$field]) === '') {
+            http_response_code(400);
+            echo json_encode(['ok' => false, 'error' => "El campo $field debe ser un texto no vacío."]);
+            exit;
+        }
+    }
+    if (!is_array($body['abordaje_por_etapas']) || count($body['abordaje_por_etapas']) === 0) {
+        http_response_code(400);
+        echo json_encode(['ok' => false, 'error' => 'abordaje_por_etapas debe ser un arreglo no vacío.']);
+        exit;
+    }
+    $etapasValidas = ['ETAPA_1_PREVENCION', 'ETAPA_2_MODERADA', 'ETAPA_3_SEVERA'];
+    foreach ($body['abordaje_por_etapas'] as $etapa) {
+        if (
+            !is_array($etapa)
+            || !in_array($etapa['etapa'] ?? '', $etapasValidas, true)
+            || !is_string($etapa['detalle'] ?? null)
+            || trim($etapa['detalle']) === ''
+        ) {
+            http_response_code(400);
+            echo json_encode(['ok' => false, 'error' => 'Cada abordaje por etapa requiere etapa válida y detalle de texto no vacío.']);
+            exit;
+        }
+    }
+    if (!isset($body['profesionales']) || !is_array($body['profesionales']) || count($body['profesionales']) === 0) {
+        http_response_code(400);
+        echo json_encode(['ok' => false, 'error' => 'profesionales debe ser un arreglo no vacío.']);
+        exit;
+    }
+
+    $profesionales = [];
+    $idsProfesionales = [];
+    foreach ($body['profesionales'] as $profesional) {
+        if (!is_array($profesional)) {
+            http_response_code(400);
+            echo json_encode(['ok' => false, 'error' => 'Cada profesional debe ser un objeto JSON.']);
+            exit;
+        }
+        $idProfesional = filter_var($profesional['id_usuario'] ?? null, FILTER_VALIDATE_INT);
+        $funcion = trim((string)($profesional['funcion'] ?? ''));
+        $detalle = $profesional['detalle_intervencion'] ?? null;
+        if ($idProfesional === false || $idProfesional < 1 || $funcion === '' || strlen($funcion) > 120 || (!is_string($detalle) && $detalle !== null)) {
+            http_response_code(400);
+            echo json_encode(['ok' => false, 'error' => 'Cada profesional requiere id_usuario, funcion y un detalle_intervencion de texto opcional.']);
+            exit;
+        }
+        if (isset($idsProfesionales[$idProfesional])) {
+            http_response_code(400);
+            echo json_encode(['ok' => false, 'error' => 'No se permite repetir id_usuario en profesionales.']);
+            exit;
+        }
+        $idsProfesionales[$idProfesional] = true;
+        $profesionales[] = [
+            'id_usuario' => (int)$idProfesional,
+            'funcion' => $funcion,
+            'detalle_intervencion' => $detalle
+        ];
+    }
+
+    $placeholders = implode(',', array_fill(0, count($idsProfesionales), '?'));
+    $stmtUsuarios = $pdo->prepare("SELECT id_usuario FROM apx_sec_cuentas_acceso WHERE id_usuario IN ($placeholders)");
+    $stmtUsuarios->execute(array_keys($idsProfesionales));
+    if (count($stmtUsuarios->fetchAll()) !== count($idsProfesionales)) {
+        http_response_code(400);
+        echo json_encode(['ok' => false, 'error' => 'Uno o más profesionales no corresponden a usuarios existentes.']);
+        exit;
+    }
+
+    try {
+        $abordajeJson = json_encode($body['abordaje_por_etapas'], JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
+    } catch (JsonException $e) {
+        http_response_code(400);
+        echo json_encode(['ok' => false, 'error' => 'abordaje_por_etapas contiene datos que no se pueden codificar como JSON.']);
+        exit;
+    }
+
+    $pdo->beginTransaction();
+    try {
+        $stmtExisting = $pdo->prepare("SELECT id_informe FROM apx_conv_informes_post_sos_enc WHERE id_incidencia = ? LIMIT 1");
+        $stmtExisting->execute([$idIncidencia]);
+        if ($stmtExisting->fetchColumn() !== false) {
+            $pdo->rollBack();
+            http_response_code(409);
+            echo json_encode(['ok' => false, 'error' => 'Ya existe un informe para esta alerta SOS.']);
+            exit;
+        }
+
+        $stmtInforme = $pdo->prepare("
+            INSERT INTO apx_conv_informes_post_sos_enc
+            (id_incidencia, id_autor, que_sucedio_enc, factores_desencadenantes_enc, abordaje_por_etapas_enc, medidas_adoptadas_enc, acuerdos_familia_enc)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        ");
+        $stmtInforme->execute([
+            $idIncidencia,
+            (int)$authUser['id_usuario'],
+            encryptAES256(trim($body['que_sucedio']), $aesHexKey),
+            encryptAES256(trim($body['factores_desencadenantes']), $aesHexKey),
+            encryptAES256($abordajeJson, $aesHexKey),
+            encryptAES256(trim($body['medidas_adoptadas']), $aesHexKey),
+            encryptAES256(trim($body['acuerdos_familia']), $aesHexKey)
+        ]);
+        $idInforme = (int)$pdo->lastInsertId();
+
+        $stmtProfesional = $pdo->prepare("
+            INSERT INTO apx_conv_informe_sos_profesionales
+            (id_informe, id_usuario, funcion, detalle_intervencion_enc)
+            VALUES (?, ?, ?, ?)
+        ");
+        foreach ($profesionales as $profesional) {
+            $stmtProfesional->execute([
+                $idInforme,
+                $profesional['id_usuario'],
+                $profesional['funcion'],
+                $profesional['detalle_intervencion'] !== null
+                    ? encryptAES256(trim($profesional['detalle_intervencion']), $aesHexKey)
+                    : null
+            ]);
+        }
+        $pdo->commit();
+    } catch (PDOException $e) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        if ($e->getCode() === '23000' && (int)($e->errorInfo[1] ?? 0) === 1062) {
+            http_response_code(409);
+            echo json_encode(['ok' => false, 'error' => 'Ya existe un informe para esta alerta SOS.']);
+            exit;
+        }
+        throw $e;
+    } catch (Throwable $e) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        throw $e;
+    }
+
+    logAudit($pdo, (int)$authUser['id_usuario'], (int)$idEstudiante, 'INFORME_POST_SOS', 'CREACION', "Creación de informe post-alerta SOS #$idInforme para incidencia #$idIncidencia");
+    http_response_code(201);
+    echo json_encode(['ok' => true, 'id_informe' => $idInforme, 'id_incidencia' => $idIncidencia]);
+    exit;
+}
+
+if (preg_match('#^paec/sos/(\d+)/informe$#', $route, $m) && $method === 'GET') {
+    $idIncidencia = (int)$m[1];
+    if (!canAccessPaecSos($authUser)) {
+        logAudit($pdo, (int)$authUser['id_usuario'], null, 'INFORME_POST_SOS', 'LECTURA', "INTENTO DENEGADO por rol no autorizado (" . ($authUser['rol_codigo'] ?? 'DESCONOCIDO') . ")");
+        http_response_code(403);
+        echo json_encode(['ok' => false, 'error' => 'No tiene permisos para consultar informes post-alerta SOS.']);
+        exit;
+    }
+
+    $stmtInforme = $pdo->prepare("
+        SELECT i.*, b.id_estudiante
+        FROM apx_conv_informes_post_sos_enc i
+        INNER JOIN apx_conv_bitacora_sos_enc b ON b.id_incidencia = i.id_incidencia
+        WHERE i.id_incidencia = ? AND b.tipo_incidencia = 'DESREGULACION_SEVERA_SOS'
+        LIMIT 1
+    ");
+    $stmtInforme->execute([$idIncidencia]);
+    $informeRaw = $stmtInforme->fetch();
+    if (!$informeRaw) {
+        http_response_code(404);
+        echo json_encode(['ok' => false, 'error' => 'No se encontró un informe para la alerta SOS indicada.']);
+        exit;
+    }
+
+    $stmtProfesionales = $pdo->prepare("
+        SELECT p.id_usuario, p.funcion, p.detalle_intervencion_enc,
+               CONCAT(u.nombres, ' ', u.apellidos) AS nombre
+        FROM apx_conv_informe_sos_profesionales p
+        INNER JOIN apx_sec_cuentas_acceso u ON u.id_usuario = p.id_usuario
+        WHERE p.id_informe = ?
+        ORDER BY u.apellidos ASC, u.nombres ASC
+    ");
+    $stmtProfesionales->execute([(int)$informeRaw['id_informe']]);
+    $profesionales = $stmtProfesionales->fetchAll();
+    foreach ($profesionales as &$profesional) {
+        $profesional['id_usuario'] = (int)$profesional['id_usuario'];
+        $profesional['detalle_intervencion'] = $profesional['detalle_intervencion_enc'] !== null
+            ? decryptAES256($profesional['detalle_intervencion_enc'], $aesHexKey)
+            : null;
+        unset($profesional['detalle_intervencion_enc']);
+    }
+    unset($profesional);
+
+    logAudit($pdo, (int)$authUser['id_usuario'], (int)$informeRaw['id_estudiante'], 'INFORME_POST_SOS', 'LECTURA', "Consulta de informe post-alerta SOS #{$informeRaw['id_informe']} para incidencia #$idIncidencia");
+    echo json_encode([
+        'ok' => true,
+        'informe' => [
+            'id_informe' => (int)$informeRaw['id_informe'],
+            'id_incidencia' => $idIncidencia,
+            'id_estudiante' => (int)$informeRaw['id_estudiante'],
+            'que_sucedio' => decryptAES256($informeRaw['que_sucedio_enc'], $aesHexKey),
+            'factores_desencadenantes' => decryptAES256($informeRaw['factores_desencadenantes_enc'], $aesHexKey),
+            'abordaje_por_etapas' => json_decode(decryptAES256($informeRaw['abordaje_por_etapas_enc'], $aesHexKey), true, 512, JSON_THROW_ON_ERROR),
+            'profesionales' => $profesionales,
+            'medidas_adoptadas' => decryptAES256($informeRaw['medidas_adoptadas_enc'], $aesHexKey),
+            'acuerdos_familia' => decryptAES256($informeRaw['acuerdos_familia_enc'], $aesHexKey),
+            'id_autor' => (int)$informeRaw['id_autor'],
+            'created_at' => $informeRaw['created_at'],
+            'updated_at' => $informeRaw['updated_at']
+        ]
+    ]);
+    exit;
+}
+
 if ($route === 'paec/sos' && $method === 'POST') {
-    $idEst = (int)($body['id_estudiante'] ?? 1);
+    $idEst = filter_var($body['id_estudiante'] ?? null, FILTER_VALIDATE_INT);
+    if ($idEst === false || $idEst < 1) {
+        http_response_code(400);
+        echo json_encode(['ok' => false, 'error' => 'id_estudiante es obligatorio y debe ser válido.']);
+        exit;
+    }
     $stmtInfo = $pdo->prepare("
         SELECT e.id_estudiante, CONCAT(e.nombres, ' ', e.apellidos) AS estudiante_nombre,
                t.id_taller, t.nombre AS taller_nombre, t.sala_ubicacion,
-               p.id_profesional_sos, p.estrategias_contencion_enc,
+               p.id_profesional_sos,
                CONCAT(u.nombres, ' ', u.apellidos) AS profesional_sos_nombre,
                u.telefono AS profesional_sos_telefono, u.especialidad
         FROM apx_acad_expedientes_alumnos e
@@ -1372,13 +1704,15 @@ if ($route === 'paec/sos' && $method === 'POST') {
     ");
     $stmtInfo->execute([$idEst]);
     $info = $stmtInfo->fetch();
-
-    $protocolo = !empty($info['estrategias_contencion_enc'])
-        ? decryptAES256($info['estrategias_contencion_enc'], $aesHexKey)
-        : 'Activar protocolo de contención emocional Etapa 3 y traslado seguro a Sala Sensorial.';
+    if (!$info) {
+        http_response_code(404);
+        echo json_encode(['ok' => false, 'error' => 'No se encontró el estudiante indicado.']);
+        exit;
+    }
 
     $suceso = $body['descripcion_breve'] ?? 'Desregulación Emocional y Conductual (DEC) Severa activada desde Botón SOS en Aula.';
-    $ubicacion = $body['ubicacion'] ?: ($info['sala_ubicacion'] ?: 'Pabellón Técnico - Sala T1');
+    $ubicacion = $body['ubicacion'] ?? ($info['sala_ubicacion'] ?: 'Pabellón Técnico - Sala T1');
+    $accionesAplicadas = 'Alerta SOS activada; consultar protocolo PAEC mediante el endpoint autorizado.';
 
     $stmtBit = $pdo->prepare("
         INSERT INTO apx_conv_bitacora_sos_enc
@@ -1391,7 +1725,7 @@ if ($route === 'paec/sos' && $method === 'POST') {
         $authUser['id_usuario'],
         $info['id_profesional_sos'] ?: 5,
         encryptAES256($suceso, $aesHexKey),
-        $protocolo
+        $accionesAplicadas
     ]);
     $idIncidencia = (int)$pdo->lastInsertId();
 
@@ -1418,7 +1752,6 @@ if ($route === 'paec/sos' && $method === 'POST') {
             'reportado_por' => $authUser['nombre_completo'],
             'profesional_sos' => $info['profesional_sos_nombre'] ?: 'Camila Ignacia Vargas Herrera (Psicóloga PIE)',
             'telefono_sos' => $info['profesional_sos_telefono'] ?: '+56 9 8555 6677',
-            'protocolo_paec' => $protocolo,
             'hora' => date('H:i:s')
         ]
     ]);
@@ -1426,6 +1759,13 @@ if ($route === 'paec/sos' && $method === 'POST') {
 }
 
 if ($route === 'paec/bitacora' && $method === 'GET') {
+    if (!canAccessPaecSos($authUser)) {
+        logAudit($pdo, (int)$authUser['id_usuario'], null, 'BITACORA_SOS', 'LECTURA', "INTENTO DENEGADO por rol no autorizado (" . ($authUser['rol_codigo'] ?? 'DESCONOCIDO') . ")");
+        http_response_code(403);
+        echo json_encode(['ok' => false, 'error' => 'No tiene permisos para consultar la bitácora de alertas SOS.']);
+        exit;
+    }
+
     $rows = $pdo->query("
         SELECT b.*, CONCAT(e.nombres, ' ', e.apellidos) AS estudiante_nombre,
                CONCAT(rep.nombres, ' ', rep.apellidos) AS reportante_nombre,
@@ -1443,6 +1783,7 @@ if ($route === 'paec/bitacora' && $method === 'GET') {
         $r['descripcion_suceso'] = decryptAES256($r['descripcion_suceso_enc'], $aesHexKey);
     }
 
+    logAudit($pdo, (int)$authUser['id_usuario'], null, 'BITACORA_SOS', 'LECTURA', 'Consulta de bitácora de alertas SOS');
     echo json_encode(['ok' => true, 'bitacora' => $rows]);
     exit;
 }
@@ -1622,6 +1963,7 @@ if ($route === 'usuarios' && $method === 'POST') {
         'profesor' => 'DOCENTE',
         'docente' => 'DOCENTE',
         'especialista_pie' => 'ESPECIALISTA_PIE',
+        'convivencia_escolar' => 'CONVIVENCIA_ESCOLAR',
         'monitor' => 'MONITOR',
         'apoderado' => 'APODERADO'
     ];
