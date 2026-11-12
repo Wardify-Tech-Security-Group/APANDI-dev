@@ -428,7 +428,9 @@ if ($route === 'auth/login' && $method === 'POST') {
         // CRITERIO OBLIGATORIO: Interceptar ANTES de verificar contraseña si la cuenta está bloqueada
         $lockInfo = checkUserLockout($user);
         if ($lockInfo !== null) {
-            $pdo->commit();
+            if ($pdo->inTransaction()) {
+                $pdo->commit();
+            }
             http_response_code(429);
             header('Retry-After: ' . $lockInfo['segundos_restantes']);
             echo json_encode([
@@ -448,7 +450,9 @@ if ($route === 'auth/login' && $method === 'POST') {
 
         // CRITERIO OBLIGATORIO: Reiniciar contador y limpiar bloqueo tras login exitoso
         resetFailedAttempts($pdo, (int)$user['id_usuario'], true);
-        $pdo->commit();
+        if ($pdo->inTransaction()) {
+            $pdo->commit();
+        }
 
         $userPayload = [
             'id_usuario' => (int)$user['id_usuario'],
