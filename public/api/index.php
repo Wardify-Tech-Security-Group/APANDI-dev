@@ -397,81 +397,68 @@ if ($route === 'auth/login' && $method === 'POST') {
     $stmt->execute([$emailOrRut, $emailOrRut, $emailOrRut, $rutSinPuntos]);
     $user = $stmt->fetch();
 
-    // Rechaza credenciales inválidas o cuentas bloqueadas y contabiliza el fallo si corresponde.
-    if (!$user || (int)$user['cuenta_bloqueada'] === 1 || !password_verify($password, $user['password_hash'])) {
-        if ($user && (int)$user['cuenta_bloqueada'] !== 1) {
-            recordFailedLogin($pdo, (int)$user['id_usuario']);
-        }
-        http_response_code(401);
-        echo json_encode(['ok' => false, 'error' => 'Credenciales inválidas o usuario inactivo.']);
-        exit;
-    }
+   $pdo->beginTransaction();
+        try {
+            if (!$user || (int)$user['activo'] !== 1) {
+                $pdo->commit();
+                http_response_code(401);
+                echo json_encode(['ok' => false, 'error' => 'Credenciales inválidas o usuario inactivo.']);
+                exit;
+            }
 
-    $pdo->prepare("UPDATE apx_sec_cuentas_acceso SET ultimo_acceso = NOW() WHERE id_usuario = ?")->execute([$user['id_usuario']]);
+            // CRITERIO OBLIGATORIO: Interceptar ANTES de verificar contraseña si la cuenta está bloqueada
+            $lockInfo = checkUserLockout($user);
+            if ($lockInfo !== null) {
+                $pdo->commit();
+                http_response_code(429);
+                header('Retry-After: ' . $lockInfo['segundos_restantes']);
+                echo json_encode([
+                    'ok' => false,
+                    'error' => "Cuenta temporalmente bloqueada por exceso de intentos fallidos. Intente nuevamente en {$lockInfo['minutos_restantes']} minuto(s).",
+                    'codigo' => 'ACCOUNT_TEMPORARILY_LOCKED',
+                    'bloqueado_hasta' => $lockInfo['bloqueado_hasta'],
+                    'segundos_restantes' => $lockInfo['segundos_restantes']
+                ]);
+                exit;
+            }
 
-    $userPayload = [
-        'id_usuario' => (int)$user['id_usuario'],
-        'rut' => $user['rut'],
-        'nombre_completo' => $user['nombres'] . ' ' . $user['apellidos'],
-        'email' => $user['email'],
-        'rol_codigo' => $user['rol_codigo'],
-        'rol_nombre' => $user['rol_nombre'],
-        'especialidad' => $user['especialidad'],
-        'horas_contrato' => (int)$user['horas_contrato'],
-        'debe_cambiar_clave' => (int)($user['debe_cambiar_clave'] ?? 0)
-    ];
+            // Verificar contraseña con Bcrypt Cost 12
+            if (!password_verify($password, (string)$user['password_hash'])) {
+                recordFailedAttempt($pdo, $user, 'password');
+            }
 
-        // CRITERIO OBLIGATORIO: Interceptar ANTES de verificar contraseña si la cuenta está bloqueada
-        $lockInfo = checkUserLockout($user);
-        if ($lockInfo !== null) {
+            // CRITERIO OBLIGATORIO: Reiniciar contador y limpiar bloqueo tras login exitoso
+            resetFailedAttempts($pdo, (int)$user['id_usuario'], true);
+            $pdo->prepare("UPDATE apx_sec_cuentas_acceso SET ultimo_acceso = NOW() WHERE id_usuario = ?")->execute([$user['id_usuario']]);
             $pdo->commit();
-            http_response_code(429);
-            header('Retry-After: ' . $lockInfo['segundos_restantes']);
+
+            $userPayload = [
+                'id_usuario' => (int)$user['id_usuario'],
+                'rut' => $user['rut'],
+                'nombre_completo' => $user['nombres'] . ' ' . $user['apellidos'],
+                'email' => $user['email'],
+                'rol_codigo' => $user['rol_codigo'],
+                'rol_nombre' => $user['rol_nombre'],
+                'especialidad' => $user['especialidad'],
+                'horas_contrato' => (int)$user['horas_contrato'],
+                'debe_cambiar_clave' => (int)($user['debe_cambiar_clave'] ?? 0)
+            ];
+
             echo json_encode([
-                'ok' => false,
-                'error' => "Cuenta temporalmente bloqueada por exceso de intentos fallidos. Intente nuevamente en {$lockInfo['minutos_restantes']} minuto(s).",
-                'codigo' => 'ACCOUNT_TEMPORARILY_LOCKED',
-                'bloqueado_hasta' => $lockInfo['bloqueado_hasta'],
-                'segundos_restantes' => $lockInfo['segundos_restantes']
+                'ok' => true,
+                'token' => createJWT($userPayload, $jwtSecret),
+                'user' => $userPayload
             ]);
             exit;
+        } catch (Throwable $e) {
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+            http_response_code(500);
+            echo json_encode(['ok' => false, 'error' => 'Error en el proceso de autenticación.']);
+            exit;
         }
-
-        // Verificar contraseña con Bcrypt Cost 12
-        if (!password_verify($password, (string)$user['password_hash'])) {
-            recordFailedAttempt($pdo, $user, 'password');
-        }
-
-        // CRITERIO OBLIGATORIO: Reiniciar contador y limpiar bloqueo tras login exitoso
-        resetFailedAttempts($pdo, (int)$user['id_usuario'], true);
-        $pdo->commit();
-
-        $userPayload = [
-            'id_usuario' => (int)$user['id_usuario'],
-            'rut' => $user['rut'],
-            'nombre_completo' => $user['nombres'] . ' ' . $user['apellidos'],
-            'email' => $user['email'],
-            'rol_codigo' => $user['rol_codigo'],
-            'rol_nombre' => $user['rol_nombre'],
-            'especialidad' => $user['especialidad'],
-            'horas_contrato' => (int)$user['horas_contrato']
-        ];
-
-        echo json_encode([
-            'ok' => true,
-            'token' => createJWT($userPayload, $jwtSecret),
-            'user' => $userPayload
-        ]);
-        exit;
-    } catch (Throwable $e) {
-        if ($pdo->inTransaction()) {
-            $pdo->rollBack();
-        }
-        http_response_code(500);
-        echo json_encode(['ok' => false, 'error' => 'Error en el proceso de autenticación.']);
-        exit;
     }
-}
 
 // Verificar autenticación JWT para el resto de los endpoints
 $authUser = verifyJWT($jwtSecret);
