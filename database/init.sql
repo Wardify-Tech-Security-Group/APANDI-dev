@@ -133,6 +133,7 @@ CREATE TABLE IF NOT EXISTS apx_rrhh_bloques_horarios (
     dia_semana TINYINT NOT NULL COMMENT '1=Lunes, 2=Martes, 3=Miércoles, 4=Jueves, 5=Viernes',
     hora_inicio TIME NOT NULL,
     hora_fin TIME NOT NULL,
+    duracion_minutos INT DEFAULT 90,
     bloque_nombre VARCHAR(100) DEFAULT 'Bloque Taller Práctico',
     CONSTRAINT fk_apx_bloque_taller FOREIGN KEY (id_taller) REFERENCES apx_acad_unidades_laborales (id_taller) ON DELETE CASCADE,
     CONSTRAINT fk_apx_bloque_usuario FOREIGN KEY (id_usuario) REFERENCES apx_sec_cuentas_acceso (id_usuario) ON DELETE CASCADE
@@ -292,10 +293,38 @@ CREATE TABLE IF NOT EXISTS apx_pie_adecuaciones_paci (
 -- 5. MÓDULO PEDAGÓGICO (LIBRO DE CLASES DIGITAL - DECRETO 83)
 -- =============================================================================
 
+CREATE TABLE IF NOT EXISTS apx_ped_semestres_config (
+    id_semestre INT AUTO_INCREMENT PRIMARY KEY,
+    anio_escolar YEAR NOT NULL,
+    numero_semestre TINYINT NOT NULL COMMENT '1 o 2',
+    nombre VARCHAR(100) NOT NULL,
+    fecha_inicio DATE NOT NULL,
+    fecha_termino DATE NOT NULL,
+    activo TINYINT(1) DEFAULT 1,
+    actualizado_por INT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uk_apx_semestre_anio (anio_escolar, numero_semestre),
+    CONSTRAINT fk_apx_semestre_usuario FOREIGN KEY (actualizado_por) REFERENCES apx_sec_cuentas_acceso (id_usuario) ON DELETE SET NULL
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS apx_ped_bloques_estudiantes (
+    id_bloque_estudiante INT AUTO_INCREMENT PRIMARY KEY,
+    id_horario INT NOT NULL,
+    id_estudiante INT NOT NULL,
+    activo TINYINT(1) DEFAULT 1,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uk_apx_bloque_alumno (id_horario, id_estudiante),
+    CONSTRAINT fk_apx_be_bloque FOREIGN KEY (id_horario) REFERENCES apx_rrhh_bloques_horarios (id_horario) ON DELETE CASCADE,
+    CONSTRAINT fk_apx_be_estudiante FOREIGN KEY (id_estudiante) REFERENCES apx_acad_expedientes_alumnos (id_estudiante) ON DELETE CASCADE
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS apx_ped_leccionario_pid (
     id_clase INT AUTO_INCREMENT PRIMARY KEY,
     id_taller INT NOT NULL,
     id_docente INT NOT NULL,
+    semestre TINYINT NOT NULL DEFAULT 1,
+    numero_semana INT NOT NULL DEFAULT 1,
     fecha_clase DATE NOT NULL,
     unidad_tematica VARCHAR(150) NOT NULL,
     objetivo_aprendizaje VARCHAR(255) NOT NULL,
@@ -305,9 +334,14 @@ CREATE TABLE IF NOT EXISTS apx_ped_leccionario_pid (
     firmado TINYINT(1) DEFAULT 0 COMMENT 'Validación con Firma Electrónica Simple (PIN/Token)',
     hash_firma_electronica VARCHAR(128) NULL COMMENT 'Sello SHA-256 de la clase firmada',
     fecha_firma TIMESTAMP NULL,
+    estado_aprobacion ENUM('BORRADOR', 'ENVIADO_REVISION', 'APROBADO', 'OBSERVADO') NOT NULL DEFAULT 'BORRADOR',
+    observaciones_utp TEXT NULL,
+    aprobado_por INT NULL,
+    fecha_aprobacion TIMESTAMP NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_apx_pid_taller FOREIGN KEY (id_taller) REFERENCES apx_acad_unidades_laborales (id_taller),
-    CONSTRAINT fk_apx_pid_docente FOREIGN KEY (id_docente) REFERENCES apx_sec_cuentas_acceso (id_usuario)
+    CONSTRAINT fk_apx_pid_docente FOREIGN KEY (id_docente) REFERENCES apx_sec_cuentas_acceso (id_usuario),
+    CONSTRAINT fk_apx_pid_aprobador FOREIGN KEY (aprobado_por) REFERENCES apx_sec_cuentas_acceso (id_usuario) ON DELETE SET NULL
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS apx_ped_asistencia_alumnos (
@@ -315,6 +349,7 @@ CREATE TABLE IF NOT EXISTS apx_ped_asistencia_alumnos (
     id_estudiante INT NOT NULL,
     id_taller INT NOT NULL,
     id_clase INT NULL,
+    id_horario INT NOT NULL DEFAULT 1,
     fecha DATE NOT NULL,
     estado ENUM(
         'PRESENTE',
@@ -327,7 +362,8 @@ CREATE TABLE IF NOT EXISTS apx_ped_asistencia_alumnos (
     registrado_por INT NOT NULL,
     firmado_digitalmente TINYINT(1) DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE KEY uk_apx_asist_alumno_dia (id_estudiante, fecha),
+    KEY idx_apx_asist_alumno (id_estudiante),
+    UNIQUE KEY uk_apx_asist_alumno_bloque_dia (id_estudiante, fecha, id_horario),
     CONSTRAINT fk_apx_asist_alumno FOREIGN KEY (id_estudiante) REFERENCES apx_acad_expedientes_alumnos (id_estudiante) ON DELETE CASCADE,
     CONSTRAINT fk_apx_asist_taller FOREIGN KEY (id_taller) REFERENCES apx_acad_unidades_laborales (id_taller),
     CONSTRAINT fk_apx_asist_autor FOREIGN KEY (registrado_por) REFERENCES apx_sec_cuentas_acceso (id_usuario)
@@ -355,6 +391,9 @@ CREATE TABLE IF NOT EXISTS apx_ped_evaluaciones_decreto83 (
     comentario_pedagogico TEXT NULL,
     id_evaluador INT NOT NULL,
     fecha_evaluacion DATE NOT NULL,
+    es_borrador TINYINT(1) DEFAULT 0,
+    hash_firma VARCHAR(128) NULL,
+    fecha_firma TIMESTAMP NULL,
     CONSTRAINT fk_apx_eval_alumno FOREIGN KEY (id_estudiante) REFERENCES apx_acad_expedientes_alumnos (id_estudiante) ON DELETE CASCADE,
     CONSTRAINT fk_apx_eval_taller FOREIGN KEY (id_taller) REFERENCES apx_acad_unidades_laborales (id_taller),
     CONSTRAINT fk_apx_eval_autor FOREIGN KEY (id_evaluador) REFERENCES apx_sec_cuentas_acceso (id_usuario)
@@ -697,10 +736,26 @@ VALUES
     (2, NULL, 'COMUNICADO_UTP', 'Visación de Planificaciones PID y Revisión PACI 2° Semestre', 'Estimado equipo docente y PIE: Se recuerda validar y firmar con PIN electrónico las clases registradas en el Libro Digital según Circular de la Superintendencia de Educación.'),
     (5, 3, 'RECORDATORIO_FIRMA', 'Actualización de Protocolo PAEC para Matías Vera Gómez', 'El equipo PIE actualizó las estrategias de contención sensorial etapa 1 y 2 en la ficha PAEC de Matías. Disponible en modo lectura para Docente Titular.');
 
+INSERT INTO apx_ped_semestres_config (id_semestre, anio_escolar, numero_semestre, nombre, fecha_inicio, fecha_termino, activo, actualizado_por)
+VALUES
+    (1, 2026, 1, 'Primer Semestre 2026', '2026-03-02', '2026-07-10', 0, 2),
+    (2, 2026, 2, 'Segundo Semestre 2026', '2026-07-27', '2026-12-18', 1, 2);
+
+INSERT INTO apx_ped_bloques_estudiantes (id_horario, id_estudiante, activo)
+VALUES
+    (1, 1, 1), (1, 2, 1), (1, 3, 1),
+    (2, 1, 1), (2, 2, 1), (2, 3, 1),
+    (3, 1, 1), (3, 2, 1), (3, 3, 1),
+    (4, 1, 1), (4, 2, 1),
+    (5, 1, 1), (5, 3, 1),
+    (6, 2, 1), (6, 3, 1);
+
 INSERT INTO apx_ped_leccionario_pid (
     id_clase,
     id_taller,
     id_docente,
+    semestre,
+    numero_semana,
     fecha_clase,
     unidad_tematica,
     objetivo_aprendizaje,
@@ -709,13 +764,19 @@ INSERT INTO apx_ped_leccionario_pid (
     recursos_dua,
     firmado,
     hash_firma_electronica,
-    fecha_firma
+    fecha_firma,
+    estado_aprobacion,
+    observaciones_utp,
+    aprobado_por,
+    fecha_aprobacion
 )
 VALUES
     (
         1,
         1,
         3,
+        2,
+        14,
         CURDATE(),
         'Unidad 3: Confección de Pecheras de Trabajo y Seguridad en Taller',
         'OA Laboral 04: Ejecutar procesos de trazado, corte y unión textil aplicando normas de prevención de riesgos e higiene.',
@@ -724,12 +785,18 @@ VALUES
         'Moldes acrílicos con textura táctil, pictogramas de secuencia de 4 pasos ARASAAC, tijeras ergonómicas asistidas con retorno y protectores auditivos.',
         1,
         'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
+        NOW(),
+        'APROBADO',
+        'Excelente diversificación DUA con apoyos táctiles y modelado paso a paso para Grupo B. Cobertura curricular aprobada.',
+        2,
         NOW()
     ),
     (
         2,
         1,
         3,
+        2,
+        14,
         DATE_SUB(CURDATE(), INTERVAL 2 DAY),
         'Unidad 3: Preparación de Estaciones de Costura y Reconocimiento de EPP',
         'OA Laboral 02: Identificar y utilizar elementos de protección personal y herramientas manuales según estándares del oficio.',
@@ -738,6 +805,10 @@ VALUES
         'Tablero visual de seguridad, guía de enhebrado por colores y temporizador visual Time Timer.',
         1,
         '8f434346648f6b96df89dda901c5176b10a6d83961dd3c1ac88b59b2dc327aa4',
+        DATE_SUB(NOW(), INTERVAL 2 DAY),
+        'APROBADO',
+        'Visado conforme por UTP.',
+        2,
         DATE_SUB(NOW(), INTERVAL 2 DAY)
     );
 
@@ -745,6 +816,7 @@ INSERT INTO apx_ped_asistencia_alumnos (
     id_estudiante,
     id_taller,
     id_clase,
+    id_horario,
     fecha,
     estado,
     observacion,
@@ -752,11 +824,11 @@ INSERT INTO apx_ped_asistencia_alumnos (
     firmado_digitalmente
 )
 VALUES
-    (1, 1, 1, CURDATE(), 'PRESENTE', 'Ingresa tranquilo con sus audífonos reductores de ruido.', 3, 1),
-    (2, 1, 1, CURDATE(), 'PRESENTE', 'Excelente disposición al trabajo en máquina recta industrial.', 3, 1),
-    (3, 1, 1, CURDATE(), 'AUSENTE', '3ra inasistencia consecutiva. Se notificó automáticamente a UTP.', 3, 1),
-    (4, 2, 1, CURDATE(), 'PRESENTE', 'Participa activamente en taller de panadería.', 3, 1),
-    (5, 3, 1, CURDATE(), 'PRESENTE', 'Asistencia en práctica laboral dual.', 3, 1);
+    (1, 1, 1, 1, CURDATE(), 'PRESENTE', 'Ingresa tranquilo con sus audífonos reductores de ruido.', 3, 1),
+    (2, 1, 1, 1, CURDATE(), 'PRESENTE', 'Excelente disposición al trabajo en máquina recta industrial.', 3, 1),
+    (3, 1, 1, 1, CURDATE(), 'AUSENTE', '3ra inasistencia consecutiva. Se notificó automáticamente a UTP.', 3, 1),
+    (4, 2, 1, 1, CURDATE(), 'PRESENTE', 'Participa activamente en taller de panadería.', 3, 1),
+    (5, 3, 1, 1, CURDATE(), 'PRESENTE', 'Asistencia en práctica laboral dual.', 3, 1);
 
 INSERT INTO apx_ped_evaluaciones_decreto83 (
     id_estudiante,

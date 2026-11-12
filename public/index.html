@@ -686,194 +686,587 @@
         <!-- MÓDULO 3: LIBRO DE CLASES DIGITAL (DECRETO 83 + FIRMA PIN)       -->
         <!-- ================================================================ -->
         <section id="tab-libro" class="tab-section hidden space-y-6">
-          <!-- Cabecera y Sub-Navegación del Libro Digital -->
+          <!-- Cabecera y Sub-Navegación del Libro Digital en 4 Sub-vistas Desacopladas -->
           <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200/80">
-            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-5 border-b border-slate-200">
+            <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-5 border-b border-slate-200">
               <div>
-                <div class="flex items-center gap-2">
-                  <span
-                    class="bg-apandi-100 text-apandi-800 text-[11px] font-extrabold px-2.5 py-0.5 rounded-full">Circular
-                    Superintendencia de Educación</span>
-                  <span class="bg-emerald-100 text-emerald-800 text-[11px] font-extrabold px-2.5 py-0.5 rounded-full">✍️
-                    Firma Electrónica Simple Activa</span>
+                <div class="flex flex-wrap items-center gap-2">
+                  <span class="bg-apandi-100 text-apandi-800 text-[11px] font-extrabold px-2.5 py-0.5 rounded-full">
+                    Circular Superintendencia de Educación
+                  </span>
+                  <span class="bg-emerald-100 text-emerald-800 text-[11px] font-extrabold px-2.5 py-0.5 rounded-full">
+                    ✍️ Firma Electrónica Simple Activa (Bcrypt Cost 12)
+                  </span>
+                  <span class="bg-purple-100 text-purple-800 text-[11px] font-extrabold px-2.5 py-0.5 rounded-full">
+                    Decreto Exento N° 83
+                  </span>
                 </div>
-                <h2 class="text-xl font-extrabold text-slate-900 mt-1">📖 Libro de Clases Digital — Educación Especial
-                  Nivel Laboral</h2>
+                <h2 class="text-xl font-extrabold text-slate-900 mt-1">📖 Libro de Clases Digital — Educación Especial Nivel Laboral</h2>
                 <p class="text-xs text-slate-500">
-                  Gestión integrada de Asistencia Diaria, Planificación Interdisciplinaria Diversificada (PID Grupo A/B)
-                  y Evaluaciones Conceptuales Decreto 83.
+                  Gestión desacoplada de Semestres y Bloques, Planificación Semanal PID, Asistencia Masiva por Bloque y Calificaciones Cualitativas.
                 </p>
               </div>
 
-              <!-- Selector de Sub-módulo del Libro -->
-              <div class="flex bg-slate-100 p-1 rounded-xl border border-slate-200 text-xs font-bold">
+              <!-- Selector de las 4 Sub-vistas Independientes -->
+              <div class="flex flex-wrap bg-slate-100 p-1.5 rounded-xl border border-slate-200 text-xs font-bold gap-1">
+                <button onclick="window.app.switchBookSubtab('book-config')" id="btnSubtabConfig"
+                  class="book-subtab text-slate-600 hover:text-slate-900 px-3 py-2 rounded-lg transition font-bold">
+                  ⚙️ 1. Semestres y Bloques
+                </button>
                 <button onclick="window.app.switchBookSubtab('book-pid')" id="btnSubtabPid"
-                  class="book-subtab bg-white text-apandi-900 shadow-sm px-3.5 py-2 rounded-lg transition">
-                  1. Planificación PID (Grupo A/B)
+                  class="book-subtab bg-white text-apandi-900 shadow-sm px-3 py-2 rounded-lg transition font-extrabold border border-slate-200">
+                  📅 2. Planificación Semanal PID
                 </button>
                 <button onclick="window.app.switchBookSubtab('book-asistencia')" id="btnSubtabAsist"
-                  class="book-subtab text-slate-600 px-3.5 py-2 rounded-lg transition">
-                  2. Asistencia Diaria
+                  class="book-subtab text-slate-600 hover:text-slate-900 px-3 py-2 rounded-lg transition font-bold">
+                  📋 3. Asistencia Diaria por Bloque
                 </button>
                 <button onclick="window.app.switchBookSubtab('book-evaluaciones')" id="btnSubtabEval"
-                  class="book-subtab text-slate-600 px-3.5 py-2 rounded-lg transition">
-                  3. Calificaciones Cualitativas
+                  class="book-subtab text-slate-600 hover:text-slate-900 px-3 py-2 rounded-lg transition font-bold">
+                  🏅 4. Calificaciones Cualitativas
                 </button>
               </div>
             </div>
 
-            <!-- SUB-PESTAÑA 3.1: PLANIFICACIÓN INTERDISCIPLINARIA DIVERSIFICADA (PID) + FIRMA PIN -->
-            <div id="book-pid" class="book-subpanel pt-5 grid grid-cols-1 lg:grid-cols-12 gap-6">
-              <div class="lg:col-span-5 bg-slate-50 p-5 rounded-2xl border border-slate-200/90">
-                <h3 class="font-extrabold text-slate-900 text-sm uppercase tracking-wider">✍️ Nueva Clase PID
-                  Diversificada y Firma PIN</h3>
-                <p class="text-xs text-slate-500 mt-1">Diseña actividades diferenciadas por nivel de funcionalidad y
-                  sella el registro con tu PIN electrónico.</p>
-
-                <form id="pidForm" class="mt-4 space-y-3.5 text-xs">
-                  <div>
-                    <label class="font-bold text-slate-700">Taller Laboral</label>
-                    <select id="pidTaller"
-                      class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 bg-white font-semibold">
-                      <option value="1">TL-CORTE-01 • Taller de Corte y Confección Textil</option>
-                      <option value="2">TL-GASTRO-02 • Taller de Gastronomía y Panadería</option>
-                      <option value="3">TL-HORTI-03 • Taller de Horticultura y Vivero</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label class="font-bold text-slate-700">Unidad Temática Semestral</label>
-                    <input id="pidUnidad" type="text" required
-                      value="Unidad 4: Confección de Bolsos Reutilizables y Control de Calidad"
-                      class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 bg-white" />
-                  </div>
-                  <div>
-                    <label class="font-bold text-slate-700">Objetivo de Aprendizaje (OA Nivel Laboral)</label>
-                    <input id="pidObjetivo" type="text" required
-                      value="OA 05: Unir piezas textiles aplicando costuras de refuerzo, control de pedal y normas de higiene y seguridad."
-                      class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 bg-white" />
-                  </div>
-
-                  <div class="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200">
-                    <label class="font-extrabold text-emerald-950 block">🟢 Actividad Diversificada GRUPO A (Mayor
-                      Funcionalidad)</label>
-                    <textarea id="pidGrupoA" rows="2" required
-                      class="mt-1.5 w-full rounded-lg border border-emerald-300 p-2 bg-white text-slate-800">Realizan costura de asas reforzadas en máquina recta industrial y verifican simetría con cinta métrica estándar.</textarea>
-                  </div>
-
-                  <div class="p-3.5 rounded-xl bg-amber-50 border border-amber-200">
-                    <label class="font-extrabold text-amber-950 block">🟡 Actividad Diversificada GRUPO B (Mayor Apoyo y
-                      Mediación)</label>
-                    <textarea id="pidGrupoB" rows="2" required
-                      class="mt-1.5 w-full rounded-lg border border-amber-300 p-2 bg-white text-slate-800">Posicionan asas utilizando plantilla acrílica con topes táctiles, fijan con clips ergonómicos de color y realizan unión asistida.</textarea>
-                  </div>
-
-                  <div>
-                    <label class="font-bold text-slate-700">Recursos DUA / Apoyos Visuales y Sensoriales</label>
-                    <input id="pidRecursos" type="text"
-                      value="Secuencia pictográfica ARASAAC, moldes táctiles de alto contraste y protectores auditivos."
-                      class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 bg-white" />
-                  </div>
-
-                  <!-- Caja de Firma Electrónica Simple (PIN/Token) -->
-                  <div class="p-3.5 rounded-xl bg-blue-950 text-white flex items-center justify-between gap-3">
-                    <div>
-                      <span class="font-extrabold text-xs text-blue-200 block">🔐 Firma Electrónica Simple (PIN /
-                        Token)</span>
-                      <span class="text-[11px] text-blue-300/80">Genera sello SHA-256 inmutable (PIN Institucional:
-                        <code>849206</code>)</span>
-                    </div>
-                    <input id="pidPin" type="password" maxlength="6" value="849206" required
-                      class="w-24 text-center font-mono text-sm font-extrabold rounded-lg border border-blue-400 px-2 py-2 bg-slate-900 text-emerald-400" />
-                  </div>
-
-                  <button type="submit"
-                    class="w-full bg-apandi-700 hover:bg-apandi-800 text-white font-extrabold py-3 rounded-xl shadow-md transition">
-                    ✍️ Validar PIN y Firmar Clase en Libro Digital
-                  </button>
-                </form>
-              </div>
-
-              <!-- Historial de Clases PID Firmadas -->
-              <div class="lg:col-span-7 space-y-4">
-                <div class="flex items-center justify-between">
-                  <h3 class="font-extrabold text-slate-900 text-sm uppercase tracking-wider">📚 Registro Histórico de
-                    Leccionario PID Firmado</h3>
-                  <span class="text-xs text-slate-500">Verificación Criptográfica SHA-256</span>
-                </div>
-                <div id="pidClassesList" class="space-y-4"></div>
-              </div>
-            </div>
-
-            <!-- SUB-PESTAÑA 3.2: TOMA DE ASISTENCIA DIARIA MOBILE-FIRST -->
-            <div id="book-asistencia" class="book-subpanel hidden pt-5 space-y-4">
-              <div
-                class="p-4 rounded-xl bg-blue-50 border border-blue-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+            <!-- ============================================================== -->
+            <!-- SUB-VISTA 1: CONFIGURACIÓN DE SEMESTRES Y BLOQUES HORARIOS     -->
+            <!-- ============================================================== -->
+            <div id="book-config" class="book-subpanel hidden pt-5 space-y-6">
+              <div class="p-4 rounded-xl bg-slate-900 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
                 <div>
-                  <strong class="text-blue-950 block text-sm">📋 Toma de Asistencia Digital — Disparador Automático de
-                    Retención Escolar</strong>
-                  <span class="text-blue-800">Al registrar a un estudiante como <strong>AUSENTE</strong>, el sistema
-                    emite automáticamente una alerta inmediata a UTP y Convivencia Escolar.</span>
+                  <span class="font-extrabold text-blue-300 text-sm flex items-center gap-2">
+                    ⚙️ Panel de Gestión Institucional UTP / Dirección / Sostenedor
+                  </span>
+                  <p class="text-slate-300 mt-0.5">
+                    Define la temporalidad del año lectivo, configura los bloques horarios por taller y asigna en qué bloque participa cada estudiante.
+                  </p>
                 </div>
-                <span
-                  class="font-mono font-bold bg-white text-blue-900 px-3 py-1.5 rounded-lg border border-blue-300 shrink-0">
-                  Fecha: Hoy (Cerrado con PIN)
+                <span class="bg-blue-600/30 text-blue-200 font-mono text-[11px] font-bold px-3 py-1.5 rounded-lg border border-blue-400/40 shrink-0">
+                  Año Escolar: 2026
                 </span>
               </div>
 
-              <div id="attendanceStudentList"
-                class="divide-y divide-slate-200 border border-slate-200 rounded-xl bg-white"></div>
-            </div>
+              <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                <!-- Tarjeta A: Fechas de 1° y 2° Semestre -->
+                <div class="lg:col-span-5 bg-slate-50 p-5 rounded-2xl border border-slate-200/90 space-y-4">
+                  <div class="flex items-center justify-between">
+                    <div>
+                      <h3 class="font-extrabold text-slate-900 text-sm">📅 Calendario de Semestres</h3>
+                      <p class="text-[11px] text-slate-500">Definición de inicio y término para 1° y 2° Semestre</p>
+                    </div>
+                    <span class="text-xs bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded-full">Oficial</span>
+                  </div>
 
-            <!-- SUB-PESTAÑA 3.3: CALIFICACIONES CONCEPTUALES CUALITATIVAS (DECRETO 83) -->
-            <div id="book-evaluaciones" class="book-subpanel hidden pt-5 space-y-5">
-              <form id="evalForm"
-                class="p-5 rounded-2xl bg-slate-50 border border-slate-200 grid grid-cols-1 md:grid-cols-12 gap-3 text-xs">
-                <div class="md:col-span-4">
-                  <label class="font-bold text-slate-700 block mb-1">Estudiante Evaluado</label>
-                  <select id="evalEstudiante"
-                    class="w-full rounded-xl border border-slate-300 px-3 py-2 bg-white font-semibold"></select>
+                  <form id="semestresConfigForm" class="space-y-4 text-xs">
+                    <!-- 1° Semestre -->
+                    <div class="p-3.5 rounded-xl bg-white border border-slate-200 space-y-2.5">
+                      <div class="flex items-center justify-between">
+                        <strong class="text-slate-800 font-extrabold">1° Semestre 2026</strong>
+                        <label class="flex items-center gap-1.5 cursor-pointer text-[11px] font-semibold text-slate-600">
+                          <input type="checkbox" id="sem1Activo" class="rounded text-apandi-600 focus:ring-0" />
+                          <span>Activo</span>
+                        </label>
+                      </div>
+                      <div class="grid grid-cols-2 gap-2">
+                        <div>
+                          <label class="font-bold text-slate-600 block mb-1">Fecha Inicio</label>
+                          <input type="date" id="sem1Inicio" value="2026-03-02" required
+                            class="w-full rounded-lg border border-slate-300 px-2.5 py-1.5 bg-white text-slate-800 font-semibold" />
+                        </div>
+                        <div>
+                          <label class="font-bold text-slate-600 block mb-1">Fecha Término</label>
+                          <input type="date" id="sem1Termino" value="2026-07-10" required
+                            class="w-full rounded-lg border border-slate-300 px-2.5 py-1.5 bg-white text-slate-800 font-semibold" />
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- 2° Semestre -->
+                    <div class="p-3.5 rounded-xl bg-white border border-slate-200 space-y-2.5">
+                      <div class="flex items-center justify-between">
+                        <strong class="text-slate-800 font-extrabold">2° Semestre 2026</strong>
+                        <label class="flex items-center gap-1.5 cursor-pointer text-[11px] font-semibold text-emerald-700">
+                          <input type="checkbox" id="sem2Activo" checked class="rounded text-apandi-600 focus:ring-0" />
+                          <span>Activo (Vigente)</span>
+                        </label>
+                      </div>
+                      <div class="grid grid-cols-2 gap-2">
+                        <div>
+                          <label class="font-bold text-slate-600 block mb-1">Fecha Inicio</label>
+                          <input type="date" id="sem2Inicio" value="2026-07-27" required
+                            class="w-full rounded-lg border border-slate-300 px-2.5 py-1.5 bg-white text-slate-800 font-semibold" />
+                        </div>
+                        <div>
+                          <label class="font-bold text-slate-600 block mb-1">Fecha Término</label>
+                          <input type="date" id="sem2Termino" value="2026-12-18" required
+                            class="w-full rounded-lg border border-slate-300 px-2.5 py-1.5 bg-white text-slate-800 font-semibold" />
+                        </div>
+                      </div>
+                    </div>
+
+                    <button type="submit"
+                      class="w-full bg-apandi-700 hover:bg-apandi-800 text-white font-extrabold py-2.5 rounded-xl shadow transition">
+                      💾 Guardar Calendario Semestral UTP
+                    </button>
+                  </form>
+
+                  <!-- Desglose de Semanas Calculadas -->
+                  <div class="pt-2 border-t border-slate-200 space-y-2">
+                    <span class="font-extrabold text-slate-700 text-xs block">Semanas del Semestre Activo:</span>
+                    <div id="semestersWeeksList" class="max-h-44 overflow-y-auto space-y-1 text-[11px] pr-1"></div>
+                  </div>
                 </div>
-                <div class="md:col-span-4">
-                  <label class="font-bold text-slate-700 block mb-1">Dimensión Formativa Nivel Laboral</label>
-                  <select id="evalDimension"
-                    class="w-full rounded-xl border border-slate-300 px-3 py-2 bg-white font-semibold">
-                    <option value="TECNICA_VOCACIONAL">1. Competencia Técnica Vocacional</option>
-                    <option value="AUTONOMIA_PERSONAL">2. Autonomía Personal y Seguridad (EPP)</option>
-                    <option value="HABILIDADES_SOCIOLABORALES">3. Habilidades Sociolaborales y Trabajo en Equipo
-                    </option>
-                  </select>
+
+                <!-- Tarjeta B: Configuración de Bloques de Clase y Duración -->
+                <div class="lg:col-span-7 bg-slate-50 p-5 rounded-2xl border border-slate-200/90 space-y-4">
+                  <div class="flex items-center justify-between">
+                    <div>
+                      <h3 class="font-extrabold text-slate-900 text-sm">⏰ Bloques de Clase y Duración</h3>
+                      <p class="text-[11px] text-slate-500">Configuración de bloques horarios por taller y su extensión en minutos</p>
+                    </div>
+                  </div>
+
+                  <form id="bloqueForm" class="p-3.5 bg-white rounded-xl border border-slate-200 grid grid-cols-1 sm:grid-cols-12 gap-2.5 text-xs">
+                    <input type="hidden" id="bloqueId" value="" />
+                    <div class="sm:col-span-6">
+                      <label class="font-bold text-slate-700 block mb-1">Taller Laboral</label>
+                      <select id="bloqueTaller" class="w-full rounded-lg border border-slate-300 p-2 bg-white font-semibold">
+                        <option value="1">TL-CORTE-01 • Corte y Confección Textil</option>
+                        <option value="2">TL-GASTRO-02 • Gastronomía y Panadería</option>
+                        <option value="3">TL-HORTI-03 • Horticultura y Vivero</option>
+                      </select>
+                    </div>
+                    <div class="sm:col-span-6">
+                      <label class="font-bold text-slate-700 block mb-1">Día de la Semana</label>
+                      <select id="bloqueDia" class="w-full rounded-lg border border-slate-300 p-2 bg-white font-semibold">
+                        <option value="1">Lunes</option>
+                        <option value="2">Martes</option>
+                        <option value="3">Miércoles</option>
+                        <option value="4">Jueves</option>
+                        <option value="5">Viernes</option>
+                      </select>
+                    </div>
+                    <div class="sm:col-span-6">
+                      <label class="font-bold text-slate-700 block mb-1">Nombre Descriptivo del Bloque</label>
+                      <input id="bloqueNombre" type="text" required placeholder="Ej: Módulo Práctico de Costura"
+                        class="w-full rounded-lg border border-slate-300 p-2 bg-white" />
+                    </div>
+                    <div class="sm:col-span-2">
+                      <label class="font-bold text-slate-700 block mb-1">Inicio</label>
+                      <input id="bloqueHoraInicio" type="time" value="08:30" required
+                        class="w-full rounded-lg border border-slate-300 p-2 bg-white font-mono" />
+                    </div>
+                    <div class="sm:col-span-2">
+                      <label class="font-bold text-slate-700 block mb-1">Fin</label>
+                      <input id="bloqueHoraFin" type="time" value="10:00" required
+                        class="w-full rounded-lg border border-slate-300 p-2 bg-white font-mono" />
+                    </div>
+                    <div class="sm:col-span-2">
+                      <label class="font-bold text-slate-700 block mb-1">Duración (min)</label>
+                      <input id="bloqueDuracion" type="number" value="90" min="15" max="360" required
+                        class="w-full rounded-lg border border-slate-300 p-2 bg-white font-bold text-center" />
+                    </div>
+                    <div class="sm:col-span-12 flex justify-end gap-2 pt-1">
+                      <button type="button" onclick="window.app.resetBlockForm()"
+                        class="px-3 py-1.5 rounded-lg border border-slate-300 text-slate-600 hover:bg-slate-100 font-bold">
+                        Limpiar
+                      </button>
+                      <button type="submit"
+                        class="bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold px-4 py-1.5 rounded-lg shadow transition">
+                        + Guardar Bloque
+                      </button>
+                    </div>
+                  </form>
+
+                  <!-- Lista de Bloques Creados -->
+                  <div class="space-y-2">
+                    <span class="font-extrabold text-slate-800 text-xs block">Bloques Horarios Registrados:</span>
+                    <div id="blocksListContainer" class="max-h-56 overflow-y-auto space-y-2 pr-1 text-xs"></div>
+                  </div>
                 </div>
-                <div class="md:col-span-4">
-                  <label class="font-bold text-slate-700 block mb-1">Concepto Cualitativo (Decreto 83)</label>
-                  <select id="evalLogro"
-                    class="w-full rounded-xl border border-slate-300 px-3 py-2 bg-white font-extrabold text-emerald-800">
-                    <option value="LOGRADO">🟢 LOGRADO (L) — Desempeño Autónomo</option>
-                    <option value="EN_DESARROLLO">🔵 EN DESARROLLO (ED) — Con Apoyo Ocasional</option>
-                    <option value="EN_INICIO">🟡 EN INICIO (EI) — Requiere Mediación Permanente</option>
-                    <option value="NO_OBSERVADO">⚪ NO OBSERVADO (NO)</option>
-                  </select>
+              </div>
+
+              <!-- Tarjeta C: Asignación de Estudiantes a Bloques (Checkbox Estudiante por Bloque) -->
+              <div class="p-5 rounded-2xl bg-white border border-slate-200 shadow-sm space-y-4">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-200">
+                  <div>
+                    <h3 class="font-extrabold text-slate-900 text-sm">👥 Asignación de Estudiantes por Bloque Horario</h3>
+                    <p class="text-xs text-slate-500">Define con precisión en qué bloque está o no cada estudiante según su plan formativo y horario institucional.</p>
+                  </div>
+                  <div class="flex items-center gap-2">
+                    <label class="text-xs font-bold text-slate-700 shrink-0">Seleccionar Bloque:</label>
+                    <select id="assignBlockSelector" onchange="window.app.loadBlockStudentsAssignment(this.value)"
+                      class="text-xs rounded-xl border border-slate-300 px-3 py-1.5 bg-slate-50 font-bold text-slate-800"></select>
+                  </div>
                 </div>
-                <div class="md:col-span-5">
-                  <label class="font-bold text-slate-700 block mb-1">Indicador de Competencia Evaluado (PID)</label>
-                  <input id="evalIndicador" type="text" required
-                    value="Reconoce y utiliza herramientas de corte respetando demarcación de seguridad industrial"
-                    class="w-full rounded-xl border border-slate-300 px-3 py-2 bg-white" />
+
+                <div class="flex items-center justify-between gap-2 text-xs">
+                  <span id="assignBlockInfoBadge" class="font-semibold text-slate-600">Cargando nómina...</span>
+                  <div class="flex gap-2">
+                    <button type="button" onclick="window.app.toggleAllBlockStudents(true)"
+                      class="px-2.5 py-1 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold transition">
+                      ✓ Marcar Todos
+                    </button>
+                    <button type="button" onclick="window.app.toggleAllBlockStudents(false)"
+                      class="px-2.5 py-1 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold transition">
+                      ✕ Desmarcar Todos
+                    </button>
+                  </div>
                 </div>
-                <div class="md:col-span-5">
-                  <label class="font-bold text-slate-700 block mb-1">Observación Cualitativa / Evidencia</label>
-                  <input id="evalComentario" type="text"
-                    value="Evidencia avance sostenido trabajando con apoyos visuales en su estación."
-                    class="w-full rounded-xl border border-slate-300 px-3 py-2 bg-white" />
-                </div>
-                <div class="md:col-span-2 flex items-end">
-                  <button type="submit"
-                    class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold py-2 px-3 rounded-xl shadow transition">
-                    + Guardar Logro
+
+                <div id="blockStudentsAssignmentGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2.5 text-xs"></div>
+
+                <div class="pt-3 border-t border-slate-200 flex justify-end">
+                  <button type="button" onclick="window.app.saveBlockStudentsAssignment()"
+                    class="bg-apandi-700 hover:bg-apandi-800 text-white font-extrabold px-5 py-2.5 rounded-xl shadow transition flex items-center gap-2 text-xs">
+                    💾 Guardar Asignación de Estudiantes al Bloque
                   </button>
                 </div>
-              </form>
+              </div>
+            </div>
 
-              <div id="evaluationsList" class="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs"></div>
+            <!-- ============================================================== -->
+            <!-- SUB-VISTA 2: PLANIFICACIÓN SEMANAL PID (GRUPO A/B) + UTP       -->
+            <!-- ============================================================== -->
+            <div id="book-pid" class="book-subpanel pt-5 space-y-6">
+              <!-- Filtros Superiores de Navegación por Semana -->
+              <div class="p-4 rounded-xl bg-slate-50 border border-slate-200 flex flex-wrap items-center justify-between gap-3 text-xs">
+                <div class="flex flex-wrap items-center gap-3">
+                  <div>
+                    <label class="font-bold text-slate-600 block mb-0.5">Semestre:</label>
+                    <select id="pidFilterSemestre" onchange="window.app.filterPidClasses()"
+                      class="rounded-lg border border-slate-300 px-2.5 py-1.5 bg-white font-bold text-slate-800">
+                      <option value="2">2° Semestre 2026</option>
+                      <option value="1">1° Semestre 2026</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label class="font-bold text-slate-600 block mb-0.5">Semana Lectiva:</label>
+                    <select id="pidFilterSemana" onchange="window.app.filterPidClasses()"
+                      class="rounded-lg border border-slate-300 px-2.5 py-1.5 bg-white font-bold text-slate-800">
+                      <option value="">Todas las semanas</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label class="font-bold text-slate-600 block mb-0.5">Taller:</label>
+                    <select id="pidFilterTaller" onchange="window.app.filterPidClasses()"
+                      class="rounded-lg border border-slate-300 px-2.5 py-1.5 bg-white font-bold text-slate-800">
+                      <option value="">Todos los talleres</option>
+                      <option value="1">TL-CORTE-01 Textil</option>
+                      <option value="2">TL-GASTRO-02 Gastronomía</option>
+                      <option value="3">TL-HORTI-03 Horticultura</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div class="flex items-center gap-2">
+                  <span class="text-[11px] font-bold text-slate-500">Estados UTP:</span>
+                  <span class="px-2 py-0.5 rounded text-[10px] font-extrabold bg-amber-100 text-amber-800">Borrador</span>
+                  <span class="px-2 py-0.5 rounded text-[10px] font-extrabold bg-blue-100 text-blue-800">En Revisión</span>
+                  <span class="px-2 py-0.5 rounded text-[10px] font-extrabold bg-emerald-100 text-emerald-800">Aprobado</span>
+                  <span class="px-2 py-0.5 rounded text-[10px] font-extrabold bg-orange-100 text-orange-800">Observado</span>
+                </div>
+              </div>
+
+              <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                <!-- Columna Izquierda: Formulario de Planificación Docente Clase a Clase -->
+                <div class="lg:col-span-5 bg-slate-50 p-5 rounded-2xl border border-slate-200/90 space-y-4">
+                  <div class="flex items-center justify-between">
+                    <div>
+                      <h3 class="font-extrabold text-slate-900 text-sm uppercase tracking-wider">✍️ Preparación Docente de Clase PID</h3>
+                      <p class="text-xs text-slate-500 mt-0.5">Diseño diversificado DUA (Grupo A / Grupo B) clase a clase</p>
+                    </div>
+                  </div>
+
+                  <form id="pidForm" class="space-y-3.5 text-xs">
+                    <input type="hidden" id="pidIdClase" value="" />
+                    <div class="grid grid-cols-2 gap-2">
+                      <div>
+                        <label class="font-bold text-slate-700">Taller Laboral</label>
+                        <select id="pidTaller" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 bg-white font-semibold">
+                          <option value="1">TL-CORTE-01 • Corte y Confección</option>
+                          <option value="2">TL-GASTRO-02 • Gastronomía</option>
+                          <option value="3">TL-HORTI-03 • Horticultura</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label class="font-bold text-slate-700">Semana del Semestre</label>
+                        <select id="pidSemana" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 bg-white font-bold"></select>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label class="font-bold text-slate-700">Fecha de la Clase</label>
+                      <input id="pidFecha" type="date" required
+                        class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 bg-white font-semibold" />
+                    </div>
+
+                    <div>
+                      <label class="font-bold text-slate-700">Unidad Temática</label>
+                      <input id="pidUnidad" type="text" required
+                        value="Unidad 4: Confección de Bolsos Reutilizables y Control de Calidad"
+                        class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 bg-white" />
+                    </div>
+
+                    <div>
+                      <label class="font-bold text-slate-700">Objetivo de Aprendizaje (OA Decreto 83)</label>
+                      <input id="pidObjetivo" type="text" required
+                        value="OA 05: Unir piezas textiles aplicando costuras de refuerzo, control de pedal y normas de higiene y seguridad."
+                        class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 bg-white" />
+                    </div>
+
+                    <div class="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200">
+                      <label class="font-extrabold text-emerald-950 block">🟢 Actividad Diversificada GRUPO A (Mayor Funcionalidad)</label>
+                      <textarea id="pidGrupoA" rows="2" required
+                        class="mt-1.5 w-full rounded-lg border border-emerald-300 p-2 bg-white text-slate-800">Realizan costura de asas reforzadas en máquina recta industrial y verifican simetría con cinta métrica estándar.</textarea>
+                    </div>
+
+                    <div class="p-3.5 rounded-xl bg-amber-50 border border-amber-200">
+                      <label class="font-extrabold text-amber-950 block">🟡 Actividad Diversificada GRUPO B (Mayor Apoyo y Mediación)</label>
+                      <textarea id="pidGrupoB" rows="2" required
+                        class="mt-1.5 w-full rounded-lg border border-amber-300 p-2 bg-white text-slate-800">Posicionan asas utilizando plantilla acrílica con topes táctiles, fijan con clips ergonómicos de color y realizan unión asistida.</textarea>
+                    </div>
+
+                    <div>
+                      <label class="font-bold text-slate-700">Recursos DUA / Apoyos Visuales y Sensoriales</label>
+                      <input id="pidRecursos" type="text"
+                        value="Secuencia pictográfica ARASAAC, moldes táctiles de alto contraste y protectores auditivos."
+                        class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 bg-white" />
+                    </div>
+
+                    <!-- Caja de Firma Electrónica Obligatoria con PIN Docente -->
+                    <div class="p-3.5 rounded-xl bg-blue-950 text-white flex items-center justify-between gap-3">
+                      <div>
+                        <span class="font-extrabold text-xs text-blue-200 block">🔐 PIN de Firma Electrónica Docente</span>
+                        <span class="text-[11px] text-blue-300/80">Validación obligatoria Bcrypt (PIN Docente: <code>849206</code>)</span>
+                      </div>
+                      <input id="pidPin" type="password" maxlength="6" value="849206" required
+                        class="w-24 text-center font-mono text-sm font-extrabold rounded-lg border border-blue-400 px-2 py-2 bg-slate-900 text-emerald-400" />
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-2 pt-1">
+                      <button type="button" onclick="window.app.submitPidClass(false)"
+                        class="bg-slate-700 hover:bg-slate-800 text-white font-extrabold py-2.5 px-3 rounded-xl shadow transition text-center">
+                        💾 Guardar Borrador
+                      </button>
+                      <button type="button" onclick="window.app.submitPidClass(true)"
+                        class="bg-apandi-700 hover:bg-apandi-800 text-white font-extrabold py-2.5 px-3 rounded-xl shadow transition text-center">
+                        🚀 Enviar a Revisión UTP
+                      </button>
+                    </div>
+                  </form>
+                </div>
+
+                <!-- Columna Derecha: Leccionario PID Semanal + Panel de Aprobación UTP -->
+                <div class="lg:col-span-7 space-y-4">
+                  <div class="flex items-center justify-between">
+                    <div>
+                      <h3 class="font-extrabold text-slate-900 text-sm uppercase tracking-wider">📚 Registro Semanal y Visación UTP</h3>
+                      <p class="text-xs text-slate-500">Supervisión técnico-pedagógica y aprobación de planificaciones</p>
+                    </div>
+                    <span id="pidCountBadge" class="text-xs bg-slate-100 text-slate-700 font-extrabold px-2.5 py-1 rounded-lg border border-slate-200">
+                      0 clases
+                    </span>
+                  </div>
+
+                  <div id="pidClassesList" class="space-y-4 max-h-[700px] overflow-y-auto pr-1"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- ============================================================== -->
+            <!-- SUB-VISTA 3: ASISTENCIA DIARIA POR BLOQUE (CHECKBOX MASIVO)    -->
+            <!-- ============================================================== -->
+            <div id="book-asistencia" class="book-subpanel hidden pt-5 space-y-5">
+              <div class="p-4 rounded-xl bg-blue-50 border border-blue-200 flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs">
+                <div>
+                  <strong class="text-blue-950 block text-sm">📋 Control de Asistencia por Bloque Horario — Retención Escolar Inmediata</strong>
+                  <span class="text-blue-800">
+                    Marca con un solo clic la nómina de estudiantes del bloque. Al enviar, si se registran ausencias se activa automáticamente la alerta UTP de retención escolar.
+                  </span>
+                </div>
+                <div class="flex items-center gap-2 shrink-0">
+                  <span class="font-mono font-bold bg-white text-blue-900 px-3 py-1.5 rounded-lg border border-blue-300">
+                    Sello Digital SHA-256
+                  </span>
+                </div>
+              </div>
+
+              <!-- Filtro de Bloque y Fecha -->
+              <div class="p-4 rounded-2xl bg-white border border-slate-200 shadow-sm grid grid-cols-1 md:grid-cols-12 gap-3 text-xs items-end">
+                <div class="md:col-span-3">
+                  <label class="font-bold text-slate-700 block mb-1">Fecha de la Clase</label>
+                  <input type="date" id="asistFecha" onchange="window.app.loadBlockAttendance()"
+                    class="w-full rounded-xl border border-slate-300 px-3 py-2 bg-slate-50 font-semibold" />
+                </div>
+                <div class="md:col-span-4">
+                  <label class="font-bold text-slate-700 block mb-1">Taller Laboral</label>
+                  <select id="asistTaller" onchange="window.app.updateAttendanceBlocksDropdown()"
+                    class="w-full rounded-xl border border-slate-300 px-3 py-2 bg-white font-semibold">
+                    <option value="1">TL-CORTE-01 • Corte y Confección Textil</option>
+                    <option value="2">TL-GASTRO-02 • Gastronomía y Panadería</option>
+                    <option value="3">TL-HORTI-03 • Horticultura y Vivero</option>
+                  </select>
+                </div>
+                <div class="md:col-span-5">
+                  <label class="font-bold text-slate-700 block mb-1">Bloque de Clase Horario</label>
+                  <select id="asistBloque" onchange="window.app.loadBlockAttendance()"
+                    class="w-full rounded-xl border border-slate-300 px-3 py-2 bg-white font-bold text-apandi-900"></select>
+                </div>
+              </div>
+
+              <!-- Cabecera de Nómina del Bloque y Acciones Rápidas -->
+              <div class="flex flex-wrap items-center justify-between gap-3 text-xs">
+                <div class="flex items-center gap-2">
+                  <span class="font-extrabold text-slate-800 text-sm">Nómina de Estudiantes del Bloque:</span>
+                  <span id="asistTotalBadge" class="bg-blue-100 text-blue-900 font-extrabold px-2.5 py-0.5 rounded-full text-[11px]">
+                    0 estudiantes
+                  </span>
+                </div>
+                <div class="flex items-center gap-2">
+                  <button type="button" onclick="window.app.toggleAllAttendance(true)"
+                    class="bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 font-extrabold px-3 py-1.5 rounded-lg transition">
+                    ✓ Marcar Todos Presentes
+                  </button>
+                  <button type="button" onclick="window.app.toggleAllAttendance(false)"
+                    class="bg-red-50 hover:bg-red-100 text-red-800 border border-red-300 font-extrabold px-3 py-1.5 rounded-lg transition">
+                    ✕ Desmarcar Todos (Ausentes)
+                  </button>
+                </div>
+              </div>
+
+              <!-- Lista con Checkbox Masivo por Alumno -->
+              <div id="blockAttendanceStudentList" class="divide-y divide-slate-200 border border-slate-200 rounded-2xl bg-white shadow-sm overflow-hidden"></div>
+
+              <!-- Barra Inferior de Firma Obligatoria y Envío Conjunto de Toda la Nómina -->
+              <div class="p-5 rounded-2xl bg-slate-900 text-white flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-md">
+                <div class="flex items-center gap-3">
+                  <div class="w-10 h-10 rounded-xl bg-blue-600/30 border border-blue-400/40 flex items-center justify-center text-xl shrink-0">
+                    ✍️
+                  </div>
+                  <div>
+                    <span class="font-extrabold text-sm text-blue-200 block">Validación y Cierre de Asistencia con PIN Docente</span>
+                    <span class="text-xs text-slate-300">
+                      Sella la nómina completa del bloque con un único envío criptográfico SHA-256 (PIN Docente: <code>849206</code>).
+                    </span>
+                  </div>
+                </div>
+
+                <div class="flex flex-wrap items-center gap-3">
+                  <div class="flex items-center gap-2 bg-slate-800 p-1.5 rounded-xl border border-slate-700">
+                    <span class="text-[11px] font-bold text-slate-400 pl-2">PIN Docente:</span>
+                    <input id="asistMassPin" type="password" maxlength="6" value="849206" required
+                      class="w-24 text-center font-mono text-sm font-extrabold rounded-lg border border-blue-400 px-2 py-1.5 bg-slate-950 text-emerald-400" />
+                  </div>
+
+                  <button type="button" onclick="window.app.submitMassBlockAttendance()"
+                    class="bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold px-5 py-2.5 rounded-xl shadow-lg transition flex items-center gap-2 text-xs">
+                    ✍️ Guardar y Firmar Asistencia del Bloque (Envío Conjunto Nómina)
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- ============================================================== -->
+            <!-- SUB-VISTA 4: CALIFICACIONES CUALITATIVAS (MATRIZ COMPLETA)     -->
+            <!-- ============================================================== -->
+            <div id="book-evaluaciones" class="book-subpanel hidden pt-5 space-y-6">
+              <!-- PASO 1: Selector Filtrable de Estudiante -->
+              <div id="qualStep1Box" class="space-y-4">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-xl bg-slate-50 border border-slate-200 text-xs">
+                  <div>
+                    <h3 class="font-extrabold text-slate-900 text-sm">Paso 1: Seleccionar Estudiante para Evaluación Cualitativa</h3>
+                    <p class="text-slate-500 mt-0.5">Busca y filtra al estudiante para desplegar su matriz formativa completa según Decreto 83.</p>
+                  </div>
+                  <div class="flex items-center gap-2">
+                    <span class="text-slate-500 font-bold">Semestre:</span>
+                    <select id="qualSemestreFilter" onchange="window.app.onQualSemestreChange()"
+                      class="rounded-lg border border-slate-300 px-2.5 py-1 bg-white font-bold text-slate-800">
+                      <option value="2">2° Semestre 2026</option>
+                      <option value="1">1° Semestre 2026</option>
+                    </select>
+                  </div>
+                </div>
+
+                <!-- Buscador Filtrable en Tiempo Real -->
+                <div class="flex flex-col sm:flex-row gap-3">
+                  <div class="relative flex-1">
+                    <input type="text" id="qualStudentSearchInput" oninput="window.app.filterQualitativeStudents(this.value)"
+                      placeholder="🔍 Buscar por nombre, apellido o RUT..."
+                      class="w-full pl-9 pr-4 py-2.5 rounded-xl border border-slate-300 bg-white text-xs font-semibold focus:outline-none focus:border-apandi-600" />
+                    <span class="absolute left-3 top-3 text-slate-400 text-xs">🔍</span>
+                  </div>
+                  <select id="qualTallerFilter" onchange="window.app.filterQualitativeStudents()"
+                    class="rounded-xl border border-slate-300 px-3 py-2 bg-white text-xs font-semibold">
+                    <option value="">Todos los talleres</option>
+                    <option value="1">TL-CORTE-01 Textil</option>
+                    <option value="2">TL-GASTRO-02 Gastronomía</option>
+                    <option value="3">TL-HORTI-03 Horticultura</option>
+                  </select>
+                </div>
+
+                <!-- Nómina de Estudiantes Filtrable con Estado de Borrador / Firma -->
+                <div id="qualStudentsListGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5 text-xs"></div>
+              </div>
+
+              <!-- PASO 2: Matriz Completa por Alumno con Dimensiones y Borrador -->
+              <div id="qualStep2Box" class="hidden space-y-5">
+                <div class="p-4 rounded-2xl bg-slate-900 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs shadow-sm">
+                  <div class="flex items-center gap-3">
+                    <button type="button" onclick="window.app.backToStudentsQualitativeList()"
+                      class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold border border-slate-700 transition">
+                      ← Volver a Nómina
+                    </button>
+                    <div>
+                      <span id="qualSelectedStudentName" class="font-extrabold text-sm text-white block">Matías Ignacio Vera Gómez</span>
+                      <span id="qualSelectedStudentInfo" class="text-xs text-blue-300">RUT: 22.345.678-9 • Corte y Confección Textil • Grupo B</span>
+                    </div>
+                  </div>
+                  <div class="flex items-center gap-2">
+                    <span id="qualEvaluationStatusBadge" class="px-3 py-1 rounded-full text-xs font-extrabold bg-amber-400/20 text-amber-300 border border-amber-400/40">
+                      📝 Borrador en Curso
+                    </span>
+                  </div>
+                </div>
+
+                <!-- Matriz Completa Formativa (3 Dimensiones Decreto 83) -->
+                <form id="qualMatrixForm" class="space-y-4">
+                  <div id="qualDimensionsMatrixContainer" class="space-y-4"></div>
+
+                  <!-- Caja de Firma y Guardado de Borrador / Envío Oficial -->
+                  <div class="p-5 rounded-2xl bg-white border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div class="flex items-center gap-3">
+                      <div class="w-10 h-10 rounded-xl bg-purple-100 text-purple-900 flex items-center justify-center text-xl shrink-0">
+                        ✍️
+                      </div>
+                      <div>
+                        <span class="font-extrabold text-slate-900 text-xs block">Validación Criptográfica con PIN Docente</span>
+                        <span class="text-[11px] text-slate-500">
+                          Todo cambio de borrador o envío oficial requiere validación de PIN (PIN Docente: <code>849206</code>).
+                        </span>
+                      </div>
+                    </div>
+
+                    <div class="flex flex-wrap items-center gap-3">
+                      <div class="flex items-center gap-2 bg-slate-100 p-1.5 rounded-xl border border-slate-300 text-xs">
+                        <span class="text-[11px] font-bold text-slate-700 pl-2">PIN Docente:</span>
+                        <input id="qualMatrixPin" type="password" maxlength="6" value="849206" required
+                          class="w-24 text-center font-mono text-sm font-extrabold rounded-lg border border-slate-400 px-2 py-1.5 bg-white text-slate-900" />
+                      </div>
+
+                      <button type="button" onclick="window.app.submitQualitativeEvaluation(true)"
+                        class="bg-slate-700 hover:bg-slate-800 text-white font-extrabold px-4 py-2 rounded-xl shadow transition text-xs">
+                        💾 Guardar Borrador
+                      </button>
+
+                      <button type="button" onclick="window.app.submitQualitativeEvaluation(false)"
+                        class="bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold px-5 py-2 rounded-xl shadow transition text-xs flex items-center gap-2">
+                        ✍️ Enviar y Firmar Evaluación Oficial
+                      </button>
+                    </div>
+                  </div>
+                </form>
+              </div>
             </div>
           </div>
         </section>
