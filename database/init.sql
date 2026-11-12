@@ -31,7 +31,7 @@ CREATE TABLE IF NOT EXISTS apx_sec_cuentas_acceso (
     apellidos VARCHAR(100) NOT NULL,
     email VARCHAR(150) NOT NULL UNIQUE,
     telefono VARCHAR(30),
-    debe_cambiar_clave TINYINT(1) DEFAULT 1,
+    debe_cambiar_clave TINYINT(1) NOT NULL DEFAULT 1 COMMENT 'Obliga cambio de contraseña en primer login o post-reset',
     intentos_fallidos TINYINT DEFAULT 0,
     bloqueado_hasta TIMESTAMP NULL,
     password_hash VARCHAR(255) NOT NULL COMMENT 'Hash Bcrypt Cost 12',
@@ -839,3 +839,6 @@ VALUES
     );
 
 SET FOREIGN_KEY_CHECKS = 1;
+
+CREATE INDEX IF NOT EXISTS idx_apx_forense_usuario_fecha
+ON apx_sec_trazabilidad_forense (id_usuario, fecha_hora DESC);
