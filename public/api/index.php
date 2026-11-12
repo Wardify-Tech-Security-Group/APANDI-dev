@@ -298,7 +298,7 @@ if ($route === 'auth/login' && $method === 'POST') {
         'rol_nombre' => $user['rol_nombre'],
         'especialidad' => $user['especialidad'],
         'horas_contrato' => (int)$user['horas_contrato'],
-        'debe_cambiar_clave' => (bool)($user['debe_cambiar_clave'] ?? false)
+        'debe_cambiar_clave' => (int)($user['debe_cambiar_clave'] ?? 1)
     ];
 
     echo json_encode([
@@ -371,15 +371,26 @@ if ($route === 'usuario/password' && $method === 'PUT') {
         exit;
     }
 
-    $newHash = password_hash($newPassword, PASSWORD_BCRYPT, ['cost' => 12]);
-    $stmtUp = $pdo->prepare("
-        UPDATE apx_sec_cuentas_acceso
-        SET password_hash = ?, debe_cambiar_clave = 0, intentos_fallidos = 0, bloqueado_hasta = NULL
-        WHERE id_usuario = ?
-    ");
-    $stmtUp->execute([$newHash, $authUser['id_usuario']]);
+    $newHash = password_hash($newPassword, PASSWORD_DEFAULT);
+    try {
+        $pdo->beginTransaction();
+        $stmtUp = $pdo->prepare("
+            UPDATE apx_sec_cuentas_acceso
+            SET password_hash = ?, debe_cambiar_clave = 0, intentos_fallidos = 0, bloqueado_hasta = NULL
+            WHERE id_usuario = ?
+        ");
+        $stmtUp->execute([$newHash, $authUser['id_usuario']]);
 
-    logAudit($pdo, $authUser['id_usuario'], null, 'SEGURIDAD_CUENTA', 'ACTUALIZACION', 'Actualización voluntaria de contraseña institucional');
+        logAudit($pdo, $authUser['id_usuario'], null, 'SEGURIDAD_CUENTA', 'ACTUALIZACION', 'Actualización voluntaria de contraseña institucional');
+        $pdo->commit();
+    } catch (Throwable $e) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        http_response_code(500);
+        echo json_encode(['ok' => false, 'error' => 'No fue posible actualizar la contraseña.']);
+        exit;
+    }
 
     echo json_encode([
         'ok' => true,
@@ -452,10 +463,21 @@ if ($route === 'usuario/pin' && $method === 'PUT') {
     }
 
     $newPinHash = password_hash($newPin, PASSWORD_BCRYPT, ['cost' => 12]);
-    $stmtUp = $pdo->prepare("UPDATE apx_sec_cuentas_acceso SET pin_firma_hash = ? WHERE id_usuario = ?");
-    $stmtUp->execute([$newPinHash, $authUser['id_usuario']]);
+    try {
+        $pdo->beginTransaction();
+        $stmtUp = $pdo->prepare("UPDATE apx_sec_cuentas_acceso SET pin_firma_hash = ? WHERE id_usuario = ?");
+        $stmtUp->execute([$newPinHash, $authUser['id_usuario']]);
 
-    logAudit($pdo, $authUser['id_usuario'], null, 'SEGURIDAD_CUENTA', 'ACTUALIZACION', 'Actualización de PIN de Firma Electrónica Simple');
+        logAudit($pdo, $authUser['id_usuario'], null, 'SEGURIDAD_CUENTA', 'ACTUALIZACION', 'Actualización de PIN de Firma Electrónica Simple');
+        $pdo->commit();
+    } catch (Throwable $e) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        http_response_code(500);
+        echo json_encode(['ok' => false, 'error' => 'No fue posible actualizar el PIN de firma.']);
+        exit;
+    }
 
     echo json_encode([
         'ok' => true,
