@@ -31,7 +31,6 @@ CREATE TABLE IF NOT EXISTS apx_sec_cuentas_acceso (
     apellidos VARCHAR(100) NOT NULL,
     email VARCHAR(150) NOT NULL UNIQUE,
     telefono VARCHAR(30),
-    debe_cambiar_clave TINYINT(1) DEFAULT 1,
     intentos_fallidos TINYINT DEFAULT 0,
     bloqueado_hasta TIMESTAMP NULL,
     password_hash VARCHAR(255) NOT NULL COMMENT 'Hash Bcrypt Cost 12',
