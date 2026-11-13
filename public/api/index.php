@@ -382,44 +382,37 @@ if ($route === 'auth/login' && $method === 'POST') {
     $rutSinPuntos = str_replace('.', '', $emailOrRut);
     $password = (string)($body['password'] ?? '');
 
-    // Recupera solo los datos necesarios y calcula si el bloqueo sigue vigente.
-    $stmt = $pdo->prepare("
-        SELECT u.id_usuario, u.rut, u.nombres, u.apellidos, u.email, u.password_hash,
-               u.especialidad, u.horas_contrato, u.debe_cambiar_clave,
-               u.intentos_fallidos, u.bloqueado_hasta,
-               (u.bloqueado_hasta IS NOT NULL AND u.bloqueado_hasta > NOW()) AS cuenta_bloqueada,
-               r.codigo AS rol_codigo, r.nombre AS rol_nombre
-        FROM apx_sec_cuentas_acceso u
-        INNER JOIN apx_sec_rbac_perfiles r ON u.id_rol = r.id_rol
-        WHERE (u.email = ? OR SUBSTRING_INDEX(u.email, '@', 1) = ? OR u.rut = ? OR REPLACE(u.rut, '.', '') = ?) AND u.activo = 1
-        LIMIT 1
-    ");
-    $stmt->execute([$emailOrRut, $emailOrRut, $emailOrRut, $rutSinPuntos]);
-    $user = $stmt->fetch();
-
-    // Rechaza credenciales inválidas o cuentas bloqueadas y contabiliza el fallo si corresponde.
-    if (!$user || (int)$user['cuenta_bloqueada'] === 1 || !password_verify($password, $user['password_hash'])) {
-        if ($user && (int)$user['cuenta_bloqueada'] !== 1) {
-            recordFailedLogin($pdo, (int)$user['id_usuario']);
-        }
-        http_response_code(401);
-        echo json_encode(['ok' => false, 'error' => 'Credenciales inválidas o usuario inactivo.']);
+    if ($emailOrRut === '' || $password === '') {
+        http_response_code(400);
+        echo json_encode(['ok' => false, 'error' => 'Debe ingresar su correo/RUT y contraseña.']);
         exit;
     }
 
-    $pdo->prepare("UPDATE apx_sec_cuentas_acceso SET ultimo_acceso = NOW() WHERE id_usuario = ?")->execute([$user['id_usuario']]);
+    $pdo->beginTransaction();
+    try {
+        $stmt = $pdo->prepare("
+            SELECT u.id_usuario, u.rut, u.nombres, u.apellidos, u.email, u.password_hash,
+                   u.especialidad, u.horas_contrato, u.debe_cambiar_clave, u.activo, u.id_rol,
+                   u.intentos_fallidos, u.bloqueado_hasta,
+                   TIMESTAMPDIFF(SECOND, NOW(), u.bloqueado_hasta) AS segundos_bloqueo,
+                   r.codigo AS rol_codigo, r.nombre AS rol_nombre, r.permisos_json
+            FROM apx_sec_cuentas_acceso u
+            INNER JOIN apx_sec_rbac_perfiles r ON u.id_rol = r.id_rol
+            WHERE (u.email = ? OR SUBSTRING_INDEX(u.email, '@', 1) = ? OR u.rut = ? OR REPLACE(u.rut, '.', '') = ?)
+            LIMIT 1
+            FOR UPDATE
+        ");
+        $stmt->execute([$emailOrRut, $emailOrRut, $emailOrRut, $rutSinPuntos]);
+        $user = $stmt->fetch();
 
-    $userPayload = [
-        'id_usuario' => (int)$user['id_usuario'],
-        'rut' => $user['rut'],
-        'nombre_completo' => $user['nombres'] . ' ' . $user['apellidos'],
-        'email' => $user['email'],
-        'rol_codigo' => $user['rol_codigo'],
-        'rol_nombre' => $user['rol_nombre'],
-        'especialidad' => $user['especialidad'],
-        'horas_contrato' => (int)$user['horas_contrato'],
-        'debe_cambiar_clave' => (int)($user['debe_cambiar_clave'] ?? 0)
-    ];
+        if (!$user || (int)$user['activo'] !== 1) {
+            $pdo->commit();
+            // Mitigación de timing attack para usuarios inexistentes o inactivos
+            password_verify($password, '$2y$12$cLrJlhPwVUG1PYmVQmma1egZiaAPKT5uGuIjcmQ4Za057tmUBAiz2');
+            http_response_code(401);
+            echo json_encode(['ok' => false, 'error' => 'Credenciales inválidas o usuario inactivo.']);
+            exit;
+        }
 
         // CRITERIO OBLIGATORIO: Interceptar ANTES de verificar contraseña si la cuenta está bloqueada
         $lockInfo = checkUserLockout($user);
@@ -454,7 +447,8 @@ if ($route === 'auth/login' && $method === 'POST') {
             'rol_codigo' => $user['rol_codigo'],
             'rol_nombre' => $user['rol_nombre'],
             'especialidad' => $user['especialidad'],
-            'horas_contrato' => (int)$user['horas_contrato']
+            'horas_contrato' => (int)$user['horas_contrato'],
+            'debe_cambiar_clave' => (int)($user['debe_cambiar_clave'] ?? 0)
         ];
 
         echo json_encode([
@@ -1447,7 +1441,15 @@ if ($route === 'paec/bitacora' && $method === 'GET') {
     exit;
 }
 
-// 7. Portal Apoderados y Datos Consolidados para el Generador PDF en JS
+// 7. Portal Apoderados: Rutas Modulares dedicadas (/api/apoderados/estudiantes/:id/*)
+if (strpos($route, 'apoderados/estudiantes/') === 0) {
+    require_once __DIR__ . '/modules/apoderados.php';
+    $subRoute = substr($route, strlen('apoderados/'));
+    handleApoderadosRoutes($pdo, $authUser, $subRoute, $method, $aesHexKey);
+    exit;
+}
+
+// 7.1 Portal Apoderados y Datos Consolidados (Rutas Heredadas / Compatibilidad)
 if (preg_match('#^apoderados/resumen/(\d+)$#', $route, $m) && $method === 'GET') {
     $idEst = (int)$m[1];
     $stmtEst = $pdo->prepare("
