@@ -59,6 +59,7 @@ $expectedApxTables = [
     'apx_fam_tutores_legales',
     'apx_acad_expedientes_alumnos',
     'apx_acad_inscripciones_anuales',
+    'apx_est_borradores_matricula',
     'apx_med_dossier_clinico_enc',
     'apx_conv_protocolos_paec_enc',
     'apx_pie_planes_apoyo_ind',
@@ -107,7 +108,7 @@ if ($decrypted !== $samplePlain) {
 }
 echo "   ✔ Cifrado autenticado AES-256-GCM (iv:authTag:cipherText) operativo.\n";
 
-echo "🗄️ [3/4] Conectando a MariaDB y verificando las 19 tablas blindadas (apx_*)...\n";
+echo "🗄️ [3/4] Conectando a MariaDB y verificando " . count($expectedApxTables) . " tablas blindadas (apx_*)...\n";
 $dbHost = getenv('DB_HOST') ?: '127.0.0.1';
 $dbPort = getenv('DB_PORT') ?: '3306';
 $dbName = getenv('DB_NAME') ?: '';

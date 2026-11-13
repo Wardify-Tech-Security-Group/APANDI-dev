@@ -31,7 +31,6 @@ CREATE TABLE IF NOT EXISTS apx_sec_cuentas_acceso (
     apellidos VARCHAR(100) NOT NULL,
     email VARCHAR(150) NOT NULL UNIQUE,
     telefono VARCHAR(30),
-    debe_cambiar_clave TINYINT(1) DEFAULT 1,
     intentos_fallidos TINYINT DEFAULT 0,
     bloqueado_hasta TIMESTAMP NULL,
     password_hash VARCHAR(255) NOT NULL COMMENT 'Hash Bcrypt Cost 12',
@@ -39,7 +38,7 @@ CREATE TABLE IF NOT EXISTS apx_sec_cuentas_acceso (
     especialidad VARCHAR(100) NULL COMMENT 'Ej: Ed. Diferencial, Psicólogo, Terapeuta Ocupacional, Fonoaudiólogo',
     horas_contrato INT DEFAULT 44,
     activo TINYINT(1) DEFAULT 1,
-    debe_cambiar_clave TINYINT(1) DEFAULT 1 COMMENT '1 = cambio obligatorio de clave, 0 = clave actualizada',
+    debe_cambiar_clave TINYINT(1) NOT NULL DEFAULT 1 COMMENT '1 = cambio obligatorio de clave, 0 = clave actualizada',
     ultimo_acceso TIMESTAMP NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -838,5 +837,18 @@ VALUES
         'Evaluación auténtica basada en producto terminado y lista de cotejo de seguridad industrial.',
         1
     );
+
+CREATE TABLE IF NOT EXISTS apx_est_borradores_matricula (
+    id_borrador INT AUTO_INCREMENT PRIMARY KEY,
+    id_usuario INT NOT NULL,
+    paso_actual TINYINT UNSIGNED NOT NULL DEFAULT 1,
+    payload_json JSON NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uk_apx_est_borrador_usuario (id_usuario),
+    CONSTRAINT chk_apx_est_borrador_paso CHECK (paso_actual BETWEEN 1 AND 4),
+    CONSTRAINT fk_apx_est_borrador_usuario FOREIGN KEY (id_usuario)
+        REFERENCES apx_sec_cuentas_acceso (id_usuario) ON DELETE CASCADE
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
 
 SET FOREIGN_KEY_CHECKS = 1;

@@ -360,6 +360,78 @@ $route = trim($route, '/');
 $method = $_SERVER['REQUEST_METHOD'];
 $body = json_decode(file_get_contents('php://input'), true) ?: [];
 
+function normalizeChileanRut(string $rut): ?array {
+    $clean = strtoupper(trim($rut));
+    if (!preg_match('/^[0-9.K\-\s]+$/', $clean)) {
+        return null;
+    }
+    $compact = preg_replace('/[.\-\s]/', '', $clean);
+    if (!preg_match('/^\d{7,8}[0-9K]$/', $compact)) {
+        return null;
+    }
+
+    $body = substr($compact, 0, -1);
+    $sum = 0;
+    $factor = 2;
+    for ($i = strlen($body) - 1; $i >= 0; $i--) {
+        $sum += (int)$body[$i] * $factor;
+        $factor = $factor === 7 ? 2 : $factor + 1;
+    }
+    $check = 11 - ($sum % 11);
+    $expected = $check === 11 ? '0' : ($check === 10 ? 'K' : (string)$check);
+    if ($compact[strlen($compact) - 1] !== $expected) {
+        return null;
+    }
+
+    return [
+        'compact' => $compact,
+        'formatted' => preg_replace('/\B(?=(\d{3})+(?!\d))/', '.', $body) . '-' . substr($compact, -1)
+    ];
+}
+
+function transformStudentClinicalFields(array $payload, string $aesHexKey, bool $encrypt): array {
+    $sensitiveFields = [
+        'diagnosticoprincipal',
+        'diagnosticosecundario',
+        'primarydiagnosis',
+        'secondarydiagnosis',
+        'relevantbackground',
+        'medicalhistory',
+        'medicalbackground',
+        'clinicalhistory',
+        'historialmedico',
+        'anamnesis',
+        'supportneeds',
+        'necesidadesdeapoyo',
+        'antecedentes',
+        'antecedentesclinicos',
+        'antecedentesrelevantes',
+        'antecedentesmedicos',
+        'fortalezas',
+        'strengths',
+        'pedagogicalobservations',
+        'observacionespedagogicas'
+    ];
+
+    foreach ($payload as $field => $value) {
+        if (is_array($value)) {
+            $payload[$field] = transformStudentClinicalFields($value, $aesHexKey, $encrypt);
+            continue;
+        }
+
+        $normalizedField = strtolower(preg_replace('/[^a-z]/i', '', (string)$field));
+        if (!in_array($normalizedField, $sensitiveFields, true) || !is_string($value) || $value === '') {
+            continue;
+        }
+
+        $payload[$field] = $encrypt
+            ? encryptAES256($value, $aesHexKey)
+            : decryptAES256($value, $aesHexKey);
+    }
+
+    return $payload;
+}
+
 // =============================================================================
 // ENRUTADOR REST JSON PARA EL MOTOR JAVASCRIPT API
 // =============================================================================
@@ -378,6 +450,7 @@ if ($route === 'health' && $method === 'GET') {
 
 // 1. Login con verificación estricta Bcrypt Cost 12, Anti-Brute Force y emisión de JWT
 if ($route === 'auth/login' && $method === 'POST') {
+    try {
     $emailOrRut = trim($body['emailOrRut'] ?? ($body['identifier'] ?? ($body['rut'] ?? '')));
     $rutSinPuntos = str_replace('.', '', $emailOrRut);
     $password = (string)($body['password'] ?? '');
@@ -400,13 +473,15 @@ if ($route === 'auth/login' && $method === 'POST') {
     // Rechaza credenciales inválidas o cuentas bloqueadas y contabiliza el fallo si corresponde.
     if (!$user || (int)$user['cuenta_bloqueada'] === 1 || !password_verify($password, $user['password_hash'])) {
         if ($user && (int)$user['cuenta_bloqueada'] !== 1) {
-            recordFailedLogin($pdo, (int)$user['id_usuario']);
+            $pdo->beginTransaction();
+            recordFailedAttempt($pdo, $user, 'password');
         }
         http_response_code(401);
         echo json_encode(['ok' => false, 'error' => 'Credenciales inválidas o usuario inactivo.']);
         exit;
     }
 
+    $pdo->beginTransaction();
     $pdo->prepare("UPDATE apx_sec_cuentas_acceso SET ultimo_acceso = NOW() WHERE id_usuario = ?")->execute([$user['id_usuario']]);
 
     $userPayload = [
@@ -698,6 +773,145 @@ if ($route === 'rrhh/reloj-control' && $method === 'POST') {
 }
 
 // 3. Módulo Administrativo: Estudiantes, Matrícula y Talleres (Grupo A / B) + Ficha Integral Figma
+if ($route === 'estudiantes/borrador') {
+    if (!in_array($authUser['rol_codigo'] ?? '', ['ADMIN', 'DIRECTOR_UTP', 'DOCENTE', 'ESPECIALISTA_PIE'], true)) {
+        http_response_code(403);
+        echo json_encode(['ok' => false, 'error' => 'Sin permisos para gestionar borradores de matrícula.']);
+        exit;
+    }
+
+    $idUsuario = (int)($authUser['id_usuario'] ?? 0);
+    if ($idUsuario < 1) {
+        http_response_code(401);
+        echo json_encode(['ok' => false, 'error' => 'La sesión no contiene un usuario válido.']);
+        exit;
+    }
+
+    if ($method === 'GET') {
+        try {
+            $stmt = $pdo->prepare("
+                SELECT paso_actual, payload_json, created_at, updated_at
+                FROM apx_est_borradores_matricula
+                WHERE id_usuario = ?
+                LIMIT 1
+            ");
+            $stmt->execute([$idUsuario]);
+            $draft = $stmt->fetch();
+            if (!$draft) {
+                echo json_encode(['ok' => true, 'borrador' => null]);
+                exit;
+            }
+
+            $payload = json_decode((string)$draft['payload_json'], true, 512, JSON_THROW_ON_ERROR);
+            if (!is_array($payload)) {
+                throw new UnexpectedValueException('El payload almacenado no tiene el formato esperado.');
+            }
+
+            echo json_encode([
+                'ok' => true,
+                'borrador' => [
+                    'paso_actual' => (int)$draft['paso_actual'],
+                    'payload' => transformStudentClinicalFields($payload, $aesHexKey, false),
+                    'created_at' => $draft['created_at'],
+                    'updated_at' => $draft['updated_at']
+                ]
+            ]);
+        } catch (Throwable $e) {
+            error_log('No fue posible consultar el borrador de matrícula: ' . $e->getMessage());
+            http_response_code(500);
+            echo json_encode(['ok' => false, 'error' => 'No fue posible consultar el borrador.']);
+        }
+        exit;
+    }
+
+    if ($method === 'PUT') {
+        if (json_last_error() !== JSON_ERROR_NONE || !is_array($body)
+            || !isset($body['paso_actual'], $body['payload'])
+            || !is_array($body['payload'])
+        ) {
+            http_response_code(400);
+            echo json_encode(['ok' => false, 'error' => 'Se requiere un JSON con paso_actual y payload.']);
+            exit;
+        }
+
+        $step = filter_var($body['paso_actual'], FILTER_VALIDATE_INT);
+        if ($step === false || $step < 1 || $step > 4) {
+            http_response_code(422);
+            echo json_encode(['ok' => false, 'error' => 'paso_actual debe estar entre 1 y 4.']);
+            exit;
+        }
+
+        try {
+            $safePayload = transformStudentClinicalFields($body['payload'], $aesHexKey, true);
+            $payloadJson = json_encode(
+                $safePayload,
+                JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR
+            );
+            if (strlen($payloadJson) > 1048576) {
+                http_response_code(413);
+                echo json_encode(['ok' => false, 'error' => 'El borrador supera el tamaño máximo permitido.']);
+                exit;
+            }
+
+            $pdo->beginTransaction();
+            $stmt = $pdo->prepare("
+                INSERT INTO apx_est_borradores_matricula (id_usuario, paso_actual, payload_json)
+                VALUES (?, ?, ?)
+                ON DUPLICATE KEY UPDATE
+                    paso_actual = VALUES(paso_actual),
+                    payload_json = VALUES(payload_json),
+                    updated_at = CURRENT_TIMESTAMP
+            ");
+            $stmt->execute([$idUsuario, $step, $payloadJson]);
+            $stmt = $pdo->prepare("
+                SELECT paso_actual, created_at, updated_at
+                FROM apx_est_borradores_matricula
+                WHERE id_usuario = ?
+                LIMIT 1
+            ");
+            $stmt->execute([$idUsuario]);
+            $savedDraft = $stmt->fetch();
+            $pdo->commit();
+
+            echo json_encode([
+                'ok' => true,
+                'borrador' => [
+                    'paso_actual' => (int)$savedDraft['paso_actual'],
+                    'created_at' => $savedDraft['created_at'],
+                    'updated_at' => $savedDraft['updated_at']
+                ]
+            ]);
+        } catch (Throwable $e) {
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+            error_log('No fue posible guardar el borrador de matrícula: ' . $e->getMessage());
+            http_response_code(500);
+            echo json_encode(['ok' => false, 'error' => 'No fue posible guardar el borrador.']);
+        }
+        exit;
+    }
+
+    if ($method === 'DELETE') {
+        try {
+            $pdo->beginTransaction();
+            $stmt = $pdo->prepare("DELETE FROM apx_est_borradores_matricula WHERE id_usuario = ?");
+            $stmt->execute([$idUsuario]);
+            $deleted = $stmt->rowCount() > 0;
+            $pdo->commit();
+            echo json_encode(['ok' => true, 'eliminado' => $deleted]);
+        } catch (Throwable $e) {
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+            error_log('No fue posible descartar el borrador de matrícula: ' . $e->getMessage());
+            http_response_code(500);
+            echo json_encode(['ok' => false, 'error' => 'No fue posible descartar el borrador.']);
+        }
+        exit;
+    }
+}
+
 if ($route === 'estudiantes' && $method === 'GET') {
     $estudiantes = $pdo->query("
         SELECT 
@@ -737,6 +951,41 @@ if ($route === 'estudiantes' && $method === 'GET') {
 
     $canSeeClinical = in_array($authUser['rol_codigo'], ['ESPECIALISTA_PIE', 'DIRECTOR_UTP', 'DOCENTE', 'ADMIN']);
     foreach ($estudiantes as &$estRow) {
+        if (!empty($estRow['observaciones_ingreso'])) {
+            $metadata = json_decode((string)$estRow['observaciones_ingreso'], true);
+            if (is_array($metadata) && isset($metadata['educational']) && is_array($metadata['educational'])) {
+                if ($canSeeClinical) {
+                    $metadata['educational'] = transformStudentClinicalFields($metadata['educational'], $aesHexKey, false);
+                } else {
+                    foreach ([
+                        'primaryDiagnosis',
+                        'secondaryDiagnosis',
+                        'relevantBackground',
+                        'medicalHistory',
+                        'medicalBackground',
+                        'clinicalHistory',
+                        'historialMedico',
+                        'anamnesis',
+                        'supportNeeds',
+                        'necesidades_de_apoyo',
+                        'antecedentes',
+                        'antecedentesClinicos',
+                        'fortalezas',
+                        'strengths',
+                        'pedagogicalObservations',
+                        'observacionesPedagogicas',
+                        'diagnostico_principal',
+                        'diagnostico_secundario'
+                    ] as $sensitiveField) {
+                        if (array_key_exists($sensitiveField, $metadata['educational'])) {
+                            $metadata['educational'][$sensitiveField] = '';
+                        }
+                    }
+                }
+                $estRow['observaciones_ingreso'] = json_encode($metadata, JSON_UNESCAPED_UNICODE);
+            }
+        }
+
         if ($canSeeClinical && !empty($estRow['diagnostico_principal_enc'])) {
             $estRow['diagnostico_principal'] = decryptAES256($estRow['diagnostico_principal_enc'], $aesHexKey);
         } else {
@@ -758,28 +1007,177 @@ if ($route === 'estudiantes' && $method === 'POST') {
         exit;
     }
 
-    $pdo->beginTransaction();
-    try {
-        $nombres = trim((string)($body['nombres'] ?? ($body['names'] ?? '')));
-        $apellidos = trim((string)($body['apellidos'] ?? trim(($body['paternalSurname'] ?? '') . ' ' . ($body['maternalSurname'] ?? ''))));
-        $nombreSocial = trim((string)($body['nombre_social'] ?? ($body['socialName'] ?? ''))) ?: null;
-        $fechaNac = trim((string)($body['fecha_nacimiento'] ?? ($body['birthDate'] ?? ''))) ?: '2007-06-15';
-        $genero = trim((string)($body['genero'] ?? ($body['gender'] ?? ''))) ?: 'No especificado';
-        $direccion = trim((string)($body['direccion'] ?? ($body['address'] ?? ''))) ?: 'Av. Pajaritos, Maipú';
-        $comuna = trim((string)($body['comuna'] ?? ($body['municipality'] ?? ''))) ?: 'Maipú';
-        $pctDisc = (int)($body['porcentaje_discapacidad'] ?? 50);
+    if (json_last_error() !== JSON_ERROR_NONE || !is_array($body) || $body === []) {
+        http_response_code(400);
+        echo json_encode(['ok' => false, 'error' => 'Se requiere un objeto JSON válido para matricular.']);
+        exit;
+    }
 
-        $rawStatus = strtolower(trim((string)($body['status'] ?? ($body['estado_matricula'] ?? 'activo'))));
+    $personal = is_array($body['datos_personales'] ?? null) ? $body['datos_personales'] : $body;
+    $academic = is_array($body['academico'] ?? null) ? $body['academico'] : $body;
+    $guardian = is_array($body['apoderado'] ?? null) ? $body['apoderado'] : [];
+    $contact = is_array($body['contact'] ?? null) ? $body['contact'] : [];
+    $clinical = is_array($body['diagnostico_apoyos'] ?? null)
+        ? $body['diagnostico_apoyos']
+        : (is_array($body['educational'] ?? null) ? $body['educational'] : $body);
+    $firstValue = static function (array $sources, array $keys, $default = '') {
+        foreach ($sources as $source) {
+            foreach ($keys as $key) {
+                if (array_key_exists($key, $source)
+                    && is_scalar($source[$key])
+                    && $source[$key] !== ''
+                ) {
+                    return $source[$key];
+                }
+            }
+        }
+        return $default;
+    };
+
+    $rutInfo = normalizeChileanRut((string)$firstValue([$personal, $body], ['rut']));
+    $guardianRutValue = $firstValue([$guardian], ['rut']);
+    if ($guardianRutValue === '') {
+        $guardianRutValue = $firstValue([$contact, $body], ['guardianRut', 'guardian_rut']);
+    }
+    $guardianRutInfo = normalizeChileanRut((string)$guardianRutValue);
+    $nombres = trim((string)$firstValue([$personal, $body], ['nombres', 'names']));
+    $apellidos = trim((string)$firstValue([$personal, $body], ['apellidos']));
+    if ($apellidos === '') {
+        $paternal = trim((string)$firstValue([$personal, $body], ['apellido_paterno', 'paternalSurname']));
+        $maternal = trim((string)$firstValue([$personal, $body], ['apellido_materno', 'maternalSurname']));
+        $apellidos = trim($paternal . ' ' . $maternal);
+    }
+    $guardianNames = trim((string)$firstValue(
+        [$guardian, $contact, $body],
+        ['nombres', 'guardianNames', 'guardian_name']
+    ));
+    $guardianLastNames = trim((string)$firstValue(
+        [$guardian, $contact, $body],
+        ['apellidos', 'guardianLastNames', 'guardian_surnames']
+    ));
+    $guardianFullName = trim((string)$firstValue(
+        [$guardian, $contact, $body],
+        ['nombre_completo', 'nombre', 'guardianName', 'guardian_name']
+    ));
+    if ($guardianNames === '' || $guardianLastNames === '') {
+        $nameParts = preg_split('/\s+/', $guardianFullName, -1, PREG_SPLIT_NO_EMPTY) ?: [];
+        if (count($nameParts) >= 2) {
+            $guardianLastNames = $guardianLastNames !== '' ? $guardianLastNames : (string)array_pop($nameParts);
+            $guardianNames = $guardianNames !== '' ? $guardianNames : implode(' ', $nameParts);
+        }
+    }
+    $guardianPhone = trim((string)$firstValue([$guardian], ['telefono_principal', 'telefono', 'phone']));
+    if ($guardianPhone === '') {
+        $guardianPhone = trim((string)$firstValue(
+            [$contact, $body],
+            ['guardianPhone', 'guardian_phone', 'telefono_apoderado']
+        ));
+    }
+    $guardianEmail = trim((string)$firstValue([$guardian, $contact, $body], ['email', 'guardianEmail', 'guardian_email']));
+    $guardianParentage = trim((string)$firstValue([$guardian, $body], ['parentesco'], 'Apoderado titular'));
+    $emergency = is_array($guardian['contacto_emergencia'] ?? null) ? $guardian['contacto_emergencia'] : [];
+    $emergencyPhone = trim((string)$firstValue(
+        [$emergency, $guardian, $contact, $body],
+        ['telefono', 'telefono_emergencia', 'emergencyPhone', 'emergency_phone']
+    ));
+    $blocks = is_array($academic['bloques_horarios'] ?? null)
+        ? $academic['bloques_horarios']
+        : (is_array($body['bloques_horarios'] ?? null) ? $body['bloques_horarios'] : []);
+
+    $fechaNac = trim((string)$firstValue([$personal, $body], ['fecha_nacimiento', 'birthDate']));
+    $fechaParsed = $fechaNac !== '' ? DateTime::createFromFormat('!Y-m-d', $fechaNac) : false;
+    $fechaErrors = DateTime::getLastErrors();
+    $dateInvalid = !$fechaParsed
+        || ($fechaErrors !== false && ($fechaErrors['warning_count'] > 0 || $fechaErrors['error_count'] > 0))
+        || $fechaParsed->format('Y-m-d') !== $fechaNac;
+
+    $idTaller = (int)$firstValue([$academic, $body], ['id_taller'], 1);
+    $year = (int)$firstValue([$academic, $body], ['anio_escolar', 'enrollmentYear'], 2026);
+    $group = (string)$firstValue([$academic, $body], ['grupo_funcionalidad'], 'GRUPO_A');
+    $jornada = (string)$firstValue([$academic, $body], ['jornada'], 'COMPLETA');
+    $entryDate = trim((string)$firstValue([$academic, $body], ['fecha_incorporacion', 'entryDate'], date('Y-m-d')));
+    $entryParsed = DateTime::createFromFormat('!Y-m-d', $entryDate);
+    $entryErrors = DateTime::getLastErrors();
+    $entryInvalid = !$entryParsed
+        || ($entryErrors !== false && ($entryErrors['warning_count'] > 0 || $entryErrors['error_count'] > 0))
+        || $entryParsed->format('Y-m-d') !== $entryDate;
+
+    if (!$rutInfo || $nombres === '' || $apellidos === '' || $dateInvalid
+        || !$guardianRutInfo || $guardianNames === '' || $guardianLastNames === '' || $guardianPhone === ''
+    ) {
+        http_response_code(422);
+        echo json_encode([
+            'ok' => false,
+            'error' => 'RUT válido, datos personales, fecha de nacimiento y RUT, nombre y teléfono del apoderado titular son obligatorios.'
+        ]);
+        exit;
+    }
+    if ($idTaller < 1 || $year < 1901 || $year > 2155
+        || !in_array($group, ['GRUPO_A', 'GRUPO_B'], true)
+        || !in_array($jornada, ['MANANA', 'TARDE', 'COMPLETA'], true)
+        || $entryInvalid
+    ) {
+        http_response_code(422);
+        echo json_encode(['ok' => false, 'error' => 'Los datos de matrícula, taller, grupo, jornada o fecha no son válidos.']);
+        exit;
+    }
+
+    try {
+        $pdo->beginTransaction();
+        $stmtWorkshop = $pdo->prepare("SELECT id_taller FROM apx_acad_unidades_laborales WHERE id_taller = ? AND activo = 1 LIMIT 1");
+        $stmtWorkshop->execute([$idTaller]);
+        if (!$stmtWorkshop->fetchColumn()) {
+            throw new InvalidArgumentException('El taller indicado no existe o no está activo.');
+        }
+
+        $rutGuardianSql = "REPLACE(REPLACE(REPLACE(UPPER(rut), '.', ''), '-', ''), ' ', '') = ?";
+        $stmtGuardian = $pdo->prepare("SELECT id_apoderado FROM apx_fam_tutores_legales WHERE $rutGuardianSql LIMIT 1 FOR UPDATE");
+        $stmtGuardian->execute([$guardianRutInfo['compact']]);
+        $idApoderado = (int)$stmtGuardian->fetchColumn();
+        if ($idApoderado < 1) {
+            $stmtGuardian = $pdo->prepare("
+                INSERT INTO apx_fam_tutores_legales
+                    (rut, nombres, apellidos, parentesco, telefono_principal, telefono_emergencia, email, direccion, comuna)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ON DUPLICATE KEY UPDATE id_apoderado = LAST_INSERT_ID(id_apoderado)
+            ");
+            $stmtGuardian->execute([
+                $guardianRutInfo['formatted'],
+                $guardianNames,
+                $guardianLastNames,
+                $guardianParentage !== '' ? $guardianParentage : 'Apoderado titular',
+                $guardianPhone,
+                $emergencyPhone !== '' ? $emergencyPhone : null,
+                $guardianEmail !== '' ? $guardianEmail : null,
+                (string)$firstValue([$guardian], ['direccion', 'address']),
+                (string)$firstValue([$guardian], ['comuna', 'municipality'])
+            ]);
+            $idApoderado = (int)$pdo->lastInsertId();
+        }
+
+        $nombreSocial = trim((string)$firstValue([$personal, $body], ['nombre_social', 'socialName'])) ?: null;
+        $genero = trim((string)$firstValue([$personal, $body], ['genero', 'gender'])) ?: null;
+        $direccion = trim((string)$firstValue([$personal, $body], ['direccion', 'address']));
+        $comuna = trim((string)$firstValue([$personal, $body], ['comuna', 'municipality']));
+        $rawPctDisc = $firstValue([$personal, $body], ['porcentaje_discapacidad'], null);
+        $pctDisc = $rawPctDisc === null || $rawPctDisc === '' ? null : filter_var($rawPctDisc, FILTER_VALIDATE_INT);
+        if ($pctDisc === false || ($pctDisc !== null && ($pctDisc < 0 || $pctDisc > 100))) {
+            throw new InvalidArgumentException('El porcentaje de discapacidad debe estar entre 0 y 100.');
+        }
+        $tieneRnd = (int)(bool)$firstValue([$personal, $body], ['registro_nacional_discapacidad'], 1);
+        $beneficioJunaeb = (int)(bool)$firstValue([$personal, $body], ['beneficio_junaeb'], 1);
+
+        $rawStatus = strtolower(trim((string)$firstValue([$personal, $academic, $body], ['status', 'estado_matricula'], 'activo')));
         $estadoMatricula = 'REGULAR';
         if ($rawStatus === 'retirado') $estadoMatricula = 'RETIRADO';
         elseif ($rawStatus === 'egresado' || $rawStatus === 'egresado_practica') $estadoMatricula = 'EGRESADO_PRACTICA';
 
         $stmt = $pdo->prepare("
             INSERT INTO apx_acad_expedientes_alumnos (rut, nombres, apellidos, nombre_social, fecha_nacimiento, genero, direccion, comuna, registro_nacional_discapacidad, porcentaje_discapacidad, beneficio_junaeb, id_apoderado_titular, estado_matricula)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?, 1, 1, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ");
         $stmt->execute([
-            $body['rut'],
+            $rutInfo['formatted'],
             $nombres,
             $apellidos,
             $nombreSocial,
@@ -787,78 +1185,147 @@ if ($route === 'estudiantes' && $method === 'POST') {
             $genero,
             $direccion,
             $comuna,
+            $tieneRnd,
             $pctDisc,
+            $beneficioJunaeb,
+            $idApoderado,
             $estadoMatricula
         ]);
         $idEst = (int)$pdo->lastInsertId();
-        $numMat = !empty($body['registrationNumber'])
-            ? trim((string)$body['registrationNumber'])
-            : (!empty($body['numero_matricula']) ? trim((string)$body['numero_matricula']) : ('MAT-2026-00' . $idEst));
+        $numMat = trim((string)$firstValue([$academic, $body], ['numero_matricula', 'registrationNumber']));
+        if ($numMat === '') {
+            $numMat = 'MAT-' . $year . '-00' . $idEst;
+        }
+        $course = (string)$firstValue([$academic, $body], ['curso', 'course'], 'Nivel Laboral 2A');
+        $level = (string)$firstValue([$academic, $body], ['nivel', 'level'], 'Nivel Laboral (Decreto 83)');
+        $workshopName = (string)$firstValue([$academic, $body], ['taller', 'workshop']);
+        $nationality = (string)$firstValue([$personal, $body], ['nacionalidad', 'nationality'], 'Chilena');
+        $evaluationDate = (string)$firstValue([$clinical, $academic, $body], ['fecha_evaluacion', 'evaluationDate']);
+        $reevaluationDate = (string)$firstValue([$clinical, $academic, $body], ['fecha_reevaluacion', 'reevaluationDate']);
+        $primaryDiagnosis = trim((string)$firstValue(
+            [$clinical, $body],
+            ['diagnostico_principal', 'primaryDiagnosis']
+        ));
+        $secondaryDiagnosis = trim((string)$firstValue(
+            [$clinical, $body],
+            ['diagnostico_secundario', 'secondaryDiagnosis']
+        ));
+        $supportNeeds = trim((string)$firstValue(
+            [$clinical, $body],
+            ['necesidades_de_apoyo', 'supportNeeds']
+        ));
+        $strengths = trim((string)$firstValue([$clinical, $body], ['fortalezas', 'strengths']));
+        $observations = trim((string)$firstValue(
+            [$clinical, $body],
+            ['observaciones_pedagogicas', 'pedagogicalObservations', 'observaciones_ingreso']
+        ));
+        $background = trim((string)$firstValue(
+            [$clinical, $body],
+            ['antecedentes_relevantes', 'relevantBackground', 'anamnesis', 'medicalHistory']
+        ));
+        $encryptedClinicalMetadata = transformStudentClinicalFields([
+            'primaryDiagnosis' => $primaryDiagnosis,
+            'secondaryDiagnosis' => $secondaryDiagnosis,
+            'supportNeeds' => $supportNeeds,
+            'strengths' => $strengths,
+            'pedagogicalObservations' => $observations,
+            'relevantBackground' => $background
+        ], $aesHexKey, true);
+        $emergencyName = trim((string)$firstValue([$emergency], ['nombre', 'name']));
+        $emergencyRelationship = trim((string)$firstValue([$emergency], ['parentesco', 'relationship']));
 
         $metaJson = json_encode([
-            'course' => $body['course'] ?? 'Nivel Laboral 2A',
-            'level' => $body['level'] ?? 'Nivel Laboral (Decreto 83)',
-            'workshop' => $body['workshop'] ?? '',
-            'nationality' => $body['nationality'] ?? 'Chilena',
-            'enrollmentYear' => (int)($body['enrollmentYear'] ?? 2026),
-            'entryDate' => $body['entryDate'] ?? date('Y-m-d'),
-            'evaluationDate' => $body['evaluationDate'] ?? '',
-            'reevaluationDate' => $body['reevaluationDate'] ?? '',
-            'paternalSurname' => $body['paternalSurname'] ?? '',
-            'maternalSurname' => $body['maternalSurname'] ?? '',
+            'course' => $course,
+            'level' => $level,
+            'workshop' => $workshopName,
+            'bloques_horarios' => $blocks,
+            'nationality' => $nationality,
+            'enrollmentYear' => $year,
+            'entryDate' => $entryDate,
+            'evaluationDate' => $evaluationDate,
+            'reevaluationDate' => $reevaluationDate,
+            'paternalSurname' => (string)$firstValue([$personal, $body], ['apellido_paterno', 'paternalSurname']),
+            'maternalSurname' => (string)$firstValue([$personal, $body], ['apellido_materno', 'maternalSurname']),
             'contact' => [
                 'address' => $direccion,
                 'municipality' => $comuna,
-                'phone' => $body['phone'] ?? '',
-                'guardianName' => $body['guardianName'] ?? '',
-                'guardianRut' => $body['guardianRut'] ?? '',
-                'guardianPhone' => $body['guardianPhone'] ?? '',
-                'guardianEmail' => $body['guardianEmail'] ?? ''
+                'phone' => (string)$firstValue([$personal, $contact, $body], ['telefono', 'phone']),
+                'guardianName' => trim($guardianNames . ' ' . $guardianLastNames),
+                'guardianRut' => $guardianRutInfo['formatted'],
+                'guardianPhone' => $guardianPhone,
+                'guardianEmail' => $guardianEmail,
+                'emergencyContact' => $emergencyName,
+                'emergencyRelationship' => $emergencyRelationship,
+                'emergencyPhone' => $emergencyPhone
             ],
-            'educational' => [
-                'primaryDiagnosis' => $body['primaryDiagnosis'] ?? '',
-                'secondaryDiagnosis' => $body['secondaryDiagnosis'] ?? '',
-                'supportNeeds' => $body['supportNeeds'] ?? '',
-                'strengths' => $body['strengths'] ?? '',
-                'pedagogicalObservations' => $body['pedagogicalObservations'] ?? ($body['observaciones_ingreso'] ?? ''),
-                'relevantBackground' => $body['relevantBackground'] ?? ''
-            ]
-        ], JSON_UNESCAPED_UNICODE);
+            'educational' => $encryptedClinicalMetadata
+        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
 
         $stmtMat = $pdo->prepare("
             INSERT INTO apx_acad_inscripciones_anuales (numero_matricula, id_estudiante, id_taller, anio_escolar, grupo_funcionalidad, jornada, fecha_incorporacion, observaciones_ingreso)
-            VALUES (?, ?, ?, 2026, ?, 'COMPLETA', CURDATE(), ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         ");
         $stmtMat->execute([
             $numMat,
             $idEst,
-            (int)($body['id_taller'] ?? 1),
-            $body['grupo_funcionalidad'] ?? 'GRUPO_A',
+            $idTaller,
+            $year,
+            $group,
+            $jornada,
+            $entryDate,
             $metaJson
         ]);
 
-        if (!empty($body['primaryDiagnosis'])) {
+        if ($primaryDiagnosis !== '') {
             $stmtClin = $pdo->prepare("
                 INSERT INTO apx_med_dossier_clinico_enc (id_estudiante, diagnostico_principal_enc, anamnesis_enc, datos_medicos_json, actualizado_por)
                 VALUES (?, ?, ?, ?, ?)
-                ON DUPLICATE KEY UPDATE diagnostico_principal_enc = VALUES(diagnostico_principal_enc)
             ");
             $stmtClin->execute([
                 $idEst,
-                encryptAES256((string)$body['primaryDiagnosis'], $aesHexKey),
-                encryptAES256((string)($body['relevantBackground'] ?? 'Registro inicial de ficha estudiantil.'), $aesHexKey),
-                json_encode(['medicamentos' => [], 'alergias' => []], JSON_UNESCAPED_UNICODE),
+                encryptAES256($primaryDiagnosis, $aesHexKey),
+                encryptAES256($background, $aesHexKey),
+                json_encode([
+                    'medicamentos' => [],
+                    'alergias' => [],
+                    'diagnostico_secundario_enc' => $secondaryDiagnosis !== '' ? encryptAES256($secondaryDiagnosis, $aesHexKey) : null,
+                    'necesidades_de_apoyo_enc' => $supportNeeds !== '' ? encryptAES256($supportNeeds, $aesHexKey) : null
+                ], JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR),
                 $authUser['id_usuario']
             ]);
         }
 
-        logAudit($pdo, $authUser['id_usuario'], $idEst, 'MATRICULA_ESTUDIANTES', 'CREACION', "Nueva matrícula $numMat asignada a " . ($body['grupo_funcionalidad'] ?? 'GRUPO_A'));
+        logAudit($pdo, $authUser['id_usuario'], $idEst, 'MATRICULA_ESTUDIANTES', 'CREACION', "Nueva matrícula $numMat asignada a $group");
+        $stmtDraft = $pdo->prepare("DELETE FROM apx_est_borradores_matricula WHERE id_usuario = ?");
+        $stmtDraft->execute([(int)$authUser['id_usuario']]);
         $pdo->commit();
+        http_response_code(201);
         echo json_encode(['ok' => true, 'id_estudiante' => $idEst, 'numero_matricula' => $numMat]);
+    } catch (InvalidArgumentException $e) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        http_response_code(422);
+        echo json_encode(['ok' => false, 'error' => $e->getMessage()]);
+    } catch (PDOException $e) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        error_log('Error de base de datos al matricular estudiante: ' . $e->getMessage());
+        http_response_code((string)$e->getCode() === '23000' ? 409 : 500);
+        echo json_encode([
+            'ok' => false,
+            'error' => (string)$e->getCode() === '23000'
+                ? 'El RUT o número de matrícula ya está registrado.'
+                : 'No fue posible completar la matrícula.'
+        ]);
     } catch (Throwable $e) {
-        $pdo->rollBack();
-        http_response_code(400);
-        echo json_encode(['ok' => false, 'error' => 'Error al matricular: ' . $e->getMessage()]);
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        error_log('Error al matricular estudiante: ' . $e->getMessage());
+        http_response_code(500);
+        echo json_encode(['ok' => false, 'error' => 'No fue posible completar la matrícula.']);
     }
     exit;
 }
