@@ -22,6 +22,13 @@ class SgiApandiApplication {
     this.chartDoughnutInstance = null;
     this.activeEditorDocId = null;
 
+    // Estado del Módulo Pedagógico v3.0 (Desacoplado)
+    this.semestres = [];
+    this.bloques = [];
+    this.pidClasses = [];
+    this.qualitativeSelectedStudent = null;
+    this.qualitativeMatrixData = null;
+
     this.initEventListeners();
     this.startChileClock();
     this.api.onSosAlert((alerta) => this.showSosBanner(alerta));
@@ -35,9 +42,19 @@ class SgiApandiApplication {
       await this.performLogin(email, pass);
     });
 
+    document.getElementById('semestresConfigForm')?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      await this.saveSemestersConfig();
+    });
+
+    document.getElementById('bloqueForm')?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      await this.saveBlockConfig();
+    });
+
     document.getElementById('pidForm')?.addEventListener('submit', async (e) => {
       e.preventDefault();
-      await this.submitPidClass();
+      await this.submitPidClass(false);
     });
 
     document.getElementById('evalForm')?.addEventListener('submit', async (e) => {
@@ -443,6 +460,7 @@ class SgiApandiApplication {
     document.getElementById(subtabId)?.classList.remove('hidden');
 
     const map = {
+      'book-config': 'btnSubtabConfig',
       'book-pid': 'btnSubtabPid',
       'book-asistencia': 'btnSubtabAsist',
       'book-evaluaciones': 'btnSubtabEval'
@@ -451,11 +469,22 @@ class SgiApandiApplication {
       const btn = document.getElementById(btnId);
       if (!btn) return;
       if (panel === subtabId) {
-        btn.className = 'book-subtab bg-white text-teal-900 shadow-sm px-3.5 py-2 rounded-lg transition font-extrabold';
+        btn.className = 'book-subtab bg-white text-apandi-900 shadow-sm px-3.5 py-2 rounded-lg transition font-extrabold border border-slate-200';
       } else {
         btn.className = 'book-subtab text-slate-600 hover:text-slate-900 px-3.5 py-2 rounded-lg transition font-bold';
       }
     });
+
+    if (subtabId === 'book-config') {
+      this.loadSemestersConfig();
+      this.loadBlocksConfig();
+    } else if (subtabId === 'book-pid') {
+      this.loadPidSection();
+    } else if (subtabId === 'book-asistencia') {
+      this.updateAttendanceBlocksDropdown();
+    } else if (subtabId === 'book-evaluaciones') {
+      this.loadQualitativeEvaluationsSection();
+    }
   }
 
   handleGlobalSearch(query) {
@@ -1918,144 +1947,954 @@ class SgiApandiApplication {
   // ===========================================================================
 
   async loadPedagogicalBook() {
-    try {
-      const data = await this.api.request('pedagogico/libro');
+    await Promise.all([
+      this.loadSemestersConfig(),
+      this.loadBlocksConfig(),
+      this.loadPidSection()
+    ]);
+  }
 
-      const pidBox = document.getElementById('pidClassesList');
-      if (pidBox && data.clasesPid) {
-        pidBox.innerHTML = data.clasesPid
+  // ---------------------------------------------------------------------------
+  // 5.1 Sub-vista 1: Configuración de Semestres y Bloques Horarios
+  // ---------------------------------------------------------------------------
+
+  async loadSemestersConfig() {
+    try {
+      const res = await this.api.request('pedagogico/semestres');
+      if (!res.ok) return;
+      this.semestres = res.semestres || [];
+
+      const sem1 = this.semestres.find((s) => Number(s.numero_semestre) === 1);
+      const sem2 = this.semestres.find((s) => Number(s.numero_semestre) === 2);
+
+      if (sem1) {
+        const inpIni = document.getElementById('sem1Inicio');
+        const inpFin = document.getElementById('sem1Termino');
+        const chk = document.getElementById('sem1Activo');
+        if (inpIni) inpIni.value = sem1.fecha_inicio;
+        if (inpFin) inpFin.value = sem1.fecha_termino;
+        if (chk) chk.checked = !!Number(sem1.activo);
+      }
+
+      if (sem2) {
+        const inpIni = document.getElementById('sem2Inicio');
+        const inpFin = document.getElementById('sem2Termino');
+        const chk = document.getElementById('sem2Activo');
+        if (inpIni) inpIni.value = sem2.fecha_inicio;
+        if (inpFin) inpFin.value = sem2.fecha_termino;
+        if (chk) chk.checked = !!Number(sem2.activo);
+      }
+
+      const semActivo = this.semestres.find((s) => Number(s.activo) === 1) || sem2 || sem1;
+      const weeksBox = document.getElementById('semestersWeeksList');
+      if (weeksBox && semActivo && semActivo.semanas) {
+        weeksBox.innerHTML = semActivo.semanas
           .map(
-            (c) => `
-            <div class="p-5 rounded-2xl bg-slate-50 border border-slate-200 space-y-3 text-xs">
-              <div class="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-slate-200">
-                <div>
-                  <span class="text-[10px] font-bold uppercase text-teal-700">${c.taller_nombre} • ${c.fecha_clase}</span>
-                  <h4 class="font-extrabold text-slate-900 text-sm">${c.unidad_tematica}</h4>
-                </div>
-                <span class="bg-emerald-100 text-emerald-900 font-mono text-[10px] font-bold px-2.5 py-1 rounded-lg border border-emerald-300">
-                  ✓ FIRMADO PIN • SHA256: ${(c.hash_firma_electronica || '').substring(0, 16)}...
-                </span>
-              </div>
-              <p class="text-slate-700 font-semibold">${c.objetivo_aprendizaje}</p>
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div class="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-950">
-                  <strong class="block mb-1">🟢 Estrategia Diversificada GRUPO A (Más Funcional):</strong>
-                  <p>${c.actividad_grupo_a}</p>
-                </div>
-                <div class="p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-950">
-                  <strong class="block mb-1">🟡 Estrategia Diversificada GRUPO B (Mayor Apoyo):</strong>
-                  <p>${c.actividad_grupo_b}</p>
-                </div>
-              </div>
-              <div class="text-[11px] text-slate-500 flex items-center justify-between pt-1">
-                <span><strong>Recursos DUA:</strong> ${c.recursos_dua || 'Apoyos visuales ARASAAC'}</span>
-                <span><strong>Docente Firmante:</strong> ${c.docente_nombre}</span>
-              </div>
-            </div>
-          `
+            (w) => `
+          <div class="flex items-center justify-between p-2 rounded-lg bg-white border border-slate-200">
+            <span class="font-extrabold text-slate-800">${w.etiqueta}</span>
+            <span class="font-mono text-[10px] text-slate-500">${w.fecha_inicio} al ${w.fecha_termino}</span>
+          </div>
+        `
           )
           .join('');
       }
 
-      const attBox = document.getElementById('attendanceStudentList');
-      if (attBox) {
-        attBox.innerHTML = this.students
-          .map((s) => {
-            const reg = (data.asistencias || []).find((a) => Number(a.id_estudiante) === Number(s.id_estudiante));
-            const estado = reg ? reg.estado : 'PRESENTE';
-            const badgeColor =
-              estado === 'PRESENTE'
-                ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
-                : estado === 'AUSENTE'
-                ? 'bg-red-100 text-red-800 border-red-300'
-                : 'bg-amber-100 text-amber-800 border-amber-300';
-
-            return `
-              <div class="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-50">
-                <div class="flex items-center gap-3">
-                  <span class="px-2.5 py-1 rounded-full font-extrabold text-[11px] border ${badgeColor}">${estado}</span>
-                  <div>
-                    <div class="font-extrabold text-slate-900 text-sm">${s.fullName}</div>
-                    <div class="text-[11px] text-slate-500">${s.workshop} • <strong>${
-              s.grupo_funcionalidad === 'GRUPO_A' ? 'Grupo A (Más Funcional)' : 'Grupo B (Mayor Apoyo)'
-            }</strong></div>
-                  </div>
-                </div>
-                <div class="flex flex-wrap items-center gap-1.5 text-xs">
-                  <button onclick="window.app.saveStudentAttendance(${s.id_estudiante}, ${s.id_taller || 1}, 'PRESENTE')"
-                    class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3 py-1.5 rounded-lg transition">
-                    ✓ Presente
-                  </button>
-                  <button onclick="window.app.saveStudentAttendance(${s.id_estudiante}, ${s.id_taller || 1}, 'AUSENTE')"
-                    class="bg-red-600 hover:bg-red-700 text-white font-bold px-3 py-1.5 rounded-lg transition">
-                    ✕ Ausente (Alerta UTP)
-                  </button>
-                  <button onclick="window.app.saveStudentAttendance(${s.id_estudiante}, ${s.id_taller || 1}, 'ATRASO')"
-                    class="bg-amber-500 hover:bg-amber-600 text-white font-bold px-3 py-1.5 rounded-lg transition">
-                    ⏱️ Atraso
-                  </button>
-                </div>
-              </div>
-            `;
-          })
-          .join('');
-      }
-
-      const evalBox = document.getElementById('evaluationsList');
-      if (evalBox && data.evaluaciones) {
-        evalBox.innerHTML = data.evaluaciones
-          .map((ev) => {
-            const color =
-              ev.nivel_logro === 'LOGRADO'
-                ? 'bg-emerald-100 text-emerald-900 border-emerald-300'
-                : ev.nivel_logro === 'EN_DESARROLLO'
-                ? 'bg-teal-100 text-teal-900 border-teal-300'
-                : 'bg-amber-100 text-amber-900 border-amber-300';
-            return `
-              <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200 flex flex-col justify-between gap-2">
-                <div class="flex items-start justify-between gap-2">
-                  <div>
-                    <span class="text-[10px] font-bold uppercase text-slate-500">${ev.dimension.replace(/_/g, ' ')}</span>
-                    <h4 class="font-extrabold text-slate-900 text-sm">${ev.estudiante_nombre}</h4>
-                  </div>
-                  <span class="px-2.5 py-1 rounded-full font-extrabold text-[11px] border shrink-0 ${color}">
-                    ${ev.nivel_logro.replace(/_/g, ' ')}
-                  </span>
-                </div>
-                <p class="font-semibold text-slate-800">${ev.indicador_competencia}</p>
-                <p class="text-[11px] text-slate-500 italic">"${ev.comentario_pedagogico || 'Sin observación adicional'}"</p>
-              </div>
-            `;
-          })
-          .join('');
-      }
+      this.populatePidWeekSelectors(semActivo?.semanas || []);
     } catch (err) {
-      console.warn('Error cargando Libro Digital:', err.message);
+      console.warn('Error cargando semestres:', err.message);
     }
   }
 
-  async submitPidClass() {
+  populatePidWeekSelectors(semanas) {
+    const selPidSem = document.getElementById('pidSemana');
+    const selFilterSem = document.getElementById('pidFilterSemana');
+    if (!semanas || semanas.length === 0) return;
+
+    const optionsHtml = semanas
+      .map((w) => `<option value="${w.numero_semana}">Semana ${w.numero_semana} (${w.fecha_inicio} al ${w.fecha_termino})</option>`)
+      .join('');
+
+    if (selPidSem) {
+      selPidSem.innerHTML = optionsHtml;
+    }
+    if (selFilterSem) {
+      selFilterSem.innerHTML = '<option value="">Todas las semanas</option>' + optionsHtml;
+    }
+  }
+
+  async saveSemestersConfig() {
     try {
-      const pin = document.getElementById('pidPin').value;
-      const res = await this.api.request('pedagogico/pid', {
+      const s1Ini = document.getElementById('sem1Inicio')?.value;
+      const s1Fin = document.getElementById('sem1Termino')?.value;
+      const s1Act = document.getElementById('sem1Activo')?.checked ? 1 : 0;
+
+      const s2Ini = document.getElementById('sem2Inicio')?.value;
+      const s2Fin = document.getElementById('sem2Termino')?.value;
+      const s2Act = document.getElementById('sem2Activo')?.checked ? 1 : 0;
+
+      const res = await this.api.request('pedagogico/semestres', {
         method: 'POST',
         body: {
-          id_taller: Number(document.getElementById('pidTaller').value),
-          unidad_tematica: document.getElementById('pidUnidad').value,
-          objetivo_aprendizaje: document.getElementById('pidObjetivo').value,
-          actividad_grupo_a: document.getElementById('pidGrupoA').value,
-          actividad_grupo_b: document.getElementById('pidGrupoB').value,
-          recursos_dua: document.getElementById('pidRecursos').value,
-          pin_firma: pin
+          anio_escolar: 2026,
+          semestres: [
+            { numero_semestre: 1, nombre: 'Primer Semestre 2026', fecha_inicio: s1Ini, fecha_termino: s1Fin, activo: s1Act },
+            { numero_semestre: 2, nombre: 'Segundo Semestre 2026', fecha_inicio: s2Ini, fecha_termino: s2Fin, activo: s2Act }
+          ]
         }
       });
-      this.showToast(`✍️ ${res.mensaje}`);
-      await this.loadPedagogicalBook();
+
+      this.showToast(`✅ ${res.mensaje}`);
+      await this.loadSemestersConfig();
     } catch (err) {
       this.showToast(err.message, 'error');
     }
   }
 
+  async loadBlocksConfig() {
+    try {
+      const res = await this.api.request('pedagogico/bloques');
+      if (!res.ok) return;
+      this.bloques = res.bloques || [];
+
+      const listContainer = document.getElementById('blocksListContainer');
+      const diasNombres = ['', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'];
+
+      if (listContainer) {
+        listContainer.innerHTML = this.bloques
+          .map(
+            (b) => `
+          <div class="p-3 rounded-xl bg-white border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div>
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 rounded text-[10px] font-extrabold bg-blue-100 text-blue-900 border border-blue-200">
+                  ${diasNombres[b.dia_semana] || 'Día ' + b.dia_semana} • ${b.hora_inicio.substring(0, 5)} - ${b.hora_fin.substring(0, 5)}
+                </span>
+                <span class="px-2 py-0.5 rounded text-[10px] font-extrabold bg-emerald-100 text-emerald-800">
+                  ⏱️ ${b.duracion_minutos || 90} min
+                </span>
+                <span class="px-2 py-0.5 rounded text-[10px] font-extrabold bg-slate-100 text-slate-700">
+                  👥 ${b.total_estudiantes || 0} estudiantes
+                </span>
+              </div>
+              <h4 class="font-extrabold text-slate-900 text-xs mt-1">${b.bloque_nombre}</h4>
+              <p class="text-[11px] text-slate-500">${b.taller_nombre} • Docente: ${b.docente_nombre}</p>
+            </div>
+            <div class="flex items-center gap-1.5 shrink-0">
+              <button type="button" onclick="window.app.editBlock(${b.id_horario})"
+                class="px-2.5 py-1 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-100 font-bold text-xs">
+                ✏️ Editar
+              </button>
+              <button type="button" onclick="window.app.selectBlockForAssignment(${b.id_horario})"
+                class="px-2.5 py-1 rounded-lg bg-apandi-600 hover:bg-apandi-700 text-white font-extrabold text-xs">
+                👥 Asignar Alumnos
+              </button>
+            </div>
+          </div>
+        `
+          )
+          .join('');
+      }
+
+      const assignSel = document.getElementById('assignBlockSelector');
+      if (assignSel) {
+        assignSel.innerHTML = this.bloques
+          .map(
+            (b) => `
+          <option value="${b.id_horario}">Bloque #${b.id_horario}: ${diasNombres[b.dia_semana]} (${b.hora_inicio.substring(0, 5)}-${b.hora_fin.substring(0, 5)}) - ${b.bloque_nombre}</option>
+        `
+          )
+          .join('');
+
+        if (this.bloques.length > 0) {
+          this.loadBlockStudentsAssignment(assignSel.value || this.bloques[0].id_horario);
+        }
+      }
+
+      this.updateAttendanceBlocksDropdown();
+    } catch (err) {
+      console.warn('Error cargando bloques:', err.message);
+    }
+  }
+
+  editBlock(idHorario) {
+    const b = this.bloques.find((x) => Number(x.id_horario) === Number(idHorario));
+    if (!b) return;
+    document.getElementById('bloqueId').value = b.id_horario;
+    document.getElementById('bloqueTaller').value = b.id_taller;
+    document.getElementById('bloqueDia').value = b.dia_semana;
+    document.getElementById('bloqueNombre').value = b.bloque_nombre;
+    document.getElementById('bloqueHoraInicio').value = b.hora_inicio.substring(0, 5);
+    document.getElementById('bloqueHoraFin').value = b.hora_fin.substring(0, 5);
+    document.getElementById('bloqueDuracion').value = b.duracion_minutos || 90;
+    this.showToast(`✏️ Bloque #${idHorario} cargado en el formulario para edición.`);
+  }
+
+  resetBlockForm() {
+    document.getElementById('bloqueId').value = '';
+    document.getElementById('bloqueNombre').value = '';
+    document.getElementById('bloqueHoraInicio').value = '08:30';
+    document.getElementById('bloqueHoraFin').value = '10:00';
+    document.getElementById('bloqueDuracion').value = '90';
+  }
+
+  async saveBlockConfig() {
+    try {
+      const idHorario = document.getElementById('bloqueId')?.value;
+      const idTaller = Number(document.getElementById('bloqueTaller')?.value || 1);
+      const diaSemana = Number(document.getElementById('bloqueDia')?.value || 1);
+      const bloqueNombre = document.getElementById('bloqueNombre')?.value.trim();
+      const horaInicio = document.getElementById('bloqueHoraInicio')?.value;
+      const horaFin = document.getElementById('bloqueHoraFin')?.value;
+      const duracion = Number(document.getElementById('bloqueDuracion')?.value || 90);
+
+      const res = await this.api.request('pedagogico/bloques', {
+        method: 'POST',
+        body: {
+          id_horario: idHorario ? Number(idHorario) : 0,
+          id_taller: idTaller,
+          dia_semana: diaSemana,
+          bloque_nombre: bloqueNombre,
+          hora_inicio: horaInicio + ':00',
+          hora_fin: horaFin + ':00',
+          duracion_minutos: duracion
+        }
+      });
+
+      this.showToast(`✅ ${res.mensaje}`);
+      this.resetBlockForm();
+      await this.loadBlocksConfig();
+    } catch (err) {
+      this.showToast(err.message, 'error');
+    }
+  }
+
+  selectBlockForAssignment(idHorario) {
+    const sel = document.getElementById('assignBlockSelector');
+    if (sel) {
+      sel.value = idHorario;
+      this.loadBlockStudentsAssignment(idHorario);
+      sel.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }
+
+  loadBlockStudentsAssignment(idHorario) {
+    const b = this.bloques.find((x) => Number(x.id_horario) === Number(idHorario));
+    const grid = document.getElementById('blockStudentsAssignmentGrid');
+    const badge = document.getElementById('assignBlockInfoBadge');
+    if (!b || !grid) return;
+
+    const assignedIds = new Set((b.estudiantes_asignados || []).map((e) => Number(e.id_estudiante)));
+    badge.textContent = `Nómina para: ${b.bloque_nombre} (${assignedIds.size} de ${this.students.length} asignados)`;
+
+    grid.innerHTML = this.students
+      .map((s) => {
+        const isAssigned = assignedIds.has(Number(s.id_estudiante));
+        return `
+        <label class="p-3 rounded-xl border ${
+          isAssigned ? 'bg-blue-50/80 border-blue-300 text-blue-950 font-bold' : 'bg-white border-slate-200 text-slate-700'
+        } flex items-center justify-between gap-3 cursor-pointer hover:bg-slate-50 transition">
+          <div class="flex items-center gap-2.5">
+            <input type="checkbox" name="assignStudent" value="${s.id_estudiante}" ${isAssigned ? 'checked' : ''}
+              class="w-4 h-4 rounded text-apandi-600 focus:ring-0 cursor-pointer" />
+            <div>
+              <div class="text-xs font-extrabold">${s.nombres} ${s.apellidos}</div>
+              <div class="text-[10px] text-slate-500">${s.rut} • ${s.taller_nombre}</div>
+            </div>
+          </div>
+          <span class="text-[10px] px-2 py-0.5 rounded-full font-extrabold ${
+            s.grupo_funcionalidad === 'GRUPO_A' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
+          }">
+            ${s.grupo_funcionalidad === 'GRUPO_A' ? 'Grupo A' : 'Grupo B'}
+          </span>
+        </label>
+      `;
+      })
+      .join('');
+  }
+
+  toggleAllBlockStudents(check) {
+    document.querySelectorAll('input[name="assignStudent"]').forEach((cb) => {
+      cb.checked = check;
+    });
+  }
+
+  async saveBlockStudentsAssignment() {
+    try {
+      const idHorario = Number(document.getElementById('assignBlockSelector')?.value);
+      if (!idHorario) return;
+
+      const checkedIds = Array.from(document.querySelectorAll('input[name="assignStudent"]:checked')).map((cb) =>
+        Number(cb.value)
+      );
+
+      const res = await this.api.request('pedagogico/bloques/asignar-estudiantes', {
+        method: 'POST',
+        body: {
+          id_horario: idHorario,
+          estudiantes_ids: checkedIds
+        }
+      });
+
+      this.showToast(`✅ ${res.mensaje}`);
+      await this.loadBlocksConfig();
+    } catch (err) {
+      this.showToast(err.message, 'error');
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // 5.2 Sub-vista 2: Planificación Semanal PID + Aprobación UTP
+  // ---------------------------------------------------------------------------
+
+  async loadPidSection() {
+    try {
+      const data = await this.api.request('pedagogico/libro');
+      this.pidClasses = data.clasesPid || [];
+      this.filterPidClasses();
+    } catch (err) {
+      console.warn('Error cargando planificaciones PID:', err.message);
+    }
+  }
+
+  filterPidClasses() {
+    const sem = document.getElementById('pidFilterSemestre')?.value;
+    const semana = document.getElementById('pidFilterSemana')?.value;
+    const taller = document.getElementById('pidFilterTaller')?.value;
+
+    let filtered = this.pidClasses;
+    if (sem) {
+      filtered = filtered.filter((c) => Number(c.semestre) === Number(sem));
+    }
+    if (semana) {
+      filtered = filtered.filter((c) => Number(c.numero_semana) === Number(semana));
+    }
+    if (taller) {
+      filtered = filtered.filter((c) => Number(c.id_taller) === Number(taller));
+    }
+
+    const countBadge = document.getElementById('pidCountBadge');
+    if (countBadge) {
+      countBadge.textContent = `${filtered.length} planificaciones`;
+    }
+
+    this.renderPidClasses(filtered);
+  }
+
+  renderPidClasses(list) {
+    const box = document.getElementById('pidClassesList');
+    if (!box) return;
+
+    if (list.length === 0) {
+      box.innerHTML = `
+        <div class="p-8 text-center text-xs text-slate-500 bg-slate-50 rounded-2xl border border-dashed border-slate-300">
+          No hay planificaciones registradas para los filtros seleccionados. Diseña una clase desde el panel izquierdo.
+        </div>
+      `;
+      return;
+    }
+
+    const isUtpOrAdmin = ['DIRECTOR_UTP', 'ADMIN'].includes(this.api.user?.rol_codigo);
+
+    box.innerHTML = list
+      .map((c) => {
+        const estado = c.estado_aprobacion || 'BORRADOR';
+        let badgeColor = 'bg-amber-100 text-amber-900 border-amber-300';
+        let badgeLabel = '📝 Borrador';
+
+        if (estado === 'ENVIADO_REVISION') {
+          badgeColor = 'bg-blue-100 text-blue-900 border-blue-300';
+          badgeLabel = '⏳ En Revisión UTP';
+        } else if (estado === 'APROBADO') {
+          badgeColor = 'bg-emerald-100 text-emerald-900 border-emerald-300';
+          badgeLabel = '🟢 Aprobado por UTP';
+        } else if (estado === 'OBSERVADO') {
+          badgeColor = 'bg-orange-100 text-orange-900 border-orange-300';
+          badgeLabel = '⚠️ Observado por UTP';
+        }
+
+        return `
+        <div class="p-5 rounded-2xl bg-white border border-slate-200/90 shadow-sm space-y-3.5 text-xs">
+          <div class="flex flex-wrap items-center justify-between gap-2 pb-2.5 border-b border-slate-100">
+            <div>
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 rounded text-[10px] font-extrabold bg-slate-100 text-slate-800">
+                  ${c.semestre}° Semestre • Semana ${c.numero_semana || 1}
+                </span>
+                <span class="text-[10px] font-bold uppercase text-apandi-700">${c.taller_nombre}</span>
+                <span class="text-[10px] text-slate-400 font-mono">${c.fecha_clase}</span>
+              </div>
+              <h4 class="font-extrabold text-slate-900 text-sm mt-1">${c.unidad_tematica}</h4>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="px-2.5 py-1 rounded-full font-extrabold text-[11px] border ${badgeColor}">
+                ${badgeLabel}
+              </span>
+              <span class="bg-emerald-50 text-emerald-800 font-mono text-[10px] font-bold px-2 py-1 rounded-lg border border-emerald-200">
+                SHA-256: ${(c.hash_firma_electronica || '').substring(0, 12)}...
+              </span>
+            </div>
+          </div>
+
+          <p class="text-slate-700 font-semibold"><strong class="text-slate-900">OA:</strong> ${c.objetivo_aprendizaje}</p>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div class="p-3 rounded-xl bg-emerald-50/70 border border-emerald-200 text-emerald-950">
+              <strong class="block mb-1 text-[11px]">🟢 Estrategia Diversificada GRUPO A (Mayor Funcionalidad):</strong>
+              <p>${c.actividad_grupo_a}</p>
+            </div>
+            <div class="p-3 rounded-xl bg-amber-50/70 border border-amber-200 text-amber-950">
+              <strong class="block mb-1 text-[11px]">🟡 Estrategia Diversificada GRUPO B (Mayor Apoyo y Mediación):</strong>
+              <p>${c.actividad_grupo_b}</p>
+            </div>
+          </div>
+
+          <div class="text-[11px] text-slate-500 flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-slate-100">
+            <span><strong>Recursos DUA:</strong> ${c.recursos_dua || 'ARASAAC / Material Concreto'}</span>
+            <span><strong>Docente:</strong> ${c.docente_nombre}</span>
+          </div>
+
+          ${
+            c.observaciones_utp
+              ? `
+            <div class="p-3 rounded-xl ${
+              estado === 'APROBADO' ? 'bg-emerald-50 border-emerald-200 text-emerald-900' : 'bg-orange-50 border-orange-200 text-orange-950'
+            } border text-[11px]">
+              <strong>Observaciones Técnico-Pedagógicas UTP:</strong>
+              <p class="mt-0.5">${c.observaciones_utp}</p>
+              ${c.aprobador_nombre ? `<span class="text-[10px] text-slate-500 block mt-1">Visado por: ${c.aprobador_nombre}</span>` : ''}
+            </div>
+          `
+              : ''
+          }
+
+          <div class="flex flex-wrap items-center justify-end gap-2 pt-1">
+            <button type="button" onclick="window.app.loadPidToForm(${c.id_clase})"
+              class="px-3 py-1.5 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-100 font-bold text-xs">
+              ✏️ Cargar para Editar
+            </button>
+
+            ${
+              isUtpOrAdmin
+                ? `
+              <button type="button" onclick="window.app.reviewPidClass(${c.id_clase}, 'APROBAR')"
+                class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs shadow-sm">
+                ✓ Aprobar Planificación UTP
+              </button>
+              <button type="button" onclick="window.app.reviewPidClass(${c.id_clase}, 'OBSERVAR')"
+                class="px-3 py-1.5 rounded-lg bg-orange-600 hover:bg-orange-700 text-white font-extrabold text-xs shadow-sm">
+                ⚠️ Observar Planificación
+              </button>
+            `
+                : ''
+            }
+          </div>
+        </div>
+      `;
+      })
+      .join('');
+  }
+
+  loadPidToForm(idClase) {
+    const c = this.pidClasses.find((x) => Number(x.id_clase) === Number(idClase));
+    if (!c) return;
+
+    document.getElementById('pidIdClase').value = c.id_clase;
+    document.getElementById('pidTaller').value = c.id_taller;
+    if (c.numero_semana) document.getElementById('pidSemana').value = c.numero_semana;
+    document.getElementById('pidFecha').value = c.fecha_clase;
+    document.getElementById('pidUnidad').value = c.unidad_tematica;
+    document.getElementById('pidObjetivo').value = c.objetivo_aprendizaje;
+    document.getElementById('pidGrupoA').value = c.actividad_grupo_a;
+    document.getElementById('pidGrupoB').value = c.actividad_grupo_b;
+    document.getElementById('pidRecursos').value = c.recursos_dua || '';
+
+    this.showToast(`✏️ Planificación cargada en el formulario para edición.`);
+    document.getElementById('pidForm').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  async submitPidClass(enviarRevision = false) {
+    try {
+      const pin = document.getElementById('pidPin')?.value.trim();
+      if (!pin || pin.length < 4) {
+        this.showToast('Debe ingresar su PIN de 6 dígitos para firmar criptográficamente.', 'error');
+        return;
+      }
+
+      const idClase = document.getElementById('pidIdClase')?.value;
+      const res = await this.api.request('pedagogico/pid', {
+        method: 'POST',
+        body: {
+          id_clase: idClase ? Number(idClase) : 0,
+          id_taller: Number(document.getElementById('pidTaller').value),
+          semestre: Number(document.getElementById('pidFilterSemestre')?.value || 2),
+          numero_semana: Number(document.getElementById('pidSemana')?.value || 1),
+          fecha_clase: document.getElementById('pidFecha').value || new Date().toISOString().split('T')[0],
+          unidad_tematica: document.getElementById('pidUnidad').value,
+          objetivo_aprendizaje: document.getElementById('pidObjetivo').value,
+          actividad_grupo_a: document.getElementById('pidGrupoA').value,
+          actividad_grupo_b: document.getElementById('pidGrupoB').value,
+          recursos_dua: document.getElementById('pidRecursos').value,
+          enviar_revision: enviarRevision,
+          pin_firma: pin
+        }
+      });
+
+      this.showToast(`✍️ ${res.mensaje}`);
+      document.getElementById('pidIdClase').value = '';
+      await this.loadPidSection();
+    } catch (err) {
+      this.showToast(err.message, 'error');
+    }
+  }
+
+  async reviewPidClass(idClase, accion) {
+    try {
+      const promptMsg =
+        accion === 'APROBAR'
+          ? 'Observaciones pedagógicas de aprobación UTP (opcional):'
+          : 'Indique las observaciones técnico-pedagógicas que el docente debe corregir:';
+      const obs = window.prompt(promptMsg, accion === 'APROBAR' ? 'Planificación diversificada DUA visada conforme.' : '');
+      if (obs === null) return;
+
+      const res = await this.api.request('pedagogico/pid/revision', {
+        method: 'POST',
+        body: {
+          id_clase: idClase,
+          accion: accion,
+          observaciones_utp: obs
+        }
+      });
+
+      this.showToast(`✅ ${res.mensaje}`);
+      await this.loadPidSection();
+      await this.loadDashboardRRHH();
+    } catch (err) {
+      this.showToast(err.message, 'error');
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // 5.3 Sub-vista 3: Asistencia Diaria por Bloque (Checkbox Masivo)
+  // ---------------------------------------------------------------------------
+
+  updateAttendanceBlocksDropdown() {
+    const tallerId = Number(document.getElementById('asistTaller')?.value || 1);
+    const sel = document.getElementById('asistBloque');
+    if (!sel) return;
+
+    const filtered = this.bloques.filter((b) => Number(b.id_taller) === tallerId);
+    const diasNombres = ['', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'];
+
+    sel.innerHTML = (filtered.length > 0 ? filtered : this.bloques)
+      .map(
+        (b) => `
+      <option value="${b.id_horario}">${diasNombres[b.dia_semana] || 'Día ' + b.dia_semana} (${b.hora_inicio.substring(0, 5)} - ${b.hora_fin.substring(0, 5)}) • ${b.bloque_nombre} [${b.duracion_minutos || 90} min]</option>
+    `
+      )
+      .join('');
+
+    const fechaInp = document.getElementById('asistFecha');
+    if (fechaInp && !fechaInp.value) {
+      fechaInp.value = new Date().toISOString().split('T')[0];
+    }
+
+    this.loadBlockAttendance();
+  }
+
+  async loadBlockAttendance() {
+    try {
+      const idHorario = Number(document.getElementById('asistBloque')?.value || 1);
+      const fecha = document.getElementById('asistFecha')?.value || new Date().toISOString().split('T')[0];
+
+      const res = await this.api.request(`pedagogico/asistencia-bloque?id_horario=${idHorario}&fecha=${fecha}`);
+      if (!res.ok) return;
+
+      const nomina = res.nomina || [];
+      const totalBadge = document.getElementById('asistTotalBadge');
+      if (totalBadge) totalBadge.textContent = `${nomina.length} estudiantes`;
+
+      const listContainer = document.getElementById('blockAttendanceStudentList');
+      if (!listContainer) return;
+
+      if (nomina.length === 0) {
+        listContainer.innerHTML = `<div class="p-6 text-center text-xs text-slate-500">No hay estudiantes asignados a este bloque ni inscritos en el taller.</div>`;
+        return;
+      }
+
+      listContainer.innerHTML = nomina
+        .map((s) => {
+          const isPresent = s.estado === 'PRESENTE';
+          return `
+          <div class="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-50 transition" data-student-id="${s.id_estudiante}">
+            <div class="flex items-center gap-3">
+              <input type="checkbox" class="student-present-checkbox w-5 h-5 rounded text-emerald-600 focus:ring-0 cursor-pointer"
+                ${isPresent ? 'checked' : ''} onchange="window.app.onStudentCheckboxChange(this, ${s.id_estudiante})" />
+              <div>
+                <div class="font-extrabold text-slate-900 text-sm flex items-center gap-2">
+                  <span>${s.estudiante_nombre}</span>
+                  <span id="badge-status-${s.id_estudiante}" class="px-2 py-0.5 rounded-full font-extrabold text-[10px] border ${
+            isPresent ? 'bg-emerald-100 text-emerald-800 border-emerald-300' : 'bg-red-100 text-red-800 border-red-300'
+          }">
+                    ${s.estado || 'PRESENTE'}
+                  </span>
+                </div>
+                <div class="text-[11px] text-slate-500">${s.rut} • <strong>${
+            s.grupo_funcionalidad === 'GRUPO_A' ? 'Grupo A (Más Funcional)' : 'Grupo B (Mayor Apoyo)'
+          }</strong></div>
+              </div>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-2">
+              <select id="state-select-${s.id_estudiante}" onchange="window.app.onStudentStateSelect(this, ${s.id_estudiante})"
+                class="rounded-lg border border-slate-300 text-xs py-1.5 px-2 bg-white font-bold text-slate-700">
+                <option value="PRESENTE" ${s.estado === 'PRESENTE' ? 'selected' : ''}>🟢 Presente</option>
+                <option value="AUSENTE" ${s.estado === 'AUSENTE' ? 'selected' : ''}>🔴 Ausente (Alerta UTP)</option>
+                <option value="ATRASO" ${s.estado === 'ATRASO' ? 'selected' : ''}>🟡 Atraso</option>
+                <option value="JUSTIFICADO_MEDICO" ${s.estado === 'JUSTIFICADO_MEDICO' ? 'selected' : ''}>🔵 Justificado Médico</option>
+              </select>
+
+              <input id="obs-${s.id_estudiante}" type="text" placeholder="Observación..."
+                value="${s.observacion && !s.observacion.includes('Registrado') ? s.observacion : ''}"
+                class="rounded-lg border border-slate-300 text-xs py-1 px-2.5 bg-white w-44" />
+            </div>
+          </div>
+        `;
+        })
+        .join('');
+    } catch (err) {
+      console.warn('Error cargando asistencia del bloque:', err.message);
+    }
+  }
+
+  onStudentCheckboxChange(chk, idEstudiante) {
+    const sel = document.getElementById(`state-select-${idEstudiante}`);
+    const badge = document.getElementById(`badge-status-${idEstudiante}`);
+    if (chk.checked) {
+      if (sel) sel.value = 'PRESENTE';
+      if (badge) {
+        badge.className = 'px-2 py-0.5 rounded-full font-extrabold text-[10px] border bg-emerald-100 text-emerald-800 border-emerald-300';
+        badge.textContent = 'PRESENTE';
+      }
+    } else {
+      if (sel) sel.value = 'AUSENTE';
+      if (badge) {
+        badge.className = 'px-2 py-0.5 rounded-full font-extrabold text-[10px] border bg-red-100 text-red-800 border-red-300';
+        badge.textContent = 'AUSENTE';
+      }
+    }
+  }
+
+  onStudentStateSelect(sel, idEstudiante) {
+    const chk = document.querySelector(`[data-student-id="${idEstudiante}"] .student-present-checkbox`);
+    const badge = document.getElementById(`badge-status-${idEstudiante}`);
+    if (chk) {
+      chk.checked = sel.value === 'PRESENTE';
+    }
+    if (badge) {
+      badge.textContent = sel.value;
+      if (sel.value === 'PRESENTE') {
+        badge.className = 'px-2 py-0.5 rounded-full font-extrabold text-[10px] border bg-emerald-100 text-emerald-800 border-emerald-300';
+      } else if (sel.value === 'AUSENTE') {
+        badge.className = 'px-2 py-0.5 rounded-full font-extrabold text-[10px] border bg-red-100 text-red-800 border-red-300';
+      } else {
+        badge.className = 'px-2 py-0.5 rounded-full font-extrabold text-[10px] border bg-amber-100 text-amber-800 border-amber-300';
+      }
+    }
+  }
+
+  toggleAllAttendance(presente) {
+    document.querySelectorAll('#blockAttendanceStudentList [data-student-id]').forEach((row) => {
+      const id = row.getAttribute('data-student-id');
+      const chk = row.querySelector('.student-present-checkbox');
+      const sel = document.getElementById(`state-select-${id}`);
+      const badge = document.getElementById(`badge-status-${id}`);
+
+      if (chk) chk.checked = presente;
+      if (sel) sel.value = presente ? 'PRESENTE' : 'AUSENTE';
+      if (badge) {
+        badge.textContent = presente ? 'PRESENTE' : 'AUSENTE';
+        badge.className = presente
+          ? 'px-2 py-0.5 rounded-full font-extrabold text-[10px] border bg-emerald-100 text-emerald-800 border-emerald-300'
+          : 'px-2 py-0.5 rounded-full font-extrabold text-[10px] border bg-red-100 text-red-800 border-red-300';
+      }
+    });
+  }
+
+  async submitMassBlockAttendance() {
+    try {
+      const pin = document.getElementById('asistMassPin')?.value.trim();
+      if (!pin || pin.length < 4) {
+        this.showToast('Debe ingresar su PIN Docente de 6 dígitos para validar la asistencia.', 'error');
+        return;
+      }
+
+      const idHorario = Number(document.getElementById('asistBloque')?.value || 1);
+      const idTaller = Number(document.getElementById('asistTaller')?.value || 1);
+      const fecha = document.getElementById('asistFecha')?.value || new Date().toISOString().split('T')[0];
+
+      const rows = document.querySelectorAll('#blockAttendanceStudentList [data-student-id]');
+      if (rows.length === 0) {
+        this.showToast('No hay estudiantes en la nómina para registrar.', 'error');
+        return;
+      }
+
+      const asistencias = Array.from(rows).map((row) => {
+        const idEst = Number(row.getAttribute('data-student-id'));
+        const sel = document.getElementById(`state-select-${idEst}`);
+        const obs = document.getElementById(`obs-${idEst}`);
+        return {
+          id_estudiante: idEst,
+          estado: sel ? sel.value : 'PRESENTE',
+          observacion: obs ? obs.value.trim() : ''
+        };
+      });
+
+      const res = await this.api.request('pedagogico/asistencia-bloque/masiva', {
+        method: 'POST',
+        body: {
+          id_horario: idHorario,
+          id_taller: idTaller,
+          fecha: fecha,
+          pin_firma: pin,
+          asistencias: asistencias
+        }
+      });
+
+      if (res.total_ausentes > 0) {
+        this.showToast(`⚠️ ${res.mensaje} Se alertó a UTP por ${res.total_ausentes} inasistencias.`, 'warning');
+      } else {
+        this.showToast(`✅ ${res.mensaje}`);
+      }
+
+      await this.loadBlockAttendance();
+      await this.loadDashboardRRHH();
+    } catch (err) {
+      this.showToast(err.message, 'error');
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // 5.4 Sub-vista 4: Calificaciones Cualitativas (Matriz Completa y Borrador)
+  // ---------------------------------------------------------------------------
+
+  async loadQualitativeEvaluationsSection() {
+    this.filterQualitativeStudents();
+  }
+
+  onQualSemestreChange() {
+    this.filterQualitativeStudents();
+    if (this.qualitativeSelectedStudent) {
+      this.selectStudentForQualitativeEval(this.qualitativeSelectedStudent.id_estudiante);
+    }
+  }
+
+  filterQualitativeStudents(query = '') {
+    const q = (query || document.getElementById('qualStudentSearchInput')?.value || '').trim().toLowerCase();
+    const tallerId = document.getElementById('qualTallerFilter')?.value;
+
+    let filtered = this.students;
+    if (tallerId) {
+      filtered = filtered.filter((s) => Number(s.id_taller) === Number(tallerId));
+    }
+    if (q) {
+      filtered = filtered.filter(
+        (s) =>
+          `${s.nombres} ${s.apellidos}`.toLowerCase().includes(q) ||
+          (s.rut || '').toLowerCase().includes(q) ||
+          (s.taller_nombre || '').toLowerCase().includes(q)
+      );
+    }
+
+    this.renderQualitativeStudentsGrid(filtered);
+  }
+
+  renderQualitativeStudentsGrid(list) {
+    const grid = document.getElementById('qualStudentsListGrid');
+    if (!grid) return;
+
+    if (list.length === 0) {
+      grid.innerHTML = `<div class="col-span-full p-6 text-center text-slate-500 bg-white rounded-xl border">No se encontraron estudiantes para los filtros dados.</div>`;
+      return;
+    }
+
+    grid.innerHTML = list
+      .map(
+        (s) => `
+      <div class="p-4 rounded-2xl bg-white border border-slate-200/90 shadow-sm flex flex-col justify-between gap-3 hover:border-apandi-400 transition">
+        <div>
+          <div class="flex items-center justify-between gap-2">
+            <span class="text-[10px] font-bold text-slate-400 font-mono">${s.rut}</span>
+            <span class="px-2 py-0.5 rounded-full font-extrabold text-[10px] ${
+              s.grupo_funcionalidad === 'GRUPO_A' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
+            }">
+              ${s.grupo_funcionalidad === 'GRUPO_A' ? 'Grupo A' : 'Grupo B'}
+            </span>
+          </div>
+          <h4 class="font-extrabold text-slate-900 text-sm mt-1">${s.nombres} ${s.apellidos}</h4>
+          <p class="text-[11px] text-slate-500 mt-0.5">${s.taller_nombre}</p>
+        </div>
+
+        <button type="button" onclick="window.app.selectStudentForQualitativeEval(${s.id_estudiante})"
+          class="w-full bg-slate-800 hover:bg-slate-900 text-white font-extrabold py-2 px-3 rounded-xl transition text-center flex items-center justify-center gap-1.5 text-xs shadow-sm">
+          <span>Abrir Matriz Completa</span> <span>→</span>
+        </button>
+      </div>
+    `
+      )
+      .join('');
+  }
+
+  async selectStudentForQualitativeEval(idEstudiante) {
+    try {
+      const sem = document.getElementById('qualSemestreFilter')?.value || 2;
+      const res = await this.api.request(`pedagogico/evaluaciones-alumno?id_estudiante=${idEstudiante}&semestre=${sem}`);
+      if (!res.ok) return;
+
+      this.qualitativeSelectedStudent = res.estudiante;
+      this.qualitativeMatrixData = res;
+
+      document.getElementById('qualStep1Box')?.classList.add('hidden');
+      document.getElementById('qualStep2Box')?.classList.remove('hidden');
+
+      const nameEl = document.getElementById('qualSelectedStudentName');
+      const infoEl = document.getElementById('qualSelectedStudentInfo');
+      const badgeEl = document.getElementById('qualEvaluationStatusBadge');
+
+      if (nameEl) nameEl.textContent = `${res.estudiante.nombres} ${res.estudiante.apellidos}`;
+      if (infoEl) {
+        infoEl.textContent = `RUT: ${res.estudiante.rut} • ${res.estudiante.taller_nombre} • ${
+          res.estudiante.grupo_funcionalidad === 'GRUPO_A' ? 'Grupo A (Más Funcional)' : 'Grupo B (Mayor Apoyo)'
+        } • ${sem}° Semestre 2026`;
+      }
+
+      if (badgeEl) {
+        if (res.tiene_firma_oficial) {
+          badgeEl.className = 'px-3 py-1 rounded-full text-xs font-extrabold bg-emerald-500/20 text-emerald-300 border border-emerald-400/40';
+          badgeEl.textContent = `🟢 Evaluación Oficial Firmada (SHA256: ${(res.hash_firma || '').substring(0, 10)}...)`;
+        } else if (res.tiene_borrador) {
+          badgeEl.className = 'px-3 py-1 rounded-full text-xs font-extrabold bg-amber-400/20 text-amber-300 border border-amber-400/40';
+          badgeEl.textContent = '📝 Borrador Guardado (En Progreso)';
+        } else {
+          badgeEl.className = 'px-3 py-1 rounded-full text-xs font-extrabold bg-blue-400/20 text-blue-300 border border-blue-400/40';
+          badgeEl.textContent = '⚪ Nueva Evaluación';
+        }
+      }
+
+      this.renderQualitativeMatrix(res.matriz || []);
+      document.getElementById('qualStep2Box')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } catch (err) {
+      this.showToast(err.message, 'error');
+    }
+  }
+
+  renderQualitativeMatrix(matriz) {
+    const container = document.getElementById('qualDimensionsMatrixContainer');
+    if (!container) return;
+
+    container.innerHTML = matriz
+      .map(
+        (dim, dimIdx) => `
+      <div class="p-5 rounded-2xl bg-slate-50 border border-slate-200 space-y-4">
+        <div class="border-b border-slate-200 pb-2">
+          <h4 class="font-extrabold text-slate-900 text-sm">${dim.nombre}</h4>
+          <p class="text-[11px] text-slate-500">${dim.descripcion}</p>
+        </div>
+
+        <div class="space-y-3.5">
+          ${dim.indicadores
+            .map(
+              (ind, indIdx) => `
+            <div class="p-3.5 rounded-xl bg-white border border-slate-200 shadow-xs space-y-2.5" data-dimension="${dim.codigo}" data-indicador-index="${indIdx}">
+              <div class="flex flex-col md:flex-row md:items-center justify-between gap-2">
+                <span class="font-bold text-slate-800 text-xs flex-1">
+                  ${indIdx + 1}. <span class="indicador-label">${ind.indicador}</span>
+                </span>
+
+                <select class="qual-level-select rounded-lg border border-slate-300 px-3 py-1.5 bg-white text-xs font-extrabold text-emerald-800">
+                  <option value="LOGRADO" ${ind.nivel_logro === 'LOGRADO' ? 'selected' : ''}>🟢 LOGRADO (L) — Desempeño Autónomo</option>
+                  <option value="EN_DESARROLLO" ${ind.nivel_logro === 'EN_DESARROLLO' ? 'selected' : ''}>🔵 EN DESARROLLO (ED) — Con Apoyo Ocasional</option>
+                  <option value="EN_INICIO" ${ind.nivel_logro === 'EN_INICIO' ? 'selected' : ''}>🟡 EN INICIO (EI) — Requiere Mediación</option>
+                  <option value="NO_OBSERVADO" ${ind.nivel_logro === 'NO_OBSERVADO' ? 'selected' : ''}>⚪ NO OBSERVADO (NO)</option>
+                </select>
+              </div>
+
+              <div>
+                <input type="text" placeholder="Observación cualitativa o evidencia pedagógica..."
+                  value="${ind.comentario_pedagogico || ''}"
+                  class="qual-comment-input w-full rounded-lg border border-slate-200 px-3 py-1.5 text-xs bg-slate-50 text-slate-800" />
+              </div>
+            </div>
+          `
+            )
+            .join('')}
+        </div>
+      </div>
+    `
+      )
+      .join('');
+  }
+
+  backToStudentsQualitativeList() {
+    document.getElementById('qualStep2Box')?.classList.add('hidden');
+    document.getElementById('qualStep1Box')?.classList.remove('hidden');
+    this.filterQualitativeStudents();
+  }
+
+  async submitQualitativeEvaluation(esBorrador) {
+    try {
+      const pin = document.getElementById('qualMatrixPin')?.value.trim();
+      if (!pin || pin.length < 4) {
+        this.showToast('Debe ingresar su PIN Docente de 6 dígitos para validar la evaluación.', 'error');
+        return;
+      }
+
+      if (!this.qualitativeSelectedStudent) {
+        this.showToast('No hay estudiante seleccionado.', 'error');
+        return;
+      }
+
+      const rows = document.querySelectorAll('#qualDimensionsMatrixContainer [data-dimension]');
+      if (rows.length === 0) {
+        this.showToast('No hay indicadores para guardar.', 'error');
+        return;
+      }
+
+      const evaluaciones = Array.from(rows).map((r) => {
+        const dim = r.getAttribute('data-dimension');
+        const ind = r.querySelector('.indicador-label')?.textContent.trim();
+        const logro = r.querySelector('.qual-level-select')?.value || 'LOGRADO';
+        const obs = r.querySelector('.qual-comment-input')?.value.trim() || '';
+        return {
+          dimension: dim,
+          indicador_competencia: ind,
+          nivel_logro: logro,
+          comentario_pedagogico: obs
+        };
+      });
+
+      const sem = Number(document.getElementById('qualSemestreFilter')?.value || 2);
+      const res = await this.api.request('pedagogico/evaluaciones-alumno/guardar', {
+        method: 'POST',
+        body: {
+          id_estudiante: this.qualitativeSelectedStudent.id_estudiante,
+          id_taller: this.qualitativeSelectedStudent.id_taller || 1,
+          semestre: sem,
+          anio_escolar: 2026,
+          es_borrador: esBorrador ? 1 : 0,
+          pin_firma: pin,
+          evaluaciones: evaluaciones
+        }
+      });
+
+      this.showToast(esBorrador ? `💾 ${res.mensaje}` : `✍️ ${res.mensaje}`);
+      await this.selectStudentForQualitativeEval(this.qualitativeSelectedStudent.id_estudiante);
+    } catch (err) {
+      this.showToast(err.message, 'error');
+    }
+  }
+
+  // Métodos retrocompatibles
   async saveStudentAttendance(id_estudiante, id_taller, estado) {
     try {
       const res = await this.api.request('pedagogico/asistencia', {
@@ -2073,7 +2912,7 @@ class SgiApandiApplication {
           : `✅ ${res.mensaje}`,
         estado === 'AUSENTE' ? 'warning' : 'success'
       );
-      await this.loadPedagogicalBook();
+      await this.loadBlockAttendance();
       await this.loadDashboardRRHH();
     } catch (err) {
       this.showToast(err.message, 'error');
@@ -2085,16 +2924,16 @@ class SgiApandiApplication {
       const res = await this.api.request('pedagogico/evaluaciones', {
         method: 'POST',
         body: {
-          id_estudiante: Number(document.getElementById('evalEstudiante').value),
+          id_estudiante: Number(document.getElementById('evalEstudiante')?.value || 1),
           id_taller: 1,
-          dimension: document.getElementById('evalDimension').value,
-          nivel_logro: document.getElementById('evalLogro').value,
-          indicador_competencia: document.getElementById('evalIndicador').value,
-          comentario_pedagogico: document.getElementById('evalComentario').value
+          dimension: document.getElementById('evalDimension')?.value || 'TECNICA_VOCACIONAL',
+          nivel_logro: document.getElementById('evalLogro')?.value || 'LOGRADO',
+          indicador_competencia: document.getElementById('evalIndicador')?.value || 'Competencia Técnica',
+          comentario_pedagogico: document.getElementById('evalComentario')?.value || ''
         }
       });
       this.showToast(`🏅 ${res.mensaje}`);
-      await this.loadPedagogicalBook();
+      await this.loadQualitativeEvaluationsSection();
     } catch (err) {
       this.showToast(err.message, 'error');
     }
