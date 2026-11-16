@@ -16,7 +16,7 @@ SET FOREIGN_KEY_CHECKS = 0;
 
 CREATE TABLE IF NOT EXISTS apx_sec_rbac_perfiles (
     id_rol INT AUTO_INCREMENT PRIMARY KEY,
-    codigo VARCHAR(40) NOT NULL UNIQUE COMMENT 'ADMIN, DIRECTOR_UTP, DOCENTE, MONITOR, ESPECIALISTA_PIE, APODERADO',
+    codigo VARCHAR(40) NOT NULL UNIQUE COMMENT 'SOSTENEDOR, DIRECTOR_UTP, ADMIN, DOCENTE, MONITOR, ESPECIALISTA_PIE, CONVIVENCIA, APODERADO',
     nombre VARCHAR(100) NOT NULL,
     descripcion VARCHAR(255),
     permisos_json JSON NOT NULL COMMENT 'Permisos granulares por módulo (lectura/escritura)',
@@ -31,8 +31,8 @@ CREATE TABLE IF NOT EXISTS apx_sec_cuentas_acceso (
     apellidos VARCHAR(100) NOT NULL,
     email VARCHAR(150) NOT NULL UNIQUE,
     telefono VARCHAR(30),
-    intentos_fallidos TINYINT DEFAULT 0,
-    bloqueado_hasta TIMESTAMP NULL,
+    intentos_fallidos INT NOT NULL DEFAULT 0 COMMENT 'Contador de intentos fallidos Anti-Brute Force',
+    bloqueado_hasta TIMESTAMP NULL DEFAULT NULL COMMENT 'Timestamp de bloqueo temporal tras 5 intentos fallidos (15 min)',
     password_hash VARCHAR(255) NOT NULL COMMENT 'Hash Bcrypt Cost 12',
     pin_firma_hash VARCHAR(255) NULL COMMENT 'Hash Bcrypt Cost 12 del PIN de 6 dígitos para Firma Electrónica Simple',
     especialidad VARCHAR(100) NULL COMMENT 'Ej: Ed. Diferencial, Psicólogo, Terapeuta Ocupacional, Fonoaudiólogo',
@@ -472,21 +472,21 @@ VALUES
         1,
         'ADMIN',
         'Administrador Institucional',
-        'Gestión integral de usuarios, seguridad RBAC, copias de respaldo y auditoría Ley 19.628',
+        'Gestión integral de cuentas de usuario, permisos de acceso, respaldos y registro de actividad del sistema',
         '{"seguridad": "rw", "rrhh": "rw", "estudiantes": "rw", "pedagogico": "rw", "clinico": "r", "paec": "r", "auditoria": "rw"}'
     ),
     (
         2,
         'DIRECTOR_UTP',
         'Directora / Jefa UTP',
-        'Supervisión técnico-pedagógica Decreto 83, visación PACI/PAI, alertas de inasistencia y acceso clínico total',
+        'Supervisión técnico-pedagógica, visación de planes de apoyo, alertas de asistencia y supervisión clínica',
         '{"seguridad": "r", "rrhh": "rw", "estudiantes": "rw", "pedagogico": "rw", "clinico": "rw", "paec": "rw", "auditoria": "r"}'
     ),
     (
         3,
         'DOCENTE',
         'Docente Titular Educación Diferencial',
-        'Gestión de Libro de Clases Digital, PID Grupo A/B, evaluaciones cualitativas y lectura de ficha clínica/PAEC',
+        'Gestión de Libro de Clases Digital, planificación PID por grupos, evaluaciones formativas y asistencia diaria',
         '{"rrhh": "rw", "estudiantes": "r", "pedagogico": "rw", "clinico": "r", "paec": "rw"}'
     ),
     (
@@ -500,22 +500,29 @@ VALUES
         5,
         'ESPECIALISTA_PIE',
         'Especialista PIE (Equipo Multidisciplinario)',
-        'Edición de Ficha Clínica cifrada AES-256, Anamnesis, PAI (DUA), PACI, PAEC y atención de alertas SOS',
+        'Gestión de Expediente Clínico, Anamnesis, Plan de Apoyo Individual (PAI), PACI, PAEC y atención SOS',
         '{"rrhh": "rw", "estudiantes": "r", "pedagogico": "r", "clinico": "rw", "paec": "rw", "auditoria": "r"}'
     ),
     (
         6,
         'APODERADO',
         'Apoderado / Familia',
-        'Portal familiar de solo lectura: asistencia, logros conceptuales PID, acuerdos PAEC y descarga de Informe PDF',
+        'Portal familiar de consulta: asistencia, avances de aprendizaje, acuerdos familiares y descarga de Informe PDF',
         '{"portal_apoderado": "r"}'
     ),
     (
         7,
-        'CONVIVENCIA_ESCOLAR',
-        'Convivencia Escolar',
-        'Acceso de lectura y registro a protocolos PAEC, alertas SOS e informes post-alerta',
-        '{"estudiantes": "r", "paec": "rw", "convivencia": "rw"}'
+        'SOSTENEDOR',
+        'Sostenedor / Representante Legal',
+        'Supervisión ejecutiva de matrícula, asistencia institucional, dotación del personal e infraestructura por taller',
+        '{"sostenedor": "rw", "seguridad": "r", "rrhh": "r", "estudiantes": "r", "pedagogico": "r", "clinico": "none", "paec": "r", "auditoria": "r"}'
+    ),
+    (
+        8,
+        'CONVIVENCIA',
+        'Encargado/a de Convivencia Escolar',
+        'Gestión de planes de acompañamiento emocional, atención de alertas SOS, bitácora de convivencia y mediación escolar',
+        '{"rrhh": "rw", "estudiantes": "r", "pedagogico": "r", "clinico": "none", "paec": "rw", "convivencia": "rw"}'
     );
 
 -- Hashes Bcrypt Cost 12 generados criptográficamente (sin contraseñas ni PINs en texto plano)
@@ -623,6 +630,32 @@ VALUES
         '$2y$12$/gdl1gniqeHdgU8b5ERoNOB7ukLHOqbem0TfqLAmCgG7WZ4yWrLUO',
         'Terapeuta Ocupacional Especialista en Integración Sensorial',
         36
+    ),
+    (
+        8,
+        7,
+        '10.234.567-8',
+        'Hernán Patricio',
+        'Valdivia Montes',
+        'sostenedor@apandi.cl',
+        '+56 9 8000 1122',
+        '$2y$12$cLrJlhPwVUG1PYmVQmma1egZiaAPKT5uGuIjcmQ4Za057tmUBAiz2',
+        '$2y$12$/gdl1gniqeHdgU8b5ERoNOB7ukLHOqbem0TfqLAmCgG7WZ4yWrLUO',
+        'Sostenedor / Representante Legal Institucional',
+        44
+    ),
+    (
+        9,
+        8,
+        '16.890.123-4',
+        'Javiera Paz',
+        'Morales Araya',
+        'convivencia@apandi.cl',
+        '+56 9 8999 0011',
+        '$2y$12$cLrJlhPwVUG1PYmVQmma1egZiaAPKT5uGuIjcmQ4Za057tmUBAiz2',
+        '$2y$12$/gdl1gniqeHdgU8b5ERoNOB7ukLHOqbem0TfqLAmCgG7WZ4yWrLUO',
+        'Trabajadora Social / Encargada de Convivencia Escolar',
+        44
     );
 
 INSERT INTO apx_acad_unidades_laborales (
@@ -638,7 +671,7 @@ VALUES
         1,
         'TL-CORTE-01',
         'Taller Laboral de Corte y Confección Textil',
-        'Nivel Laboral 2 (Decreto Exento N° 83)',
+        'Nivel Laboral 2',
         12,
         'Pabellón Técnico - Sala T1'
     ),
@@ -646,7 +679,7 @@ VALUES
         2,
         'TL-GASTRO-02',
         'Taller Laboral de Gastronomía, Panadería y Repostería',
-        'Nivel Laboral 1 y 2 (Decreto Exento N° 83)',
+        'Nivel Laboral 1 y 2',
         14,
         'Cocina Pedagógica Industrial - Sala G1'
     ),
@@ -654,7 +687,7 @@ VALUES
         3,
         'TL-HORTI-03',
         'Taller Laboral de Horticultura, Vivero y Paisajismo',
-        'Nivel Laboral 3 Dual (Decreto Exento N° 83)',
+        'Nivel Laboral 3 Dual',
         15,
         'Invernadero Institucional - Sector Norte'
     );
@@ -765,7 +798,7 @@ INSERT INTO apx_sys_alertas_utp (
     mensaje
 )
 VALUES
-    (2, NULL, 'ALERTA_INASISTENCIA', '⚠️ Alerta Automática de Inasistencia Reiterada: Benjamín Castro Riquelme', 'El estudiante Benjamín Castro Riquelme (Taller de Corte y Confección - Grupo A) acumula 3 inasistencias consecutivas sin justificación médica. Se activó protocolo de retención escolar con Convivencia y Trabajo Social.'),
+    (2, NULL, 'ALERTA_INASISTENCIA', 'Alerta Automática de Inasistencia Reiterada: Benjamín Castro Riquelme', 'El estudiante Benjamín Castro Riquelme (Taller de Corte y Confección - Grupo A) acumula 3 inasistencias consecutivas sin justificación médica. Se activó protocolo de retención escolar con Convivencia y Trabajo Social.'),
     (2, NULL, 'COMUNICADO_UTP', 'Visación de Planificaciones PID y Revisión PACI 2° Semestre', 'Estimado equipo docente y PIE: Se recuerda validar y firmar con PIN electrónico las clases registradas en el Libro Digital según Circular de la Superintendencia de Educación.'),
     (5, 3, 'RECORDATORIO_FIRMA', 'Actualización de Protocolo PAEC para Matías Vera Gómez', 'El equipo PIE actualizó las estrategias de contención sensorial etapa 1 y 2 en la ficha PAEC de Matías. Disponible en modo lectura para Docente Titular.');
 

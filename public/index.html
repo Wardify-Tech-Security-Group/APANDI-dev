@@ -22,6 +22,7 @@
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script>
     tailwind.config = {
+      darkMode: 'class',
       theme: {
         extend: {
           fontFamily: {
@@ -44,9 +45,19 @@
         }
       }
     };
+    (function () {
+      try {
+        var savedTheme = localStorage.getItem('apandi_theme');
+        if (savedTheme === 'dark') {
+          document.documentElement.classList.add('dark');
+        } else {
+          document.documentElement.classList.remove('dark');
+        }
+      } catch (e) {}
+    })();
   </script>
   <style>
-    /* Estilos globales exportados de Figma (styles.css) + SGI */
+    /* Estilos globales exportados de Figma (styles.css) + SGI + Modo Oscuro Institucional */
     * {
       border-color: #e2e8f0;
     }
@@ -54,6 +65,156 @@
     body {
       font-family: 'DM Sans', system-ui, -apple-system, sans-serif;
       background-color: #f4f7f8;
+      transition: background-color 0.2s ease, color 0.2s ease;
+    }
+
+    html.dark,
+    html.dark body,
+    html.dark #loginScreen {
+      background-color: #0b1120 !important;
+      color: #f8fafc !important;
+    }
+
+    html.dark * {
+      border-color: #1e293b;
+    }
+
+    html.dark .bg-white,
+    html.dark .bg-white\/90 {
+      background-color: #0f172a !important;
+      color: #f8fafc;
+    }
+
+    html.dark .bg-\[\#f4f7f8\],
+    html.dark .bg-slate-50,
+    html.dark .bg-slate-50\/80,
+    html.dark .bg-slate-100,
+    html.dark .bg-slate-100\/80 {
+      background-color: #1e293b !important;
+      color: #e2e8f0;
+    }
+
+    html.dark .text-slate-950,
+    html.dark .text-slate-900,
+    html.dark .text-slate-800 {
+      color: #f8fafc !important;
+    }
+
+    html.dark .text-slate-700,
+    html.dark .text-slate-600 {
+      color: #cbd5e1 !important;
+    }
+
+    html.dark .text-slate-500,
+    html.dark .text-slate-400 {
+      color: #94a3b8 !important;
+    }
+
+    html.dark .text-\[\#073b3a\] {
+      color: #5eead4 !important;
+    }
+
+    html.dark input:not([type='checkbox']):not([type='radio']),
+    html.dark select,
+    html.dark textarea {
+      background-color: #1e293b !important;
+      color: #f8fafc !important;
+      border-color: #334155 !important;
+    }
+
+    html.dark input::placeholder,
+    html.dark textarea::placeholder {
+      color: #64748b !important;
+    }
+
+    html.dark .bg-teal-50,
+    html.dark .bg-teal-50\/60,
+    html.dark .bg-teal-100 {
+      background-color: rgba(13, 148, 136, 0.18) !important;
+      color: #5eead4 !important;
+      border-color: rgba(20, 184, 166, 0.35) !important;
+    }
+
+    html.dark .text-teal-950,
+    html.dark .text-teal-900,
+    html.dark .text-teal-800,
+    html.dark .text-teal-700 {
+      color: #5eead4 !important;
+    }
+
+    html.dark .bg-emerald-50,
+    html.dark .bg-emerald-100 {
+      background-color: rgba(16, 185, 129, 0.16) !important;
+      color: #6ee7b7 !important;
+      border-color: rgba(16, 185, 129, 0.35) !important;
+    }
+
+    html.dark .text-emerald-950,
+    html.dark .text-emerald-900,
+    html.dark .text-emerald-800,
+    html.dark .text-emerald-700 {
+      color: #6ee7b7 !important;
+    }
+
+    html.dark .bg-amber-50,
+    html.dark .bg-amber-100 {
+      background-color: rgba(245, 158, 11, 0.16) !important;
+      color: #fcd34d !important;
+      border-color: rgba(245, 158, 11, 0.35) !important;
+    }
+
+    html.dark .text-amber-950,
+    html.dark .text-amber-900,
+    html.dark .text-amber-800,
+    html.dark .text-amber-700 {
+      color: #fcd34d !important;
+    }
+
+    html.dark .bg-sky-50,
+    html.dark .bg-sky-50\/60,
+    html.dark .bg-sky-100 {
+      background-color: rgba(14, 165, 233, 0.16) !important;
+      color: #7dd3fc !important;
+      border-color: rgba(14, 165, 233, 0.35) !important;
+    }
+
+    html.dark .text-sky-950,
+    html.dark .text-sky-900,
+    html.dark .text-sky-800,
+    html.dark .text-sky-700 {
+      color: #7dd3fc !important;
+    }
+
+    html.dark .bg-rose-50,
+    html.dark .bg-red-50,
+    html.dark .bg-red-100 {
+      background-color: rgba(244, 63, 94, 0.16) !important;
+      color: #fda4af !important;
+      border-color: rgba(244, 63, 94, 0.35) !important;
+    }
+
+    html.dark .text-rose-700,
+    html.dark .text-red-900,
+    html.dark .text-red-800,
+    html.dark .text-red-700 {
+      color: #fda4af !important;
+    }
+
+    html.dark .bg-violet-50,
+    html.dark .bg-indigo-50 {
+      background-color: rgba(139, 92, 246, 0.16) !important;
+      color: #c4b5fd !important;
+      border-color: rgba(139, 92, 246, 0.35) !important;
+    }
+
+    html.dark .text-violet-700,
+    html.dark .text-indigo-700 {
+      color: #c4b5fd !important;
+    }
+
+    html.dark .hover\:bg-slate-50:hover,
+    html.dark .hover\:bg-slate-100:hover {
+      background-color: #1e293b !important;
     }
 
     button:not(:disabled),
@@ -70,9 +231,17 @@
       background: #f1f5f9;
     }
 
+    html.dark ::-webkit-scrollbar-track {
+      background: #0f172a;
+    }
+
     ::-webkit-scrollbar-thumb {
       background: #cbd5e1;
       border-radius: 9999px;
+    }
+
+    html.dark ::-webkit-scrollbar-thumb {
+      background: #334155;
     }
 
     ::-webkit-scrollbar-thumb:hover {
@@ -130,8 +299,9 @@
     <div class="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-3">
       <div class="flex items-center gap-3">
         <span
-          class="bg-white text-red-700 font-black px-2.5 py-1 rounded-lg text-xs tracking-wider uppercase animate-bounce">
-          🚨 CÓDIGO ROJO PAEC
+          class="inline-flex items-center gap-1.5 bg-white text-red-700 font-black px-2.5 py-1 rounded-lg text-xs tracking-wider uppercase animate-bounce">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+          <span>CÓDIGO ROJO PAEC</span>
         </span>
         <div id="sosBannerText" class="text-xs md:text-sm font-medium"></div>
       </div>
@@ -141,8 +311,9 @@
           Ver Protocolo PAEC
         </button>
         <button onclick="document.getElementById('sosRealtimeBanner').classList.add('hidden')"
-          class="bg-white text-red-700 hover:bg-red-50 font-extrabold px-3.5 py-1.5 rounded-lg text-xs shadow">
-          ✓ Acusar Recibo e Intervenir
+          class="inline-flex items-center gap-1.5 bg-white text-red-700 hover:bg-red-50 font-extrabold px-3.5 py-1.5 rounded-lg text-xs shadow">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          <span>Acusar Recibo e Intervenir</span>
         </button>
       </div>
     </div>
@@ -180,19 +351,35 @@
           en el lugar correcto.
         </h1>
         <p class="mt-6 max-w-lg text-lg leading-8 text-teal-50/75">
-          Gestiona fichas, evaluaciones y documentación institucional de manera centralizada,
-          trazable y protegida bajo normativa MINEDUC (Decreto 83 / Decreto 170) y Ley N° 19.628.
+          Gestiona fichas estudiantiles, asistencia, evaluaciones y documentación institucional de manera centralizada,
+          trazable y segura para toda la comunidad educativa.
         </p>
       </div>
 
       <div class="relative flex flex-wrap gap-8 text-sm text-teal-50/65">
         <span>Centro de Capacitación Laboral APANDI</span>
-        <span>Acceso restringido • AES-256-GCM</span>
+        <span>Educación Especial y Formación Laboral</span>
       </div>
     </section>
 
     <!-- Panel Derecho: Formulario de Inicio de Sesión -->
-    <section class="flex items-center justify-center p-6 sm:p-12">
+    <section class="relative flex items-center justify-center p-6 sm:p-12">
+      <div class="absolute right-6 top-6 flex items-center gap-2">
+        <button id="btnOpenDevModalLoginTop" type="button" onclick="window.app.openDevLoginModal()"
+          class="inline-flex items-center gap-1.5 rounded-xl border border-teal-200 bg-teal-50 px-3 py-2 text-xs font-semibold text-teal-800 shadow-sm hover:bg-teal-100 transition"
+          title="Abrir modal de acceso rápido para desarrollo">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          <span>Acceso Rápido (Dev)</span>
+        </button>
+        <button type="button" onclick="window.app.toggleDarkMode()"
+          class="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm hover:bg-slate-50 transition"
+          title="Alternar Modo Oscuro Institucional">
+          <svg class="dark-icon-moon" xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+          <svg class="dark-icon-sun hidden text-amber-400" xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
+          <span class="dark-mode-label">Modo Oscuro</span>
+        </button>
+      </div>
+
       <div class="w-full max-w-md bg-white sm:bg-transparent p-6 sm:p-0 rounded-3xl sm:rounded-none shadow-xl sm:shadow-none border sm:border-0 border-slate-200">
         <!-- Brand Móvil -->
         <div class="mb-8 lg:hidden flex items-center gap-3">
@@ -213,27 +400,27 @@
             Inicia sesión en APANDI
           </h2>
           <p class="mt-2.5 text-sm leading-6 text-slate-500">
-            Utiliza tu nombre de usuario, RUT o correo institucional.
+            Ingresa con tu usuario, RUT o correo institucional.
           </p>
         </div>
 
         <form id="loginForm" class="space-y-5">
           <label class="block text-sm font-medium text-slate-700">
             Usuario, RUT o correo institucional
-            <input id="loginEmail" type="text" value="cmunoz@apandi.cl" placeholder="nombre@apandi.cl o 17.654.321-8" required
+            <input id="loginEmail" type="text" value="" placeholder="nombre@apandi.cl, usuario o RUT" required
               class="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-teal-600 focus:ring-4 focus:ring-teal-600/10" />
           </label>
 
           <label class="block text-sm font-medium text-slate-700">
             Contraseña
-            <input id="loginPassword" type="password" value="Ap4nd1#S3cV4ult!2026_Cl" placeholder="••••••••••" required
+            <input id="loginPassword" type="password" value="" placeholder="Ingresa tu contraseña" required
               class="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-teal-600 focus:ring-4 focus:ring-teal-600/10" />
           </label>
 
           <div class="flex items-center justify-between text-xs text-slate-600">
             <label class="flex items-center gap-2 cursor-pointer select-none">
               <input type="checkbox" checked class="rounded border-slate-300 text-[#087c78] focus:ring-teal-600" />
-              <span>Mantener sesión protegida (8 horas)</span>
+              <span>Mantener sesión iniciada (8 horas)</span>
             </label>
           </div>
 
@@ -247,26 +434,22 @@
           </button>
 
           <button type="button"
-            onclick="alert('Para restablecer su contraseña institucional, contacte a Administración o Dirección UTP.')"
+            onclick="window.app.showToast('Para restablecer su contraseña institucional, contacte a Administración o Dirección UTP.', 'info')"
             class="w-full text-center text-sm font-medium text-teal-700 hover:underline">
             ¿Olvidaste tu contraseña? Contacta a administración
           </button>
         </form>
 
-        <!-- Selector rápido de cuentas institucionales para evaluación RBAC -->
+        <!-- Botón de Desarrollo para abrir el Modal de Acceso Rápido -->
         <div class="mt-7 pt-5 border-t border-slate-200/80">
-          <label class="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-2">
-            Selector rápido de perfil institucional (Demo RBAC):
-          </label>
-          <select onchange="window.app.quickLogin(this.value)"
-            class="w-full rounded-xl bg-white border border-slate-200 px-3.5 py-2.5 text-xs font-semibold text-slate-700 outline-none focus:border-teal-600">
-            <option value="cmunoz@apandi.cl">👩‍🏫 Docente Titular — cmunoz@apandi.cl</option>
-            <option value="cvargas.pie@apandi.cl">🩺 Especialista PIE — cvargas.pie@apandi.cl</option>
-            <option value="utp@apandi.cl">🎓 Directora / Jefa UTP — utp@apandi.cl</option>
-            <option value="jfuentes@apandi.cl">🛠️ Monitor de Taller — jfuentes@apandi.cl</option>
-            <option value="pgomez.familia@gmail.com">👨‍👩‍👦 Portal Apoderado — pgomez.familia@gmail.com</option>
-            <option value="admin@apandi.cl">🛡️ Administrador — admin@apandi.cl</option>
-          </select>
+          <button id="btnOpenDevModalLogin" type="button" onclick="window.app.openDevLoginModal()"
+            class="flex w-full items-center justify-between rounded-xl border border-dashed border-teal-500/60 bg-teal-50/60 px-4 py-3 text-xs font-semibold text-teal-900 hover:bg-teal-50 transition">
+            <span class="flex items-center gap-2">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+              <span>Acceso Rápido de Desarrollo (Cuentas de Prueba)</span>
+            </span>
+            <span class="rounded-lg bg-teal-700 px-2 py-0.5 text-[10px] font-bold text-white uppercase">8 Perfiles</span>
+          </button>
         </div>
       </div>
     </section>
@@ -298,17 +481,24 @@
           </div>
         </div>
 
-        <!-- Menú de Navegación Principal (Figma + Módulos Especializados SGI) -->
+        <!-- Menú de Navegación Principal Filtrado por RBAC -->
         <div class="space-y-4">
-          <div>
+          <div data-nav-group="estudiantil">
             <div class="px-3.5 text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400 mb-1.5">
-              Gestión Estudiantil
+              Gestión Institucional
             </div>
             <nav class="space-y-1">
               <button onclick="window.app.switchTab('tab-dashboard')" data-target="tab-dashboard"
                 class="nav-tab flex w-full items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-semibold transition bg-teal-50 text-teal-800">
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>
                 <span>Panel principal</span>
+              </button>
+
+              <button onclick="window.app.switchTab('tab-sostenedor')" data-target="tab-sostenedor"
+                class="nav-tab flex w-full items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-medium transition text-slate-600 hover:bg-slate-50 hover:text-slate-950">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" x2="21" y1="22" y2="22"/><line x1="6" x2="6" y1="18" y2="11"/><line x1="10" x2="10" y1="18" y2="11"/><line x1="14" x2="14" y1="18" y2="11"/><line x1="18" x2="18" y1="18" y2="11"/><polygon points="12 2 20 7 4 7"/></svg>
+                <span>Gobierno & Subvención</span>
+                <span class="ml-auto text-[10px] bg-amber-50 text-amber-700 border border-amber-200 px-1.5 py-0.5 rounded font-bold">SIGE</span>
               </button>
 
               <button onclick="window.app.switchTab('tab-estudiantes')" data-target="tab-estudiantes"
@@ -333,7 +523,7 @@
             </nav>
           </div>
 
-          <div>
+          <div data-nav-group="pedagogia">
             <div class="px-3.5 text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400 mb-1.5">
               Pedagogía, PIE & Familia
             </div>
@@ -349,7 +539,7 @@
                 class="nav-tab flex w-full items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-medium transition text-slate-600 hover:bg-slate-50 hover:text-slate-950">
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2"/></svg>
                 <span>Expediente Clínico & PIE</span>
-                <span class="ml-auto text-[10px] bg-sky-50 text-sky-700 border border-sky-200 px-1.5 py-0.5 rounded font-mono font-bold">AES</span>
+                <span class="ml-auto text-[10px] bg-sky-50 text-sky-700 border border-sky-200 px-1.5 py-0.5 rounded font-bold">PIE</span>
               </button>
 
               <button onclick="window.app.switchTab('tab-paec')" data-target="tab-paec"
@@ -368,7 +558,7 @@
             </nav>
           </div>
 
-          <div>
+          <div data-nav-group="sistema">
             <div class="px-3.5 text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400 mb-1.5">
               Sistema & Seguridad
             </div>
@@ -376,7 +566,7 @@
               <button onclick="window.app.switchTab('tab-auditoria')" data-target="tab-auditoria"
                 class="nav-tab flex w-full items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-medium transition text-slate-600 hover:bg-slate-50 hover:text-slate-950">
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 21a8 8 0 0 0-16 0"/><circle cx="10" cy="8" r="5"/><path d="M22 20c0-3.37-2-6.5-4-8a5 5 0 0 0-.45-8.3"/></svg>
-                <span>Administración & RBAC</span>
+                <span>Administración y Cuentas</span>
               </button>
 
               <button onclick="window.app.switchTab('tab-configuracion')" data-target="tab-configuracion"
@@ -389,32 +579,8 @@
         </div>
       </div>
 
-      <!-- Pie de Sidebar (Estilo Figma + Simulador RBAC) -->
+      <!-- Pie de Sidebar (Usuario Autenticado y Cierre de Sesión) -->
       <div class="p-4 border-t border-slate-100 bg-white space-y-3">
-        <!-- Estado técnico MariaDB + AES-256 -->
-        <div class="px-3 py-2 rounded-xl bg-slate-50 border border-slate-200/70 flex items-center justify-between text-[11px]">
-          <span id="sidebarDbBadge" class="inline-flex items-center gap-1.5 font-semibold text-teal-800">
-            <span class="w-2 h-2 rounded-full bg-emerald-500"></span> MariaDB 11.4
-          </span>
-          <span class="font-mono text-[10px] text-teal-700 bg-teal-50 px-2 py-0.5 rounded border border-teal-200">AES-256</span>
-        </div>
-
-        <!-- Selector rápido de rol en vivo -->
-        <div>
-          <label class="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1">
-            ⚡ Cambiar Rol en Vivo (RBAC):
-          </label>
-          <select id="quickRoleSwitcher" onchange="window.app.quickLogin(this.value)"
-            class="w-full bg-slate-50 text-slate-700 text-xs font-semibold rounded-xl border border-slate-200 px-2.5 py-2 focus:outline-none focus:border-teal-600">
-            <option value="cmunoz@apandi.cl">👩‍🏫 Docente Titular (Carolina Muñoz)</option>
-            <option value="cvargas.pie@apandi.cl">🩺 Especialista PIE (Camila Vargas)</option>
-            <option value="utp@apandi.cl">🎓 Directora / UTP (Marcela Rojas)</option>
-            <option value="jfuentes@apandi.cl">🛠️ Monitor Taller (Jorge Fuentes)</option>
-            <option value="pgomez.familia@gmail.com">👨‍👩‍👦 Apoderado (Patricia Gómez)</option>
-            <option value="admin@apandi.cl">🛡️ Administrador (Roberto Soto)</option>
-          </select>
-        </div>
-
         <!-- Tarjeta Usuario Figma -->
         <div class="flex items-center gap-3 rounded-xl bg-slate-50 p-3">
           <div id="sidebarUserInitials"
@@ -438,7 +604,7 @@
     <!-- CONTENEDOR DERECHO: TOPBAR FIGMA + ÁREA DE TRABAJO -->
     <div class="flex-1 flex flex-col overflow-hidden">
 
-      <!-- TOPBAR SUPERIOR (Estilo Figma Sticky Header + Buscador Global + Botón SOS) -->
+      <!-- TOPBAR SUPERIOR (Estilo Figma Sticky Header + Buscador Global + Interruptor Modo Oscuro + Botón SOS) -->
       <header
         class="sticky top-0 z-20 flex h-[76px] items-center justify-between gap-4 border-b border-slate-200/80 bg-white/90 px-5 backdrop-blur md:px-8 shrink-0">
         <div class="flex items-center gap-3 min-w-0">
@@ -455,7 +621,7 @@
         </div>
 
         <!-- Buscador Global Instantáneo -->
-        <div class="relative flex-1 max-w-md hidden md:block">
+        <div id="globalSearchContainer" class="relative flex-1 max-w-md hidden md:block">
           <svg class="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
           <input id="globalSearchInput" type="text" oninput="window.app.handleGlobalSearch(this.value)"
             placeholder="Buscar estudiante por nombre, RUT, curso o taller (Grupo A/B)..."
@@ -465,7 +631,7 @@
           </div>
         </div>
 
-        <!-- Indicadores Derecha: Hora Oficial, Rol, Notificaciones y Botón SOS -->
+        <!-- Indicadores Derecha: Hora Oficial, Rol, Modo Oscuro, Notificaciones y Botón SOS -->
         <div class="flex items-center gap-2.5">
           <div class="hidden xl:flex flex-col items-end text-right pr-1">
             <div id="liveChileClock" class="text-xs font-mono font-bold text-slate-800">--:--:-- hrs</div>
@@ -477,7 +643,23 @@
             <span id="headerRoleBadge" class="text-xs font-bold text-teal-900">DOCENTE</span>
           </div>
 
-          <button onclick="window.app.switchTab('tab-dashboard'); document.getElementById('utpNotificationsList')?.scrollIntoView({behavior:'smooth'})"
+          <!-- Botón de Desarrollo para Cambio Rápido de Cuenta (Modal) -->
+          <button id="btnOpenDevModalHeader" type="button" onclick="window.app.openDevLoginModal()"
+            title="Abrir modal de cuentas de prueba (Desarrollo)"
+            class="inline-flex items-center gap-1.5 rounded-xl border border-dashed border-teal-500/60 bg-teal-50/70 px-3 py-2 text-xs font-semibold text-teal-800 hover:bg-teal-100 transition">
+            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            <span class="hidden md:inline">Cuentas Dev</span>
+          </button>
+
+          <!-- Interruptor Persistente Modo Oscuro Institucional (localStorage) -->
+          <button id="darkModeToggleBtn" type="button" onclick="window.app.toggleDarkMode()"
+            title="Alternar Modo Oscuro Institucional"
+            class="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 p-2.5 text-slate-600 hover:bg-slate-50 transition">
+            <svg class="dark-icon-moon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+            <svg class="dark-icon-sun hidden text-amber-400" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
+          </button>
+
+          <button id="headerNotificationsBtn" onclick="window.app.switchTab('tab-dashboard'); document.getElementById('utpNotificationsList')?.scrollIntoView({behavior:'smooth'})"
             title="Notificaciones y Alertas UTP"
             class="relative rounded-xl border border-slate-200 p-2.5 text-slate-500 hover:bg-slate-50 transition">
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
@@ -485,25 +667,28 @@
           </button>
 
           <!-- BOTÓN CRÍTICO SOS EN AULA -->
-          <button onclick="window.app.openSosModal()"
+          <button id="headerSosBtn" onclick="window.app.openSosModal()"
             class="sos-pulse bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 active:scale-95 text-white font-bold px-3.5 py-2.5 rounded-xl shadow-lg flex items-center gap-2 text-xs transition">
-            <span>🚨 SOS AULA</span>
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg>
+            <span>SOS AULA</span>
           </button>
         </div>
       </header>
 
-      <!-- Barra de Navegación Móvil Rápida -->
+      <!-- Barra de Navegación Móvil Rápida (Filtrada por RBAC) -->
       <div id="mobileNavStrip"
         class="lg:hidden bg-[#073b3a] text-white px-3 py-2 flex items-center gap-1.5 overflow-x-auto text-xs font-semibold shrink-0">
-        <button onclick="window.app.switchTab('tab-dashboard')" class="px-2.5 py-1 rounded-lg bg-[#087c78] whitespace-nowrap">Panel</button>
-        <button onclick="window.app.switchTab('tab-estudiantes')" class="px-2.5 py-1 rounded-lg bg-white/10 whitespace-nowrap">Estudiantes</button>
-        <button onclick="window.app.switchTab('tab-buscar-rut')" class="px-2.5 py-1 rounded-lg bg-white/10 whitespace-nowrap">Buscar RUT</button>
-        <button onclick="window.app.switchTab('tab-documentos')" class="px-2.5 py-1 rounded-lg bg-white/10 whitespace-nowrap">Documentos</button>
-        <button onclick="window.app.switchTab('tab-libro')" class="px-2.5 py-1 rounded-lg bg-white/10 whitespace-nowrap">Libro PID</button>
-        <button onclick="window.app.switchTab('tab-clinico')" class="px-2.5 py-1 rounded-lg bg-white/10 whitespace-nowrap">Ficha PIE</button>
-        <button onclick="window.app.switchTab('tab-paec')" class="px-2.5 py-1 rounded-lg bg-white/10 whitespace-nowrap">PAEC SOS</button>
-        <button onclick="window.app.switchTab('tab-apoderados')" class="px-2.5 py-1 rounded-lg bg-white/10 whitespace-nowrap">Familia PDF</button>
-        <button onclick="window.app.switchTab('tab-auditoria')" class="px-2.5 py-1 rounded-lg bg-white/10 whitespace-nowrap">Admin & RBAC</button>
+        <button data-target="tab-dashboard" onclick="window.app.switchTab('tab-dashboard')" class="px-2.5 py-1 rounded-lg bg-[#087c78] whitespace-nowrap">Panel</button>
+        <button data-target="tab-sostenedor" onclick="window.app.switchTab('tab-sostenedor')" class="px-2.5 py-1 rounded-lg bg-white/10 whitespace-nowrap">Sostenedor</button>
+        <button data-target="tab-estudiantes" onclick="window.app.switchTab('tab-estudiantes')" class="px-2.5 py-1 rounded-lg bg-white/10 whitespace-nowrap">Estudiantes</button>
+        <button data-target="tab-buscar-rut" onclick="window.app.switchTab('tab-buscar-rut')" class="px-2.5 py-1 rounded-lg bg-white/10 whitespace-nowrap">Buscar RUT</button>
+        <button data-target="tab-documentos" onclick="window.app.switchTab('tab-documentos')" class="px-2.5 py-1 rounded-lg bg-white/10 whitespace-nowrap">Documentos</button>
+        <button data-target="tab-libro" onclick="window.app.switchTab('tab-libro')" class="px-2.5 py-1 rounded-lg bg-white/10 whitespace-nowrap">Libro PID</button>
+        <button data-target="tab-clinico" onclick="window.app.switchTab('tab-clinico')" class="px-2.5 py-1 rounded-lg bg-white/10 whitespace-nowrap">Ficha PIE</button>
+        <button data-target="tab-paec" onclick="window.app.switchTab('tab-paec')" class="px-2.5 py-1 rounded-lg bg-white/10 whitespace-nowrap">PAEC SOS</button>
+        <button data-target="tab-apoderados" onclick="window.app.switchTab('tab-apoderados')" class="px-2.5 py-1 rounded-lg bg-white/10 whitespace-nowrap">Familia PDF</button>
+        <button data-target="tab-auditoria" onclick="window.app.switchTab('tab-auditoria')" class="px-2.5 py-1 rounded-lg bg-white/10 whitespace-nowrap">Administración</button>
+        <button data-target="tab-configuracion" onclick="window.app.switchTab('tab-configuracion')" class="px-2.5 py-1 rounded-lg bg-white/10 whitespace-nowrap">Configuración</button>
       </div>
 
       <!-- ================================================================== -->
@@ -512,7 +697,7 @@
       <main class="flex-1 overflow-y-auto p-5 md:p-8 space-y-6">
 
         <!-- ================================================================ -->
-        <!-- SECCIÓN 1: PANEL PRINCIPAL (DASHBOARD FIGMA + RRHH & DECRETO 83) -->
+        <!-- SECCIÓN 1: PANEL PRINCIPAL (DASHBOARD FIGMA + RRHH)              -->
         <!-- ================================================================ -->
         <section id="tab-dashboard" class="tab-section mx-auto max-w-[1480px] space-y-7">
           <!-- Cabecera de Bienvenida Figma -->
@@ -524,16 +709,17 @@
               <h2 id="welcomeBannerTitle" class="text-3xl font-semibold tracking-[-0.035em] text-slate-950">
                 Buenos días, Carolina
               </h2>
-              <p class="mt-2 text-slate-500">
-                Este es el estado general de la comunidad APANDI • Educación Especial Nivel Laboral (Decreto 83 / Decreto 170).
+              <p id="welcomeRoleDescription" class="mt-2 text-slate-500">
+                Este es el estado general de la comunidad APANDI • Educación Especial y Formación Laboral.
               </p>
             </div>
             <div class="flex flex-wrap items-center gap-2.5">
-              <button onclick="window.app.switchTab('tab-libro')"
+              <button id="dashBtnLibro" onclick="window.app.switchTab('tab-libro')"
                 class="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50 transition">
-                📖 Libro de Clases Digital
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg>
+                <span>Libro de Clases Digital</span>
               </button>
-              <button onclick="window.app.openNewStudentModal()"
+              <button id="dashBtnNewStudent" onclick="window.app.openNewStudentModal()"
                 class="inline-flex items-center justify-center gap-2 rounded-xl bg-[#087c78] px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-teal-900/10 hover:bg-[#066a67] transition">
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
                 <span>Registrar estudiante</span>
@@ -602,9 +788,9 @@
               <div class="mb-6 flex items-center justify-between">
                 <div>
                   <h3 class="font-semibold text-slate-900">Distribución por curso y taller laboral</h3>
-                  <p class="mt-1 text-sm text-slate-500">Estudiantes registrados por nivel Decreto Exento N° 83</p>
+                  <p class="mt-1 text-sm text-slate-500">Estudiantes registrados por nivel y taller asignado</p>
                 </div>
-                <button onclick="window.app.switchTab('tab-estudiantes')" class="text-sm font-semibold text-teal-700 hover:underline">
+                <button id="dashBtnVerBase" onclick="window.app.switchTab('tab-estudiantes')" class="text-sm font-semibold text-teal-700 hover:underline">
                   Ver base completa
                 </button>
               </div>
@@ -618,7 +804,7 @@
                 </div>
                 <div>
                   <h3 class="font-semibold text-slate-900">Próximas reevaluaciones</h3>
-                  <p class="text-sm text-slate-500">Fechas programadas Decreto 170 / PIE</p>
+                  <p class="text-sm text-slate-500">Fechas programadas por el equipo multiprofesional</p>
                 </div>
               </div>
               <div id="dashboardUpcomingReevaluations" class="space-y-3"></div>
@@ -626,8 +812,8 @@
           </div>
 
           <!-- 4 Botones de Acción Rápida Figma (Quick) -->
-          <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <button onclick="window.app.switchTab('tab-buscar-rut')"
+          <div id="dashboardQuickActionsGrid" class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <button id="dashQuickRut" onclick="window.app.switchTab('tab-buscar-rut')"
               class="group flex items-center gap-3 rounded-2xl border border-slate-200 bg-white p-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-teal-200 hover:shadow-md">
               <span class="rounded-xl bg-slate-50 p-2.5 text-slate-600 group-hover:bg-teal-50 group-hover:text-teal-700">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
@@ -635,7 +821,7 @@
               <span class="text-sm font-semibold text-slate-700">Buscar estudiante por RUT</span>
             </button>
 
-            <button onclick="window.app.switchTab('tab-documentos')"
+            <button id="dashQuickDoc" onclick="window.app.switchTab('tab-documentos')"
               class="group flex items-center gap-3 rounded-2xl border border-slate-200 bg-white p-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-teal-200 hover:shadow-md">
               <span class="rounded-xl bg-slate-50 p-2.5 text-slate-600 group-hover:bg-teal-50 group-hover:text-teal-700">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M4 7V4a2 2 0 0 1 2-2h9l5 5v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-3"/><path d="M3 15h6"/><path d="M6 12v6"/></svg>
@@ -643,7 +829,7 @@
               <span class="text-sm font-semibold text-slate-700">Generar documento</span>
             </button>
 
-            <button onclick="window.app.switchTab('tab-estudiantes'); document.getElementById('excelImportInput')?.click()"
+            <button id="dashQuickExcel" onclick="window.app.switchTab('tab-estudiantes'); document.getElementById('excelImportInput')?.click()"
               class="group flex items-center gap-3 rounded-2xl border border-slate-200 bg-white p-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-teal-200 hover:shadow-md">
               <span class="rounded-xl bg-slate-50 p-2.5 text-slate-600 group-hover:bg-teal-50 group-hover:text-teal-700">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
@@ -651,7 +837,7 @@
               <span class="text-sm font-semibold text-slate-700">Importar registros Excel</span>
             </button>
 
-            <button onclick="window.app.switchTab('tab-configuracion')"
+            <button id="dashQuickConfig" onclick="window.app.switchTab('tab-configuracion')"
               class="group flex items-center gap-3 rounded-2xl border border-slate-200 bg-white p-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-teal-200 hover:shadow-md">
               <span class="rounded-xl bg-slate-50 p-2.5 text-slate-600 group-hover:bg-teal-50 group-hover:text-teal-700">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
@@ -661,17 +847,21 @@
           </div>
 
           <!-- Fila Institucional SGI: Reloj Control RRHH + Alertas UTP + Horarios -->
-          <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          <div id="rrhhStaffSection" class="grid grid-cols-1 lg:grid-cols-12 gap-6">
             <!-- Terminal de Reloj Control Docente / RRHH -->
-            <div class="lg:col-span-5 bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col justify-between space-y-4">
+            <div id="rrhhClockPanel" class="lg:col-span-5 bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col justify-between space-y-4">
               <div>
                 <div class="flex items-center justify-between">
                   <div>
-                    <h3 class="font-semibold text-slate-900 text-base">⏱️ Terminal de Reloj Control RRHH</h3>
+                    <h3 class="font-semibold text-slate-900 text-base flex items-center gap-2">
+                      <svg class="text-teal-700" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                      <span>Terminal de Reloj Control RRHH</span>
+                    </h3>
                     <p class="text-xs text-slate-500">Control de asistencia biométrico y geolocalizado (Recinto Maipú).</p>
                   </div>
-                  <span class="text-[11px] bg-emerald-50 text-emerald-700 px-2.5 py-1 rounded-full font-bold border border-emerald-200">
-                    📍 GPS Activo
+                  <span class="inline-flex items-center gap-1 text-[11px] bg-emerald-50 text-emerald-700 px-2.5 py-1 rounded-full font-bold border border-emerald-200">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+                    <span>GPS Activo</span>
                   </span>
                 </div>
 
@@ -698,18 +888,21 @@
                 <div class="grid grid-cols-2 gap-3 mt-4">
                   <button onclick="window.app.markStaffAttendance('ENTRADA', 'GEOLOCALIZADO')"
                     class="bg-[#087c78] hover:bg-[#066a67] text-white font-semibold py-2.5 px-4 rounded-xl text-xs shadow transition flex items-center justify-center gap-1.5">
-                    <span>📍 Marcar Entrada GPS</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+                    <span>Marcar Entrada GPS</span>
                   </button>
                   <button onclick="window.app.markStaffAttendance('SALIDA', 'GEOLOCALIZADO')"
                     class="bg-slate-800 hover:bg-slate-900 text-white font-semibold py-2.5 px-4 rounded-xl text-xs shadow transition flex items-center justify-center gap-1.5">
-                    <span>🏁 Marcar Salida</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" x2="4" y1="22" y2="15"/></svg>
+                    <span>Marcar Salida</span>
                   </button>
                 </div>
               </div>
 
               <div class="pt-4 border-t border-slate-100">
-                <h4 class="text-xs font-bold text-slate-600 uppercase tracking-wider mb-2.5">
-                  👥 Registro de Asistencia del Personal Hoy
+                <h4 class="text-xs font-bold text-slate-600 uppercase tracking-wider mb-2.5 flex items-center gap-1.5">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                  <span>Registro de Asistencia del Personal Hoy</span>
                 </h4>
                 <div id="staffAttendanceHistoryList" class="space-y-2 max-h-48 overflow-y-auto text-xs"></div>
               </div>
@@ -720,7 +913,10 @@
               <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
                 <div class="flex items-center justify-between mb-3">
                   <div>
-                    <h3 class="font-semibold text-slate-900 text-base">🔔 Centro de Alertas UTP y Workflows Automáticos</h3>
+                    <h3 class="font-semibold text-slate-900 text-base flex items-center gap-2">
+                      <svg class="text-teal-700" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+                      <span>Centro de Alertas UTP y Workflows Automáticos</span>
+                    </h3>
                     <p class="text-xs text-slate-500">Alertas de inasistencias reiteradas, avisos de firma digital y despachos SOS.</p>
                   </div>
                   <span class="text-[11px] font-bold bg-teal-50 text-teal-700 px-2.5 py-1 rounded-lg border border-teal-200">
@@ -732,19 +928,25 @@
 
               <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
                 <div class="flex items-center justify-between mb-3">
-                  <h3 class="font-semibold text-slate-900 text-base">📅 Carga Horaria y Bloques de Taller Asignados</h3>
-                  <span class="text-xs font-semibold text-slate-500">Contrato: 40 hrs cronológicas</span>
+                  <h3 class="font-semibold text-slate-900 text-base flex items-center gap-2">
+                    <svg class="text-teal-700" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
+                    <span>Carga Horaria y Bloques de Taller Asignados</span>
+                  </h3>
+                  <span class="text-xs font-semibold text-slate-500">Contrato Institucional</span>
                 </div>
                 <div id="staffScheduleList" class="grid grid-cols-1 md:grid-cols-2 gap-2.5 text-xs"></div>
               </div>
             </div>
           </div>
 
-          <!-- Fila de Gráficos Analíticos Decreto 83 -->
+          <!-- Fila de Gráficos Analíticos -->
           <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
             <div class="lg:col-span-7 bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
               <div class="mb-4">
-                <h3 class="font-semibold text-slate-900 text-sm">📈 Progresión de Logros Conceptuales por Dimensión (Decreto 83)</h3>
+                <h3 class="font-semibold text-slate-900 text-sm flex items-center gap-2">
+                  <svg class="text-teal-700" xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" x2="18" y1="20" y2="10"/><line x1="12" x2="12" y1="20" y2="4"/><line x1="6" x2="6" y1="20" y2="14"/></svg>
+                  <span>Progresión de Logros Conceptuales por Dimensión</span>
+                </h3>
                 <p class="text-xs text-slate-500">Comparativa de indicadores Logrados (L), En Desarrollo (ED) y En Inicio (EI).</p>
               </div>
               <canvas id="chartDimensiones" height="120"></canvas>
@@ -752,10 +954,71 @@
 
             <div class="lg:col-span-5 bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
               <div class="mb-4">
-                <h3 class="font-semibold text-slate-900 text-sm">🎯 Distribución de Evaluaciones Cualitativas</h3>
+                <h3 class="font-semibold text-slate-900 text-sm flex items-center gap-2">
+                  <svg class="text-teal-700" xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+                  <span>Distribución de Evaluaciones Cualitativas</span>
+                </h3>
                 <p class="text-xs text-slate-500">Consolidado semestral de talleres laborales.</p>
               </div>
               <canvas id="chartLogrosDoughnut" height="155"></canvas>
+            </div>
+          </div>
+        </section>
+
+        <!-- ================================================================ -->
+        <!-- SECCIÓN 1B: GOBIERNO SOSTENEDOR, SUBVENCIÓN SIGE Y DOTACIÓN RRHH -->
+        <!-- ================================================================ -->
+        <section id="tab-sostenedor" class="tab-section hidden mx-auto max-w-[1480px] space-y-6">
+          <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-6">
+            <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-5 border-b border-slate-200">
+              <div>
+                <div class="flex flex-wrap items-center gap-2">
+                  <span class="bg-amber-50 text-amber-800 border border-amber-200 text-[11px] font-bold px-2.5 py-0.5 rounded-full">
+                    Gobierno Corporativo Sostenedor
+                  </span>
+                  <span class="bg-teal-50 text-teal-800 border border-teal-200 text-[11px] font-bold px-2.5 py-0.5 rounded-full">
+                    Superintendencia de Educación & SIGE MINEDUC
+                  </span>
+                </div>
+                <h2 class="text-2xl font-semibold text-slate-950 mt-2 flex items-center gap-2.5">
+                  <svg class="text-teal-700" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" x2="21" y1="22" y2="22"/><line x1="6" x2="6" y1="18" y2="11"/><line x1="10" x2="10" y1="18" y2="11"/><line x1="14" x2="14" y1="18" y2="11"/><line x1="18" x2="18" y1="18" y2="11"/><polygon points="12 2 20 7 4 7"/></svg>
+                  <span>Panel Ejecutivo de Sostenedor, Subvención y Dotación</span>
+                </h2>
+                <p class="text-xs text-slate-500 mt-1">
+                  Control estratégico de subvención educacional Educación Especial, asistencia media declarada en SIGE, dotación horaria contratada y capacidad instalada por taller.
+                </p>
+              </div>
+              <button onclick="window.app.loadSostenedorDashboard()"
+                class="inline-flex items-center gap-2 rounded-xl bg-[#073b3a] hover:bg-slate-800 text-white px-4 py-2.5 text-xs font-semibold transition">
+                <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 16h5v5"/></svg>
+                <span>Actualizar Indicadores SIGE</span>
+              </button>
+            </div>
+
+            <!-- KPIs Financieros y Normativos Sostenedor -->
+            <div id="sostenedorKpiGrid" class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4"></div>
+
+            <!-- Capacidad por Taller y Cumplimiento Normativo -->
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+              <div class="lg:col-span-6 rounded-2xl border border-slate-200 bg-slate-50/60 p-5 space-y-4">
+                <div class="flex items-center justify-between">
+                  <div>
+                    <h3 class="font-semibold text-slate-900 text-sm">Capacidad e Infraestructura por Taller Laboral</h3>
+                    <p class="text-xs text-slate-500">Ocupación de matrícula respecto al cupo autorizado por sala</p>
+                  </div>
+                </div>
+                <div id="sostenedorWorkshopsList" class="space-y-3"></div>
+              </div>
+
+              <div class="lg:col-span-6 rounded-2xl border border-slate-200 bg-slate-50/60 p-5 space-y-4">
+                <div class="flex items-center justify-between">
+                  <div>
+                    <h3 class="font-semibold text-slate-900 text-sm">Dotación Docente, PIE y Asistentes de la Educación</h3>
+                    <p class="text-xs text-slate-500">Distribución de horas cronológicas semanales de contrato vigentes</p>
+                  </div>
+                </div>
+                <div id="sostenedorStaffTable" class="space-y-2 max-h-72 overflow-y-auto"></div>
+              </div>
             </div>
           </div>
         </section>
@@ -771,7 +1034,7 @@
               <p id="studentsCountSubtitle" class="mt-1 text-sm text-slate-500">5 registros centralizados • Categorización Funcional Grupo A y Grupo B</p>
             </div>
             <div class="flex flex-wrap gap-2">
-              <button onclick="window.app.exportStudentsExcel()"
+              <button id="btnExportExcel" onclick="window.app.exportStudentsExcel()"
                 class="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition shadow-sm">
                 <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
                 <span>Exportar Excel</span>
@@ -779,13 +1042,13 @@
 
               <input id="excelImportInput" type="file" accept=".xlsx,.xls" class="hidden"
                 onchange="window.app.importStudentsExcel(this.files[0]); this.value='';" />
-              <button onclick="document.getElementById('excelImportInput').click()"
+              <button id="btnImportExcel" onclick="document.getElementById('excelImportInput').click()"
                 class="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition shadow-sm">
                 <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
                 <span>Importar Excel</span>
               </button>
 
-              <button onclick="window.app.openNewStudentModal()"
+              <button id="btnNewStudentMain" onclick="window.app.openNewStudentModal()"
                 class="inline-flex items-center gap-2 rounded-xl bg-[#087c78] hover:bg-[#066a67] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition">
                 <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
                 <span>Nuevo estudiante</span>
@@ -826,8 +1089,8 @@
               <select id="filterGroupSelect" onchange="window.app.renderStudentsModule()"
                 class="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-600 outline-none focus:border-teal-600">
                 <option value="ALL">Grupos A y B</option>
-                <option value="GRUPO_A">🟢 Grupo A (Más Funcional)</option>
-                <option value="GRUPO_B">🟡 Grupo B (Mayor Apoyo)</option>
+                <option value="GRUPO_A">Grupo A (Más Funcional)</option>
+                <option value="GRUPO_B">Grupo B (Mayor Apoyo)</option>
               </select>
 
               <select id="filterStatusSelect" onchange="window.app.renderStudentsModule()"
@@ -861,7 +1124,7 @@
         </section>
 
         <!-- ================================================================ -->
-        <!-- SECCIÓN 3: BUSCAR POR RUT (VISTA DEDICADA FIGMA + MÓDULO 11)     -->
+        <!-- SECCIÓN 3: BUSCAR POR RUT (VISTA DEDICADA FIGMA)                 -->
         <!-- ================================================================ -->
         <section id="tab-buscar-rut" class="tab-section hidden mx-auto max-w-4xl pt-4">
           <div class="mb-8 text-center">
@@ -869,7 +1132,7 @@
               <svg xmlns="http://www.w3.org/2000/svg" width="27" height="27" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
             </div>
             <h2 class="text-3xl font-semibold tracking-tight text-slate-950">Buscar estudiante por RUT</h2>
-            <p class="mt-2.5 text-slate-500">Puedes escribirlo con o sin puntos y guion. Verificación automática de dígito verificador chileno (Módulo 11).</p>
+            <p class="mt-2.5 text-slate-500">Puedes escribirlo con o sin puntos y guion para consultar su ficha institucional.</p>
           </div>
 
           <div class="relative mx-auto max-w-2xl">
@@ -925,8 +1188,9 @@
 
           <!-- Vista Editor de Documento Institucional (DocumentEditor de Figma) -->
           <div id="documentEditorView" class="hidden mx-auto max-w-5xl">
-            <button onclick="window.app.closeDocumentEditor()" class="mb-5 inline-flex items-center gap-1 text-sm font-semibold text-teal-700 hover:underline">
-              ← Volver a formatos
+            <button onclick="window.app.closeDocumentEditor()" class="mb-5 inline-flex items-center gap-1.5 text-sm font-semibold text-teal-700 hover:underline">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>
+              <span>Volver a formatos</span>
             </button>
             <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
               <div class="border-b border-slate-200 bg-[#073b3a] p-6 text-white">
@@ -1009,7 +1273,7 @@
         </section>
 
         <!-- ================================================================ -->
-        <!-- SECCIÓN 5: LIBRO DE CLASES DIGITAL (DECRETO 83 + FIRMA PIN)      -->
+        <!-- SECCIÓN 5: LIBRO DE CLASES DIGITAL (FIRMA PIN)                   -->
         <!-- ================================================================ -->
         <section id="tab-libro" class="tab-section hidden space-y-6">
           <!-- Cabecera y Sub-Navegación del Libro Digital en 4 Sub-vistas Desacopladas -->
@@ -1017,19 +1281,18 @@
             <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-5 border-b border-slate-200">
               <div>
                 <div class="flex flex-wrap items-center gap-2">
-                  <span class="bg-apandi-100 text-apandi-800 text-[11px] font-extrabold px-2.5 py-0.5 rounded-full">
-                    Circular Superintendencia de Educación
-                  </span>
-                  <span class="bg-emerald-100 text-emerald-800 text-[11px] font-extrabold px-2.5 py-0.5 rounded-full">
-                    ✍️ Firma Electrónica Simple Activa (Bcrypt Cost 12)
-                  </span>
-                  <span class="bg-purple-100 text-purple-800 text-[11px] font-extrabold px-2.5 py-0.5 rounded-full">
-                    Decreto Exento N° 83
+                  <span class="bg-teal-50 text-teal-800 border border-teal-200 text-[11px] font-bold px-2.5 py-0.5 rounded-full">Libro de Clases Oficial</span>
+                  <span class="inline-flex items-center gap-1 bg-emerald-50 text-emerald-800 border border-emerald-200 text-[11px] font-bold px-2.5 py-0.5 rounded-full">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>
+                    <span>Firmado electrónicamente con PIN</span>
                   </span>
                 </div>
-                <h2 class="text-xl font-extrabold text-slate-900 mt-1">📖 Libro de Clases Digital — Educación Especial Nivel Laboral</h2>
-                <p class="text-xs text-slate-500">
-                  Gestión desacoplada de Semestres y Bloques, Planificación Semanal PID, Asistencia Masiva por Bloque y Calificaciones Cualitativas.
+                <h2 class="text-xl font-semibold text-slate-900 mt-1.5 flex items-center gap-2">
+                  <svg class="text-teal-700" xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg>
+                  <span>Libro de Clases Digital — Educación Especial Nivel Laboral</span>
+                </h2>
+                <p class="text-xs text-slate-500 mt-0.5">
+                  Gestión integrada de Asistencia Diaria, Planificación Interdisciplinaria Diversificada (PID Grupo A/B) y Evaluaciones Conceptuales.
                 </p>
               </div>
 
@@ -1054,23 +1317,14 @@
               </div>
             </div>
 
-            <!-- ============================================================== -->
-            <!-- SUB-VISTA 1: CONFIGURACIÓN DE SEMESTRES Y BLOQUES HORARIOS     -->
-            <!-- ============================================================== -->
-            <div id="book-config" class="book-subpanel hidden pt-5 space-y-6">
-              <div class="p-4 rounded-xl bg-slate-900 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
-                <div>
-                  <span class="font-extrabold text-blue-300 text-sm flex items-center gap-2">
-                    ⚙️ Panel de Gestión Institucional UTP / Dirección / Sostenedor
-                  </span>
-                  <p class="text-slate-300 mt-0.5">
-                    Define la temporalidad del año lectivo, configura los bloques horarios por taller y asigna en qué bloque participa cada estudiante.
-                  </p>
-                </div>
-                <span class="bg-blue-600/30 text-blue-200 font-mono text-[11px] font-bold px-3 py-1.5 rounded-lg border border-blue-400/40 shrink-0">
-                  Año Escolar: 2026
-                </span>
-              </div>
+            <!-- SUB-PESTAÑA 5.1: PLANIFICACIÓN PID + FIRMA PIN -->
+            <div id="book-pid" class="book-subpanel pt-5 grid grid-cols-1 lg:grid-cols-12 gap-6">
+              <div id="pidFormPanel" class="lg:col-span-5 bg-slate-50 p-5 rounded-2xl border border-slate-200">
+                <h3 class="font-bold text-slate-900 text-sm uppercase tracking-wider flex items-center gap-2">
+                  <svg class="text-teal-700" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
+                  <span>Nueva Clase PID Diversificada y Firma PIN</span>
+                </h3>
+                <p class="text-xs text-slate-500 mt-1">Diseña actividades diferenciadas por nivel de funcionalidad y valida el registro con tu PIN electrónico.</p>
 
               <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
                 <!-- Tarjeta A: Fechas de 1° y 2° Semestre -->
@@ -1212,31 +1466,21 @@
                 </div>
               </div>
 
-              <!-- Tarjeta C: Asignación de Estudiantes a Bloques (Checkbox Estudiante por Bloque) -->
-              <div class="p-5 rounded-2xl bg-white border border-slate-200 shadow-sm space-y-4">
-                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-200">
-                  <div>
-                    <h3 class="font-extrabold text-slate-900 text-sm">👥 Asignación de Estudiantes por Bloque Horario</h3>
-                    <p class="text-xs text-slate-500">Define con precisión en qué bloque está o no cada estudiante según su plan formativo y horario institucional.</p>
-                  </div>
-                  <div class="flex items-center gap-2">
-                    <label class="text-xs font-bold text-slate-700 shrink-0">Seleccionar Bloque:</label>
-                    <select id="assignBlockSelector" onchange="window.app.loadBlockStudentsAssignment(this.value)"
-                      class="text-xs rounded-xl border border-slate-300 px-3 py-1.5 bg-slate-50 font-bold text-slate-800"></select>
+                  <div class="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200">
+                    <label class="font-extrabold text-emerald-950 flex items-center gap-1.5">
+                      <span class="h-2.5 w-2.5 rounded-full bg-emerald-500 inline-block"></span>
+                      <span>Actividad Diversificada GRUPO A (Mayor Funcionalidad)</span>
+                    </label>
+                    <textarea id="pidGrupoA" rows="2" required class="mt-1.5 w-full rounded-lg border border-emerald-300 p-2 bg-white text-slate-800">Realizan costura de asas reforzadas en máquina recta industrial y verifican simetría con cinta métrica estándar.</textarea>
                   </div>
                 </div>
 
-                <div class="flex items-center justify-between gap-2 text-xs">
-                  <span id="assignBlockInfoBadge" class="font-semibold text-slate-600">Cargando nómina...</span>
-                  <div class="flex gap-2">
-                    <button type="button" onclick="window.app.toggleAllBlockStudents(true)"
-                      class="px-2.5 py-1 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold transition">
-                      ✓ Marcar Todos
-                    </button>
-                    <button type="button" onclick="window.app.toggleAllBlockStudents(false)"
-                      class="px-2.5 py-1 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold transition">
-                      ✕ Desmarcar Todos
-                    </button>
+                  <div class="p-3.5 rounded-xl bg-amber-50 border border-amber-200">
+                    <label class="font-extrabold text-amber-950 flex items-center gap-1.5">
+                      <span class="h-2.5 w-2.5 rounded-full bg-amber-500 inline-block"></span>
+                      <span>Actividad Diversificada GRUPO B (Mayor Apoyo y Mediación)</span>
+                    </label>
+                    <textarea id="pidGrupoB" rows="2" required class="mt-1.5 w-full rounded-lg border border-amber-300 p-2 bg-white text-slate-800">Posicionan asas utilizando plantilla acrílica con topes táctiles, fijan con clips ergonómicos de color y realizan unión asistida.</textarea>
                   </div>
                 </div>
 
@@ -1274,14 +1518,9 @@
                     </select>
                   </div>
                   <div>
-                    <label class="font-bold text-slate-600 block mb-0.5">Taller:</label>
-                    <select id="pidFilterTaller" onchange="window.app.filterPidClasses()"
-                      class="rounded-lg border border-slate-300 px-2.5 py-1.5 bg-white font-bold text-slate-800">
-                      <option value="">Todos los talleres</option>
-                      <option value="1">TL-CORTE-01 Textil</option>
-                      <option value="2">TL-GASTRO-02 Gastronomía</option>
-                      <option value="3">TL-HORTI-03 Horticultura</option>
-                    </select>
+                    <label class="font-bold text-slate-700">Recursos Pedagógicos / Apoyos Visuales y Sensoriales</label>
+                    <input id="pidRecursos" type="text" value="Secuencia pictográfica ARASAAC, moldes táctiles de alto contraste y protectores auditivos."
+                      class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 bg-white" />
                   </div>
                 </div>
 
@@ -1299,103 +1538,29 @@
                 <div class="lg:col-span-5 bg-slate-50 p-5 rounded-2xl border border-slate-200/90 space-y-4">
                   <div class="flex items-center justify-between">
                     <div>
-                      <h3 class="font-extrabold text-slate-900 text-sm uppercase tracking-wider">✍️ Preparación Docente de Clase PID</h3>
-                      <p class="text-xs text-slate-500 mt-0.5">Diseño diversificado DUA (Grupo A / Grupo B) clase a clase</p>
+                      <span class="font-extrabold text-xs text-teal-100 flex items-center gap-1.5">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                        <span>Firma Electrónica Simple (PIN / Token)</span>
+                      </span>
+                      <span class="text-[11px] text-teal-200/80">Estado resultante: Firmado electrónicamente con PIN (PIN: <code>849206</code>)</span>
                     </div>
                   </div>
 
-                  <form id="pidForm" class="space-y-3.5 text-xs">
-                    <input type="hidden" id="pidIdClase" value="" />
-                    <div class="grid grid-cols-2 gap-2">
-                      <div>
-                        <label class="font-bold text-slate-700">Taller Laboral</label>
-                        <select id="pidTaller" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 bg-white font-semibold">
-                          <option value="1">TL-CORTE-01 • Corte y Confección</option>
-                          <option value="2">TL-GASTRO-02 • Gastronomía</option>
-                          <option value="3">TL-HORTI-03 • Horticultura</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label class="font-bold text-slate-700">Semana del Semestre</label>
-                        <select id="pidSemana" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 bg-white font-bold"></select>
-                      </div>
-                    </div>
+                  <button type="submit"
+                    class="w-full bg-[#087c78] hover:bg-[#066a67] text-white font-semibold py-3 rounded-xl shadow-md transition flex items-center justify-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>
+                    <span>Validar PIN y Firmar Clase en Libro Digital</span>
+                  </button>
+                </form>
+              </div>
 
-                    <div>
-                      <label class="font-bold text-slate-700">Fecha de la Clase</label>
-                      <input id="pidFecha" type="date" required
-                        class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 bg-white font-semibold" />
-                    </div>
-
-                    <div>
-                      <label class="font-bold text-slate-700">Unidad Temática</label>
-                      <input id="pidUnidad" type="text" required
-                        value="Unidad 4: Confección de Bolsos Reutilizables y Control de Calidad"
-                        class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 bg-white" />
-                    </div>
-
-                    <div>
-                      <label class="font-bold text-slate-700">Objetivo de Aprendizaje (OA Decreto 83)</label>
-                      <input id="pidObjetivo" type="text" required
-                        value="OA 05: Unir piezas textiles aplicando costuras de refuerzo, control de pedal y normas de higiene y seguridad."
-                        class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 bg-white" />
-                    </div>
-
-                    <div class="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200">
-                      <label class="font-extrabold text-emerald-950 block">🟢 Actividad Diversificada GRUPO A (Mayor Funcionalidad)</label>
-                      <textarea id="pidGrupoA" rows="2" required
-                        class="mt-1.5 w-full rounded-lg border border-emerald-300 p-2 bg-white text-slate-800">Realizan costura de asas reforzadas en máquina recta industrial y verifican simetría con cinta métrica estándar.</textarea>
-                    </div>
-
-                    <div class="p-3.5 rounded-xl bg-amber-50 border border-amber-200">
-                      <label class="font-extrabold text-amber-950 block">🟡 Actividad Diversificada GRUPO B (Mayor Apoyo y Mediación)</label>
-                      <textarea id="pidGrupoB" rows="2" required
-                        class="mt-1.5 w-full rounded-lg border border-amber-300 p-2 bg-white text-slate-800">Posicionan asas utilizando plantilla acrílica con topes táctiles, fijan con clips ergonómicos de color y realizan unión asistida.</textarea>
-                    </div>
-
-                    <div>
-                      <label class="font-bold text-slate-700">Recursos DUA / Apoyos Visuales y Sensoriales</label>
-                      <input id="pidRecursos" type="text"
-                        value="Secuencia pictográfica ARASAAC, moldes táctiles de alto contraste y protectores auditivos."
-                        class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 bg-white" />
-                    </div>
-
-                    <!-- Caja de Firma Electrónica Obligatoria con PIN Docente -->
-                    <div class="p-3.5 rounded-xl bg-blue-950 text-white flex items-center justify-between gap-3">
-                      <div>
-                        <span class="font-extrabold text-xs text-blue-200 block">🔐 PIN de Firma Electrónica Docente</span>
-                        <span class="text-[11px] text-blue-300/80">Validación obligatoria Bcrypt (PIN Docente: <code>849206</code>)</span>
-                      </div>
-                      <input id="pidPin" type="password" maxlength="6" value="849206" required
-                        class="w-24 text-center font-mono text-sm font-extrabold rounded-lg border border-blue-400 px-2 py-2 bg-slate-900 text-emerald-400" />
-                    </div>
-
-                    <div class="grid grid-cols-2 gap-2 pt-1">
-                      <button type="button" onclick="window.app.submitPidClass(false)"
-                        class="bg-slate-700 hover:bg-slate-800 text-white font-extrabold py-2.5 px-3 rounded-xl shadow transition text-center">
-                        💾 Guardar Borrador
-                      </button>
-                      <button type="button" onclick="window.app.submitPidClass(true)"
-                        class="bg-apandi-700 hover:bg-apandi-800 text-white font-extrabold py-2.5 px-3 rounded-xl shadow transition text-center">
-                        🚀 Enviar a Revisión UTP
-                      </button>
-                    </div>
-                  </form>
-                </div>
-
-                <!-- Columna Derecha: Leccionario PID Semanal + Panel de Aprobación UTP -->
-                <div class="lg:col-span-7 space-y-4">
-                  <div class="flex items-center justify-between">
-                    <div>
-                      <h3 class="font-extrabold text-slate-900 text-sm uppercase tracking-wider">📚 Registro Semanal y Visación UTP</h3>
-                      <p class="text-xs text-slate-500">Supervisión técnico-pedagógica y aprobación de planificaciones</p>
-                    </div>
-                    <span id="pidCountBadge" class="text-xs bg-slate-100 text-slate-700 font-extrabold px-2.5 py-1 rounded-lg border border-slate-200">
-                      0 clases
-                    </span>
-                  </div>
-
-                  <div id="pidClassesList" class="space-y-4 max-h-[700px] overflow-y-auto pr-1"></div>
+              <div id="pidHistoryColumn" class="lg:col-span-7 space-y-4">
+                <div class="flex items-center justify-between">
+                  <h3 class="font-bold text-slate-900 text-sm uppercase tracking-wider flex items-center gap-2">
+                    <svg class="text-teal-700" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>
+                    <span>Registro Histórico de Leccionario PID Firmado</span>
+                  </h3>
+                  <span class="text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-full">Firmado electrónicamente con PIN</span>
                 </div>
               </div>
             </div>
@@ -1406,32 +1571,42 @@
             <div id="book-asistencia" class="book-subpanel hidden pt-5 space-y-5">
               <div class="p-4 rounded-xl bg-blue-50 border border-blue-200 flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs">
                 <div>
-                  <strong class="text-blue-950 block text-sm">📋 Control de Asistencia por Bloque Horario — Retención Escolar Inmediata</strong>
-                  <span class="text-blue-800">
-                    Marca con un solo clic la nómina de estudiantes del bloque. Al enviar, si se registran ausencias se activa automáticamente la alerta UTP de retención escolar.
-                  </span>
+                  <strong class="text-teal-950 flex items-center gap-1.5 text-sm">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="m9 14 2 2 4-4"/></svg>
+                    <span>Toma de Asistencia Digital — Disparador Automático de Retención Escolar</span>
+                  </strong>
+                  <span class="text-teal-800">Al registrar a un estudiante como <strong>AUSENTE</strong>, el sistema emite automáticamente una alerta inmediata a UTP y Convivencia Escolar.</span>
                 </div>
-                <div class="flex items-center gap-2 shrink-0">
-                  <span class="font-mono font-bold bg-white text-blue-900 px-3 py-1.5 rounded-lg border border-blue-300">
-                    Sello Digital SHA-256
-                  </span>
-                </div>
+                <span class="font-mono font-bold bg-white text-teal-900 px-3 py-1.5 rounded-lg border border-teal-300 shrink-0">
+                  Firmado electrónicamente con PIN
+                </span>
               </div>
 
-              <!-- Filtro de Bloque y Fecha -->
-              <div class="p-4 rounded-2xl bg-white border border-slate-200 shadow-sm grid grid-cols-1 md:grid-cols-12 gap-3 text-xs items-end">
-                <div class="md:col-span-3">
-                  <label class="font-bold text-slate-700 block mb-1">Fecha de la Clase</label>
-                  <input type="date" id="asistFecha" onchange="window.app.loadBlockAttendance()"
-                    class="w-full rounded-xl border border-slate-300 px-3 py-2 bg-slate-50 font-semibold" />
+              <div id="attendanceStudentList" class="divide-y divide-slate-200 border border-slate-200 rounded-xl bg-white"></div>
+            </div>
+
+            <!-- SUB-PESTAÑA 5.3: CALIFICACIONES CONCEPTUALES CUALITATIVAS -->
+            <div id="book-evaluaciones" class="book-subpanel hidden pt-5 space-y-5">
+              <form id="evalForm" class="p-5 rounded-2xl bg-slate-50 border border-slate-200 grid grid-cols-1 md:grid-cols-12 gap-3 text-xs">
+                <div class="md:col-span-4">
+                  <label class="font-bold text-slate-700 block mb-1">Estudiante Evaluado</label>
+                  <select id="evalEstudiante" class="w-full rounded-xl border border-slate-300 px-3 py-2 bg-white font-semibold"></select>
                 </div>
                 <div class="md:col-span-4">
-                  <label class="font-bold text-slate-700 block mb-1">Taller Laboral</label>
-                  <select id="asistTaller" onchange="window.app.updateAttendanceBlocksDropdown()"
-                    class="w-full rounded-xl border border-slate-300 px-3 py-2 bg-white font-semibold">
-                    <option value="1">TL-CORTE-01 • Corte y Confección Textil</option>
-                    <option value="2">TL-GASTRO-02 • Gastronomía y Panadería</option>
-                    <option value="3">TL-HORTI-03 • Horticultura y Vivero</option>
+                  <label class="font-bold text-slate-700 block mb-1">Dimensión Formativa Nivel Laboral</label>
+                  <select id="evalDimension" class="w-full rounded-xl border border-slate-300 px-3 py-2 bg-white font-semibold">
+                    <option value="TECNICA_VOCACIONAL">1. Competencia Técnica Vocacional</option>
+                    <option value="AUTONOMIA_PERSONAL">2. Autonomía Personal y Seguridad (EPP)</option>
+                    <option value="HABILIDADES_SOCIOLABORALES">3. Habilidades Sociolaborales y Trabajo en Equipo</option>
+                  </select>
+                </div>
+                <div class="md:col-span-4">
+                  <label class="font-bold text-slate-700 block mb-1">Concepto Cualitativo</label>
+                  <select id="evalLogro" class="w-full rounded-xl border border-slate-300 px-3 py-2 bg-white font-extrabold text-emerald-800">
+                    <option value="LOGRADO">LOGRADO (L) — Desempeño Autónomo</option>
+                    <option value="EN_DESARROLLO">EN DESARROLLO (ED) — Con Apoyo Ocasional</option>
+                    <option value="EN_INICIO">EN INICIO (EI) — Requiere Mediación Permanente</option>
+                    <option value="NO_OBSERVADO">NO OBSERVADO (NO)</option>
                   </select>
                 </div>
                 <div class="md:col-span-5">
@@ -1598,21 +1773,25 @@
         </section>
 
         <!-- ================================================================ -->
-        <!-- SECCIÓN 6: EXPEDIENTE CLÍNICO Y PIE (AES-256 LEY 19.628)         -->
+        <!-- SECCIÓN 6: EXPEDIENTE CLÍNICO Y PIE                              -->
         <!-- ================================================================ -->
         <section id="tab-clinico" class="tab-section hidden mx-auto max-w-[1480px] space-y-6">
           <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-5">
             <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-slate-200">
               <div>
                 <div class="flex flex-wrap items-center gap-2">
-                  <span class="bg-emerald-50 text-emerald-900 text-[11px] font-bold px-2.5 py-0.5 rounded-full border border-emerald-200">
-                    🔒 Cifrado AES-256-GCM en Reposo (Ley N° 19.628)
+                  <span class="inline-flex items-center gap-1.5 bg-emerald-50 text-emerald-900 text-[11px] font-bold px-2.5 py-0.5 rounded-full border border-emerald-200">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                    <span>Expediente Multiprofesional PIE</span>
                   </span>
                   <span id="clinicalPermissionBadge" class="px-2.5 py-0.5 rounded-full text-[11px] font-bold"></span>
                 </div>
-                <h2 class="text-xl font-semibold text-slate-900 mt-1.5">🩺 Expediente Clínico Digital, PAI (DUA) y PACI</h2>
+                <h2 class="text-xl font-semibold text-slate-900 mt-1.5 flex items-center gap-2">
+                  <svg class="text-teal-700" xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2"/></svg>
+                  <span>Expediente Clínico Digital, PAI y PACI</span>
+                </h2>
                 <p class="text-xs text-slate-500">
-                  Acceso restringido por RBAC: <strong>Equipo PIE</strong> y <strong>Dirección/UTP</strong> (Lectura/Escritura) • <strong>Docente Titular</strong> (Modo Solo Lectura) • <strong>Monitor</strong> (Acceso Bloqueado).
+                  Acceso según perfil: <strong>Equipo PIE</strong> y <strong>Dirección/UTP</strong> (Lectura/Escritura) • <strong>Docente Titular</strong> (Modo Solo Lectura).
                 </p>
               </div>
 
@@ -1623,43 +1802,55 @@
               </div>
             </div>
 
-            <!-- Pantalla de Bloqueo RBAC Ley 19.628 -->
+            <!-- Pantalla de Bloqueo de Acceso Clínico -->
             <div id="clinicalAccessDeniedBox" class="hidden p-8 rounded-2xl bg-red-50 border-2 border-red-200 text-center space-y-3">
-              <div class="text-4xl">🛑</div>
-              <h3 class="text-lg font-extrabold text-red-900">Acceso Denegado por Normativa Legal (Ley N° 19.628)</h3>
+              <div class="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-red-100 text-red-700">
+                <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" x2="19.07" y1="4.93" y2="19.07"/></svg>
+              </div>
+              <h3 class="text-lg font-extrabold text-red-900">Acceso Restringido al Expediente Clínico</h3>
               <p id="clinicalDeniedText" class="text-xs text-red-800 max-w-xl mx-auto leading-relaxed"></p>
               <div class="pt-2">
-                <button onclick="window.app.quickLogin('cvargas.pie@apandi.cl')"
-                  class="bg-[#087c78] hover:bg-[#066a67] text-white font-bold px-4 py-2.5 rounded-xl text-xs shadow">
-                  🩺 Cambiar a Perfil Especialista PIE para Desencriptar y Editar
+                <button onclick="window.app.openDevLoginModal()"
+                  class="inline-flex items-center gap-2 bg-[#087c78] hover:bg-[#066a67] text-white font-bold px-4 py-2.5 rounded-xl text-xs shadow">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2"/></svg>
+                  <span>Cambiar a Perfil Autorizado</span>
                 </button>
               </div>
             </div>
 
-            <!-- Contenido Desencriptado del Expediente Clínico y PIE -->
+            <!-- Contenido Autorizado del Expediente Clínico y PIE -->
             <div id="clinicalContentBox" class="space-y-6">
               <div class="p-4 rounded-xl bg-[#073b3a] text-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs">
-                <div class="space-y-1 overflow-hidden">
-                  <div class="flex items-center gap-2">
-                    <span class="text-emerald-300 font-bold uppercase tracking-wider text-[11px]">⚡ Inspector Criptográfico MariaDB (AES-256-GCM):</span>
-                    <span class="text-[11px] text-teal-100/70">Formato <code>IV_Hex : AuthTag_Hex : CipherText_Hex</code></span>
+                <div class="flex items-center gap-3">
+                  <span class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/10 text-emerald-300">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></svg>
+                  </span>
+                  <div>
+                    <div id="clinicalProtectionStatus" class="text-emerald-300 font-bold uppercase tracking-wider text-xs">
+                      Expediente Clínico y Psicopedagógico
+                    </div>
+                    <p class="text-[11px] text-teal-100/80">
+                      Confidencialidad médico-psicopedagógica garantizada. Acceso verificado y registrado por el equipo multiprofesional.
+                    </p>
                   </div>
-                  <div id="clinicalCipherPreview" class="font-mono text-[11px] text-emerald-300 truncate"></div>
                 </div>
-                <span class="shrink-0 text-[11px] bg-white/10 text-teal-100 px-3 py-1 rounded-lg border border-white/15 font-mono">
-                  Auditado en apx_sec_trazabilidad_forense
+                <span class="shrink-0 text-[11px] bg-white/10 text-teal-100 px-3 py-1 rounded-lg border border-white/15 font-semibold">
+                  Registro Clínico Institucional
                 </span>
               </div>
 
               <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
                 <div class="lg:col-span-6 bg-slate-50 p-5 rounded-2xl border border-slate-200 space-y-4 text-xs">
                   <div class="flex items-center justify-between">
-                    <h3 class="font-bold text-slate-900 text-sm uppercase tracking-wider">🧬 1. Ficha Médica, Diagnóstico y Anamnesis</h3>
-                    <span class="text-[11px] font-bold text-slate-500">Decreto N° 170</span>
+                    <h3 class="font-bold text-slate-900 text-sm uppercase tracking-wider flex items-center gap-2">
+                      <svg class="text-teal-700" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 2a2 2 0 0 0-2 2v5H4a2 2 0 0 0-2 2v2c0 1.1.9 2 2 2h5v5c0 1.1.9 2 2 2h2a2 2 0 0 0 2-2v-5h5a2 2 0 0 0 2-2v-2a2 2 0 0 0-2-2h-5V4a2 2 0 0 0-2-2h-2z"/></svg>
+                      <span>1. Ficha Médica, Diagnóstico y Anamnesis</span>
+                    </h3>
+                    <span class="text-[11px] font-bold text-slate-500">Evaluación Multiprofesional</span>
                   </div>
 
                   <div>
-                    <label class="font-bold text-slate-700 block">Diagnóstico Clínico Principal (Desencriptado AES-256):</label>
+                    <label class="font-bold text-slate-700 block">Diagnóstico Clínico Principal:</label>
                     <textarea id="clinDiagnostico" rows="2" class="mt-1 w-full rounded-xl border border-slate-300 p-3 bg-white font-medium text-slate-900"></textarea>
                   </div>
 
@@ -1669,20 +1860,24 @@
                   </div>
 
                   <div>
-                    <label class="font-bold text-slate-700 block mb-1.5">Farmacoterapia, Alergias y Perfil Sensorial (Columna JSON):</label>
+                    <label class="font-bold text-slate-700 block mb-1.5">Farmacoterapia, Alergias y Perfil Sensorial:</label>
                     <div id="clinMedicamentosBox" class="p-3.5 bg-white rounded-xl border border-slate-200 space-y-2"></div>
                   </div>
 
                   <button id="btnSaveClinical" onclick="window.app.saveClinicalRecord()"
-                    class="w-full bg-[#087c78] hover:bg-[#066a67] text-white font-semibold py-3 rounded-xl shadow-md transition">
-                    💾 Encriptar con AES-256-GCM y Guardar en MariaDB
+                    class="w-full bg-[#087c78] hover:bg-[#066a67] text-white font-semibold py-3 rounded-xl shadow-md transition flex items-center justify-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                    <span>Guardar Expediente Clínico</span>
                   </button>
                 </div>
 
                 <div class="lg:col-span-6 space-y-5 text-xs">
                   <div class="p-5 rounded-2xl bg-teal-50/60 border border-teal-200 space-y-3">
                     <div class="flex items-center justify-between">
-                      <h3 class="font-bold text-teal-950 text-sm uppercase tracking-wider">🧩 2. Plan de Apoyo Individual (PAI) & Estrategias DUA</h3>
+                      <h3 class="font-bold text-teal-950 text-sm uppercase tracking-wider flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>
+                        <span>2. Plan de Apoyo Individual (PAI) & Estrategias de Aula</span>
+                      </h3>
                       <span class="bg-teal-100 text-teal-900 font-bold px-2 py-0.5 rounded text-[10px]">Equipo PIE</span>
                     </div>
                     <div id="paiContentBox" class="space-y-3 text-slate-700"></div>
@@ -1690,7 +1885,10 @@
 
                   <div class="p-5 rounded-2xl bg-sky-50/60 border border-sky-200 space-y-3">
                     <div class="flex items-center justify-between">
-                      <h3 class="font-bold text-sky-950 text-sm uppercase tracking-wider">📑 3. Plan de Adecuación Curricular Individual (PACI)</h3>
+                      <h3 class="font-bold text-sky-950 text-sm uppercase tracking-wider flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/></svg>
+                        <span>3. Plan de Adecuación Curricular Individual (PACI)</span>
+                      </h3>
                       <span class="bg-sky-100 text-sky-900 font-bold px-2 py-0.5 rounded text-[10px]">Visado por UTP</span>
                     </div>
                     <div id="paciContentBox" class="space-y-2.5 text-slate-700"></div>
@@ -1706,29 +1904,96 @@
         <!-- ================================================================ -->
         <section id="tab-paec" class="tab-section hidden mx-auto max-w-[1480px] space-y-6">
           <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-            <div class="lg:col-span-5 bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-4 text-xs">
-              <div class="flex items-center justify-between pb-3 border-b border-slate-100">
-                <div>
-                  <span class="text-[10px] font-bold uppercase tracking-wider text-red-600">Orientaciones DEC MINEDUC</span>
-                  <h3 class="font-semibold text-slate-900 text-base">🤝 Plan de Acompañamiento Emocional y Conductual (PAEC)</h3>
+            <div class="lg:col-span-5 space-y-6 text-xs">
+              <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-4">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-slate-100">
+                  <div>
+                    <span class="text-[10px] font-bold uppercase tracking-wider text-red-600">Convivencia Escolar & Bienestar</span>
+                    <h3 class="font-semibold text-slate-900 text-base flex items-center gap-2 mt-0.5">
+                      <svg class="text-teal-700" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
+                      <span>Plan de Acompañamiento PAEC</span>
+                    </h3>
+                  </div>
+                  <span class="bg-emerald-50 text-emerald-800 border border-emerald-200 font-semibold text-[10px] px-2.5 py-1 rounded-full shrink-0">Acompañamiento Activo</span>
                 </div>
-                <span class="bg-slate-100 text-slate-700 font-mono text-[10px] px-2 py-1 rounded">AES-256</span>
+
+                <div>
+                  <label class="font-bold text-slate-700 block mb-1">Consultar Protocolo PAEC del Estudiante:</label>
+                  <select id="paecStudentSelect" onchange="window.app.onPaecStudentSelectChange(this.value)"
+                    class="w-full rounded-xl border border-slate-300 px-3 py-2 bg-slate-50 font-bold text-slate-800"></select>
+                </div>
+
+                <div id="paecDetailCard" class="space-y-3"></div>
               </div>
-              <div id="paecDetailCard" class="space-y-3"></div>
+
+              <!-- Formulario Operativo de Convivencia Escolar y Seguimiento Psicosocial -->
+              <div id="convivenciaInterventionPanel" class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-4">
+                <div class="pb-3 border-b border-slate-100">
+                  <span class="text-[10px] font-bold uppercase tracking-wider text-teal-700">Gestión de Convivencia Escolar & PIE</span>
+                  <h3 class="font-semibold text-slate-900 text-base flex items-center gap-2 mt-0.5">
+                    <svg class="text-teal-700" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/></svg>
+                    <span>Registrar Intervención o Seguimiento PAEC</span>
+                  </h3>
+                </div>
+                <form id="convivenciaForm" class="space-y-3">
+                  <div>
+                    <label class="font-bold text-slate-700 block">Estudiante acompañado</label>
+                    <select id="convivenciaStudentSelect" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 bg-white font-semibold"></select>
+                  </div>
+                  <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label class="font-bold text-slate-700 block">Tipo de Actuación</label>
+                      <select id="convivenciaTipo" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 bg-white font-semibold">
+                        <option value="CONTENCION_PREVENTIVA">Contención Preventiva Etapa 1-2</option>
+                        <option value="MEDIACION_CONVIVENCIA">Mediación Formativa / Convivencia</option>
+                        <option value="ENTREVISTA_FAMILIA_PAEC">Entrevista con Familia / Apoderado</option>
+                        <option value="SEGUIMIENTO_ASISTENCIA">Seguimiento Retención / Asistencia</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label class="font-bold text-slate-700 block">Estado del Caso</label>
+                      <select id="convivenciaEstado" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 bg-white font-semibold">
+                        <option value="CONTENIDA_RESUELTA">Contenida / Resuelta</option>
+                        <option value="SEGUIMIENTO_ACTIVO">En Seguimiento Activo</option>
+                        <option value="DERIVADA_PIE">Derivada a Especialista PIE</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div>
+                    <label class="font-bold text-slate-700 block">Antecedentes de la Intervención</label>
+                    <textarea id="convivenciaDescripcion" rows="2" required placeholder="Describa el contexto observado y factores ambientales..."
+                      class="mt-1 w-full rounded-xl border border-slate-300 p-2.5 bg-white"></textarea>
+                  </div>
+                  <div>
+                    <label class="font-bold text-slate-700 block">Acuerdos y Apoyos Aplicados</label>
+                    <input id="convivenciaAcciones" type="text" required value="Acompañamiento en zona de regulación sensorial y coordinación con docente de taller."
+                      class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 bg-white" />
+                  </div>
+                  <button type="submit"
+                    class="w-full bg-[#087c78] hover:bg-[#066a67] text-white font-semibold py-2.5 rounded-xl shadow transition flex items-center justify-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>
+                    <span>Guardar en Bitácora</span>
+                  </button>
+                </form>
+              </div>
             </div>
 
             <div class="lg:col-span-7 bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-4">
               <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
                 <div>
-                  <h3 class="font-semibold text-slate-900 text-base">🚨 Bitácora de Incidencias DEC y Despachos SOS en Aula</h3>
-                  <p class="text-xs text-slate-500">Registro cronológico cifrado de episodios conductuales y tiempos de respuesta del Profesional SOS.</p>
+                  <h3 class="font-semibold text-slate-900 text-base flex items-center gap-2">
+                    <svg class="text-red-600" xmlns="http://www.w3.org/2000/svg" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+                    <span>Bitácora de Incidencias DEC, Convivencia y Despachos SOS en Aula</span>
+                  </h3>
+                  <p class="text-xs text-slate-500">Registro cronológico de episodios conductuales y acompañamiento del Profesional SOS.</p>
                 </div>
-                <button onclick="window.app.openSosModal()"
-                  class="bg-red-600 hover:bg-red-700 text-white font-bold px-4 py-2 rounded-xl text-xs shadow">
-                  🚨 Disparar Alerta SOS Ahora
+                <button id="paecSosTriggerBtn" onclick="window.app.openSosModal()"
+                  class="inline-flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white font-bold px-4 py-2.5 rounded-xl text-xs shadow shrink-0">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg>
+                  <span>Disparar Alerta SOS Ahora</span>
                 </button>
               </div>
-              <div id="bitacoraList" class="space-y-3 text-xs max-h-[520px] overflow-y-auto"></div>
+              <div id="bitacoraList" class="space-y-3 text-xs max-h-[620px] overflow-y-auto"></div>
             </div>
           </div>
         </section>
@@ -1740,8 +2005,9 @@
           <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-6">
             <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-slate-200">
               <div>
-                <span class="bg-rose-50 text-rose-700 border border-rose-200 text-[11px] font-bold px-2.5 py-0.5 rounded-full uppercase">
-                  👨‍👩‍👦 Vista Exclusiva para la Familia (Modo Solo Lectura)
+                <span class="inline-flex items-center gap-1.5 bg-rose-50 text-rose-700 border border-rose-200 text-[11px] font-bold px-2.5 py-0.5 rounded-full uppercase">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                  <span>Vista Exclusiva para la Familia (Modo Solo Lectura)</span>
                 </span>
                 <h2 class="text-xl font-semibold text-slate-900 mt-1.5">Portal de Apoderados & Generador Automático del "Informe para la Familia"</h2>
                 <p class="text-xs text-slate-500">
@@ -1754,7 +2020,8 @@
                   class="rounded-xl border border-slate-300 px-3.5 py-2.5 text-xs font-bold bg-slate-50"></select>
                 <button onclick="window.app.generateOfficialFamilyPDF()"
                   class="bg-[#087c78] hover:bg-[#066a67] text-white font-semibold px-5 py-2.5 rounded-xl shadow-lg flex items-center gap-2 text-xs transition">
-                  <span>📄 Descargar PDF Oficial "Informe para la Familia"</span>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M12 18v-6"/><path d="m9 15 3 3 3-3"/></svg>
+                  <span>Descargar PDF Oficial "Informe para la Familia"</span>
                 </button>
               </div>
             </div>
@@ -1774,9 +2041,9 @@
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
                 <h2 class="text-2xl font-semibold tracking-tight text-slate-950">Cuentas del equipo</h2>
-                <p class="mt-1 text-sm text-slate-500">Perfiles y permisos de acceso institucional (Administradores, Docentes, Equipo PIE y Monitores)</p>
+                <p class="mt-1 text-sm text-slate-500">Perfiles y permisos de acceso institucional (Sostenedor, Dirección/UTP, Administración, Docentes, Equipo PIE, Convivencia, Monitores y Apoderados)</p>
               </div>
-              <button onclick="window.app.openCreateUserModal()"
+              <button id="btnOpenCreateUserModal" onclick="window.app.openCreateUserModal()"
                 class="inline-flex items-center gap-2 rounded-xl bg-[#087c78] hover:bg-[#066a67] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition">
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" x2="19" y1="8" y2="14"/><line x1="22" x2="16" y1="11" y2="11"/></svg>
                 <span>Crear cuenta</span>
@@ -1790,25 +2057,32 @@
             </div>
           </div>
 
-          <!-- Sub-bloque 2: Matriz de Control de Acceso Basado en Roles (RBAC) -->
+          <!-- Sub-bloque 2: Perfiles y Permisos Institucionales -->
           <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-4">
             <div>
-              <h3 class="text-lg font-semibold text-slate-900">🔐 Matriz de Control de Acceso Basado en Roles (RBAC Institucional)</h3>
-              <p class="text-xs text-slate-500">Definición granular de privilegios según cargos MINEDUC y resguardo de datos sensibles Ley 19.628.</p>
+              <h3 class="text-lg font-semibold text-slate-900 flex items-center gap-2">
+                <svg class="text-teal-700" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                <span>Perfiles y Permisos del Sistema (8 Perfiles Institucionales)</span>
+              </h3>
+              <p class="text-xs text-slate-500">Definición de privilegios y módulos habilitados según cada cargo institucional.</p>
             </div>
-            <div id="rbacRolesGrid" class="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs"></div>
+            <div id="rbacRolesGrid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3 text-xs"></div>
           </div>
 
-          <!-- Sub-bloque 3: Tabla de Logs de Auditoría Forense -->
+          <!-- Sub-bloque 3: Tabla de Logs de Auditoría -->
           <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-4">
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-200">
               <div>
-                <h3 class="text-lg font-semibold text-slate-900">🛡️ Registro Inmutable de Auditoría (Trazabilidad Ley N° 19.628)</h3>
-                <p class="text-xs text-slate-500">Bitácora forense de cada acceso a Fichas Clínicas, desencriptación AES-256, firmas PID, documentos y alertas SOS.</p>
+                <h3 class="text-lg font-semibold text-slate-900 flex items-center gap-2">
+                  <svg class="text-teal-700" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></svg>
+                  <span>Registro de Actividad y Auditoría del Sistema</span>
+                </h3>
+                <p class="text-xs text-slate-500">Bitácora de accesos a Fichas Clínicas, firmas electrónicas con PIN, documentos y alertas SOS.</p>
               </div>
               <button onclick="window.app.loadAuditLogs()"
-                class="bg-[#073b3a] hover:bg-slate-800 text-white text-xs font-semibold px-4 py-2 rounded-xl transition">
-                🔄 Refrescar Logs en Vivo
+                class="inline-flex items-center gap-2 bg-[#073b3a] hover:bg-slate-800 text-white text-xs font-semibold px-4 py-2 rounded-xl transition">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 16h5v5"/></svg>
+                <span>Refrescar Logs en Vivo</span>
               </button>
             </div>
 
@@ -1820,7 +2094,7 @@
                     <th class="p-3.5">Funcionario / Rol</th>
                     <th class="p-3.5">Módulo Auditado</th>
                     <th class="p-3.5">Operación</th>
-                    <th class="p-3.5">Detalle de Trazabilidad Legal</th>
+                    <th class="p-3.5">Detalle de Actividad</th>
                     <th class="p-3.5">IP Origen</th>
                   </tr>
                 </thead>
@@ -1831,59 +2105,103 @@
         </section>
 
         <!-- ================================================================ -->
-        <!-- SECCIÓN 10: CONFIGURACIÓN (SETTINGSVIEW FIGMA)                   -->
+        <!-- SECCIÓN 10: CONFIGURACIÓN (TEMA OSCURO, CLAVE Y PIN ELECTRÓNICO) -->
         <!-- ================================================================ -->
-        <section id="tab-configuracion" class="tab-section hidden mx-auto max-w-4xl space-y-6">
-          <div>
-            <h2 class="text-2xl font-semibold tracking-tight text-slate-950">Configuración</h2>
-            <p class="mt-1 text-sm text-slate-500">Seguridad, cifrado institucional y preferencias de plataforma</p>
+        <section id="tab-configuracion" class="tab-section hidden mx-auto max-w-5xl space-y-6">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h2 class="text-2xl font-semibold tracking-tight text-slate-950">Configuración Institucional</h2>
+              <p class="mt-1 text-sm text-slate-500">Apariencia visual (Modo Claro / Modo Oscuro), credenciales de acceso y PIN de Firma Electrónica</p>
+            </div>
           </div>
 
+          <!-- Tarjetas Informativas y Selector de Tema -->
           <div class="grid gap-5 md:grid-cols-2">
+            <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+              <div class="mb-4 w-fit rounded-xl bg-teal-50 p-2.5 text-teal-700">
+                <svg xmlns="http://www.w3.org/2000/svg" width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+              </div>
+              <h3 class="font-semibold text-slate-900">Apariencia y Modo Oscuro Institucional</h3>
+              <p class="mt-2 text-sm leading-6 text-slate-500">
+                Selecciona el esquema de color de la interfaz. Tu preferencia se guarda automáticamente en el navegador (<code>localStorage</code>).
+              </p>
+              <div class="mt-4 flex items-center gap-2.5">
+                <button type="button" onclick="window.app.setTheme('light')"
+                  class="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-xs font-semibold text-slate-700 hover:border-teal-600 transition">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
+                  <span>Modo Claro</span>
+                </button>
+                <button type="button" onclick="window.app.setTheme('dark')"
+                  class="inline-flex items-center gap-2 rounded-xl bg-[#073b3a] px-4 py-2 text-xs font-semibold text-white hover:bg-[#087c78] transition">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+                  <span>Modo Oscuro</span>
+                </button>
+              </div>
+            </div>
+
             <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
               <div class="mb-4 w-fit rounded-xl bg-teal-50 p-2.5 text-teal-700">
                 <svg xmlns="http://www.w3.org/2000/svg" width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></svg>
               </div>
-              <h3 class="font-semibold text-slate-900">Seguridad de la cuenta</h3>
+              <h3 class="font-semibold text-slate-900">Seguridad de la cuenta institucional</h3>
               <p id="settingsUserSummary" class="mt-2 text-sm leading-6 text-slate-500">
-                Sesión protegida por 8 horas con token JWT firmado (HMAC-SHA256) y bloqueo automático ante intentos fallidos.
+                Sesión institucional activa por 8 horas con control de acceso por perfil y bloqueo automático ante intentos fallidos.
               </p>
+              <div class="mt-3 inline-flex items-center gap-1.5 rounded-full bg-emerald-50 border border-emerald-200 px-3 py-1 text-xs font-bold text-emerald-800">
+                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                <span>Sesión Verificada</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Formularios de Cambio de Contraseña y Cambio de PIN Electrónico -->
+          <div class="grid gap-5 md:grid-cols-2">
+            <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+              <h3 class="font-semibold text-slate-900 flex items-center gap-2">
+                <svg class="text-teal-700" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                <span>Actualizar contraseña de acceso</span>
+              </h3>
+              <p class="mt-1 text-xs text-slate-500">Mínimo 10 caracteres alfanuméricos y símbolos.</p>
+              <form id="changePasswordForm" class="mt-4 space-y-3 text-xs">
+                <div>
+                  <label class="font-bold text-slate-700 block">Contraseña actual</label>
+                  <input id="cfgCurrentPassword" type="password" required placeholder="••••••••••"
+                    class="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 bg-white" />
+                </div>
+                <div>
+                  <label class="font-bold text-slate-700 block">Nueva contraseña institucional</label>
+                  <input id="cfgNewPassword" type="password" required minlength="10" placeholder="Mínimo 10 caracteres"
+                    class="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 bg-white" />
+                </div>
+                <button type="submit"
+                  class="w-full rounded-xl bg-[#087c78] hover:bg-[#066a67] py-2.5 text-xs font-semibold text-white shadow-sm transition">
+                  Actualizar contraseña
+                </button>
+              </form>
             </div>
 
-            <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-              <div class="mb-4 w-fit rounded-xl bg-teal-50 p-2.5 text-teal-700">
-                <svg xmlns="http://www.w3.org/2000/svg" width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5V19A9 3 0 0 0 21 19V5"/><path d="M3 12A9 3 0 0 0 21 12"/></svg>
-              </div>
-              <h3 class="font-semibold text-slate-900">Base de datos y Criptografía</h3>
-              <p class="mt-2 text-sm leading-6 text-slate-500">
-                Información centralizada en MariaDB 11.4 con cifrado autenticado <strong>AES-256-GCM</strong> en reposo (Ley N° 19.628) y control de acceso por rol.
-              </p>
-            </div>
-
-            <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-              <div class="mb-4 w-fit rounded-xl bg-teal-50 p-2.5 text-teal-700">
-                <svg xmlns="http://www.w3.org/2000/svg" width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2"/></svg>
-              </div>
-              <h3 class="font-semibold text-slate-900">Trazabilidad forense</h3>
-              <p class="mt-2 text-sm leading-6 text-slate-500">
-                Las altas, modificaciones, eliminaciones, importaciones Excel, firmas PID y descargas de documentos quedan auditadas.
-              </p>
-              <button onclick="window.app.switchTab('tab-auditoria')" class="mt-3 text-xs font-semibold text-teal-700 hover:underline">
-                Abrir consola de auditoría →
-              </button>
-            </div>
-
-            <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-              <div class="mb-4 w-fit rounded-xl bg-teal-50 p-2.5 text-teal-700">
-                <svg xmlns="http://www.w3.org/2000/svg" width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
-              </div>
-              <h3 class="font-semibold text-slate-900">Copias y exportación</h3>
-              <p class="mt-2 text-sm leading-6 text-slate-500">
-                Exporta la base estudiantil completa en formato Excel (.xlsx) o importa planillas institucionales en cualquier momento.
-              </p>
-              <button onclick="window.app.exportStudentsExcel()" class="mt-3 text-xs font-semibold text-teal-700 hover:underline">
-                Descargar respaldo Excel ahora →
-              </button>
+            <div id="settingsPinCard" class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+              <h3 class="font-semibold text-slate-900 flex items-center gap-2">
+                <svg class="text-teal-700" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>
+                <span>Actualizar PIN de Firma Electrónica (6 dígitos)</span>
+              </h3>
+              <p class="mt-1 text-xs text-slate-500">Utilizado para validar registros en el Libro Digital (Firmado electrónicamente con PIN).</p>
+              <form id="changePinForm" class="mt-4 space-y-3 text-xs">
+                <div>
+                  <label class="font-bold text-slate-700 block">Contraseña actual de verificación</label>
+                  <input id="cfgPinCurrentPassword" type="password" required placeholder="••••••••••"
+                    class="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 bg-white" />
+                </div>
+                <div>
+                  <label class="font-bold text-slate-700 block">Nuevo PIN numérico de 6 dígitos</label>
+                  <input id="cfgNewPin" type="password" required maxlength="6" pattern="\d{6}" placeholder="Ej: 849206"
+                    class="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 font-mono bg-white" />
+                </div>
+                <button type="submit"
+                  class="w-full rounded-xl bg-[#073b3a] hover:bg-slate-800 py-2.5 text-xs font-semibold text-white shadow-sm transition">
+                  Guardar nuevo PIN de Firma
+                </button>
+              </form>
             </div>
           </div>
         </section>
@@ -1900,11 +2218,16 @@
     <div class="bg-white rounded-3xl max-w-lg w-full p-6 md:p-8 shadow-2xl border-t-8 border-red-600">
       <div class="flex items-center justify-between">
         <span class="bg-red-100 text-red-800 font-extrabold text-[11px] px-3 py-1 rounded-full uppercase">Protocolo de Emergencia DEC Etapa 3</span>
-        <button onclick="window.app.closeSosModal()" class="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100">✕</button>
+        <button onclick="window.app.closeSosModal()" class="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100" aria-label="Cerrar">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+        </button>
       </div>
-      <h3 class="text-xl font-extrabold text-red-700 mt-2">🚨 Activar Botón SOS en Aula</h3>
+      <h3 class="text-xl font-extrabold text-red-700 mt-2 flex items-center gap-2">
+        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+        <span>Activar Botón SOS en Aula</span>
+      </h3>
       <p class="text-xs text-slate-600 mt-1">
-        Notifica instantáneamente al <strong>Profesional SOS designado en el PAEC</strong> del alumno, despliega en pantalla el protocolo de contención personalizado y registra el evento encriptado en la bitácora.
+        Notifica instantáneamente al <strong>Profesional SOS designado en el PAEC</strong> del alumno, despliega en pantalla el protocolo de contención personalizado y registra el evento en la bitácora institucional.
       </p>
 
       <form id="sosForm" class="mt-5 space-y-4 text-xs">
@@ -1928,8 +2251,9 @@
             Cancelar
           </button>
           <button type="submit"
-            class="bg-red-600 hover:bg-red-700 text-white font-extrabold px-6 py-2.5 rounded-xl shadow-lg shadow-red-600/30">
-            🚨 DESPACHAR ALERTA SOS AHORA
+            class="inline-flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white font-extrabold px-6 py-2.5 rounded-xl shadow-lg shadow-red-600/30">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+            <span>DESPACHAR ALERTA SOS AHORA</span>
           </button>
         </div>
       </form>
@@ -1947,8 +2271,8 @@
           <h2 id="studentModalTitle" class="text-xl font-semibold tracking-tight text-slate-950">Registrar estudiante</h2>
           <p class="mt-1 text-sm text-slate-500">Ficha institucional completa • Los campos marcados con * son obligatorios</p>
         </div>
-        <button type="button" onclick="window.app.closeStudentModal()" class="rounded-lg p-2 text-slate-400 hover:bg-slate-100">
-          ✕
+        <button type="button" onclick="window.app.closeStudentModal()" class="rounded-lg p-2 text-slate-400 hover:bg-slate-100" aria-label="Cerrar">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
         </button>
       </div>
 
@@ -2030,8 +2354,8 @@
                   class="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm outline-none focus:border-teal-600" />
               </label>
               <label class="block text-sm font-medium text-slate-700">
-                Nivel Decreto 83
-                <input id="newEstNivel" type="text" value="Nivel Laboral 2 (Decreto Exento N° 83)"
+                Nivel educativo
+                <input id="newEstNivel" type="text" value="Nivel Laboral 2"
                   class="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm outline-none focus:border-teal-600" />
               </label>
               <label class="block text-sm font-medium text-slate-700">
@@ -2047,8 +2371,8 @@
                 Categorización Funcional (Grupo A/B) *
                 <select id="newEstGrupo"
                   class="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm font-semibold text-teal-800 outline-none focus:border-teal-600">
-                  <option value="GRUPO_A">🟢 GRUPO A (Mayor Funcionalidad / Autonomía)</option>
-                  <option value="GRUPO_B">🟡 GRUPO B (Mayor Apoyo y Mediación)</option>
+                  <option value="GRUPO_A">GRUPO A (Mayor Funcionalidad / Autonomía)</option>
+                  <option value="GRUPO_B">GRUPO B (Mayor Apoyo y Mediación)</option>
                 </select>
               </label>
               <label class="block text-sm font-medium text-slate-700">
@@ -2133,11 +2457,11 @@
           <section>
             <div class="mb-4 flex items-center gap-3">
               <span class="h-5 w-1 rounded-full bg-teal-600"></span>
-              <h3 class="font-semibold text-slate-900">Antecedentes educativos y diagnósticos (Cifrado Ley 19.628)</h3>
+              <h3 class="font-semibold text-slate-900">Antecedentes educativos y diagnósticos</h3>
             </div>
             <div class="grid gap-4 md:grid-cols-2">
               <label class="block text-sm font-medium text-slate-700">
-                Diagnóstico principal (Decreto 170)
+                Diagnóstico principal
                 <input id="newEstDiagPrincipal" type="text" placeholder="Ej: Discapacidad Intelectual Leve / TEA"
                   class="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm outline-none focus:border-teal-600" />
               </label>
@@ -2147,7 +2471,7 @@
                   class="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm outline-none focus:border-teal-600" />
               </label>
               <label class="block text-sm font-medium text-slate-700">
-                Necesidades de apoyo (DUA / PIE)
+                Necesidades de apoyo (PIE)
                 <textarea id="newEstApoyos" rows="3"
                   class="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm outline-none resize-y focus:border-teal-600">Anticipación visual con pictogramas ARASAAC y mediación paso a paso en taller.</textarea>
               </label>
@@ -2159,7 +2483,7 @@
               <label class="block text-sm font-medium text-slate-700">
                 Observaciones pedagógicas
                 <textarea id="newEstObs" rows="3"
-                  class="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm outline-none resize-y focus:border-teal-600">Estudiante derivado con evaluación diagnóstica integral Decreto 170 al día.</textarea>
+                  class="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm outline-none resize-y focus:border-teal-600">Estudiante derivado con evaluación diagnóstica integral al día.</textarea>
               </label>
               <label class="block text-sm font-medium text-slate-700">
                 Antecedentes relevantes / Anamnesis
@@ -2197,8 +2521,8 @@
           <h2 class="text-xl font-semibold tracking-tight text-slate-950">Ficha individual del estudiante</h2>
           <p id="profileModalSubtitle" class="mt-1 text-sm text-slate-500">Registro MAT-2026-001</p>
         </div>
-        <button type="button" onclick="window.app.closeStudentProfileModal()" class="rounded-lg p-2 text-slate-400 hover:bg-slate-100">
-          ✕
+        <button type="button" onclick="window.app.closeStudentProfileModal()" class="rounded-lg p-2 text-slate-400 hover:bg-slate-100" aria-label="Cerrar">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
         </button>
       </div>
 
@@ -2217,8 +2541,8 @@
           <h2 class="text-xl font-semibold tracking-tight text-slate-950">Crear cuenta de usuario</h2>
           <p class="mt-1 text-sm text-slate-500">La contraseña temporal debe tener al menos 10 caracteres</p>
         </div>
-        <button type="button" onclick="document.getElementById('createUserModal').classList.add('hidden')" class="rounded-lg p-2 text-slate-400 hover:bg-slate-100">
-          ✕
+        <button type="button" onclick="document.getElementById('createUserModal').classList.add('hidden')" class="rounded-lg p-2 text-slate-400 hover:bg-slate-100" aria-label="Cerrar">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
         </button>
       </div>
       <div class="p-6">
@@ -2253,11 +2577,14 @@
             Perfil institucional *
             <select id="newUserRole"
               class="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm outline-none focus:border-teal-600">
-              <option value="docente">Docente Titular</option>
-              <option value="profesor">Profesor / Co-Docente</option>
-              <option value="especialista_pie">Especialista PIE</option>
-              <option value="administrador">Administrador / UTP</option>
-              <option value="monitor">Monitor de Taller</option>
+              <option value="docente">Docente Titular Educación Diferencial</option>
+              <option value="especialista_pie">Especialista PIE (Psicología / T.O. / Fono)</option>
+              <option value="convivencia">Encargado/a de Convivencia Escolar</option>
+              <option value="monitor">Monitor Vocacional de Taller</option>
+              <option value="director_utp">Director/a o Jefe/a UTP</option>
+              <option value="sostenedor">Sostenedor Institucional</option>
+              <option value="administrador">Administrador Institucional</option>
+              <option value="apoderado">Apoderado / Familia</option>
             </select>
           </label>
           <button type="submit"
@@ -2270,13 +2597,48 @@
   </div>
 
   <!-- ==================================================================== -->
-  <!-- MODAL 5: NOTIFICACIÓN TOAST FLOTANTE                                 -->
+  <!-- MODAL 5: ACCESO RÁPIDO DE DESARROLLO (8 CUENTAS INSTITUCIONALES)     -->
+  <!-- ==================================================================== -->
+  <div id="devQuickLoginModal"
+    class="hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm">
+    <div class="max-h-[92vh] w-full max-w-4xl overflow-y-auto rounded-3xl bg-white shadow-2xl border border-slate-200">
+      <div class="sticky top-0 z-10 flex items-start justify-between border-b border-slate-200 bg-[#073b3a] px-6 py-5 text-white">
+        <div>
+          <span class="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-0.5 text-[11px] font-bold uppercase tracking-wider text-teal-200">
+            Entorno de Desarrollo
+          </span>
+          <h2 class="mt-1.5 text-xl font-semibold tracking-tight text-white">Cuentas de Usuario e Inicio de Sesión Rápido</h2>
+          <p class="mt-1 text-xs text-teal-100/80">
+            Selecciona cualquiera de las 8 cuentas institucionales generadas para iniciar sesión con 1 clic o autocompletar el formulario. Contraseña común: <code class="font-mono font-bold text-emerald-300">Ap4nd1#S3cV4ult!2026_Cl</code>
+          </p>
+        </div>
+        <button type="button" onclick="window.app.closeDevLoginModal()" class="rounded-xl p-2 text-teal-100 hover:bg-white/10 transition" aria-label="Cerrar">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+        </button>
+      </div>
+
+      <div class="p-6 space-y-4">
+        <div id="devAccountsModalGrid" class="grid grid-cols-1 md:grid-cols-2 gap-3.5"></div>
+      </div>
+
+      <div class="flex items-center justify-between border-t border-slate-100 bg-slate-50 px-6 py-4 text-xs text-slate-500">
+        <span>PIN de Firma Electrónica (Docentes / UTP): <code class="font-mono font-bold text-slate-800">849206</code></span>
+        <button type="button" onclick="window.app.closeDevLoginModal()"
+          class="rounded-xl border border-slate-200 bg-white px-4 py-2 font-semibold text-slate-700 hover:bg-slate-100 transition">
+          Cerrar ventana
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================================================================== -->
+  <!-- MODAL 6: NOTIFICACIÓN TOAST FLOTANTE                                 -->
   <!-- ==================================================================== -->
   <div id="toastContainer" class="fixed bottom-5 right-5 z-50 space-y-2 max-w-sm"></div>
 
   <!-- Cargar Motor JS API y Controlador Principal de la Aplicación -->
-  <script src="/js/api-sdk.js?v=4.0"></script>
-  <script src="/js/app.js?v=4.0"></script>
+  <script src="/js/api-sdk.js?v=6.0"></script>
+  <script src="/js/app.js?v=6.0"></script>
 </body>
 
 </html>
