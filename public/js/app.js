@@ -398,9 +398,19 @@ class SgiApandiApplication {
       await this.performLogin(email, pass);
     });
 
+    document.getElementById('semestresConfigForm')?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      await this.saveSemestersConfig();
+    });
+
+    document.getElementById('bloqueForm')?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      await this.saveBlockConfig();
+    });
+
     document.getElementById('pidForm')?.addEventListener('submit', async (e) => {
       e.preventDefault();
-      await this.submitPidClass();
+      await this.submitPidClass(false);
     });
 
     document.getElementById('evalForm')?.addEventListener('submit', async (e) => {
@@ -996,6 +1006,7 @@ class SgiApandiApplication {
     document.getElementById(subtabId)?.classList.remove('hidden');
 
     const map = {
+      'book-config': 'btnSubtabConfig',
       'book-pid': 'btnSubtabPid',
       'book-asistencia': 'btnSubtabAsist',
       'book-evaluaciones': 'btnSubtabEval'
@@ -1004,11 +1015,22 @@ class SgiApandiApplication {
       const btn = document.getElementById(btnId);
       if (!btn) return;
       if (panel === subtabId) {
-        btn.className = 'book-subtab bg-white text-teal-900 shadow-sm px-3.5 py-2 rounded-lg transition font-extrabold';
+        btn.className = 'book-subtab bg-white text-apandi-900 shadow-sm px-3.5 py-2 rounded-lg transition font-extrabold border border-slate-200';
       } else {
         btn.className = 'book-subtab text-slate-600 hover:text-slate-900 px-3.5 py-2 rounded-lg transition font-bold';
       }
     });
+
+    if (subtabId === 'book-config') {
+      this.loadSemestersConfig();
+      this.loadBlocksConfig();
+    } else if (subtabId === 'book-pid') {
+      this.loadPidSection();
+    } else if (subtabId === 'book-asistencia') {
+      this.updateAttendanceBlocksDropdown();
+    } else if (subtabId === 'book-evaluaciones') {
+      this.loadQualitativeEvaluationsSection();
+    }
   }
 
   handleGlobalSearch(query) {
@@ -2662,12 +2684,48 @@ class SgiApandiApplication {
   // ===========================================================================
 
   async loadPedagogicalBook() {
-    try {
-      const data = await this.api.request('pedagogico/libro');
+    await Promise.all([
+      this.loadSemestersConfig(),
+      this.loadBlocksConfig(),
+      this.loadPidSection()
+    ]);
+  }
 
-      const pidBox = document.getElementById('pidClassesList');
-      if (pidBox && data.clasesPid) {
-        pidBox.innerHTML = data.clasesPid
+  // ---------------------------------------------------------------------------
+  // 5.1 Sub-vista 1: Configuración de Semestres y Bloques Horarios
+  // ---------------------------------------------------------------------------
+
+  async loadSemestersConfig() {
+    try {
+      const res = await this.api.request('pedagogico/semestres');
+      if (!res.ok) return;
+      this.semestres = res.semestres || [];
+
+      const sem1 = this.semestres.find((s) => Number(s.numero_semestre) === 1);
+      const sem2 = this.semestres.find((s) => Number(s.numero_semestre) === 2);
+
+      if (sem1) {
+        const inpIni = document.getElementById('sem1Inicio');
+        const inpFin = document.getElementById('sem1Termino');
+        const chk = document.getElementById('sem1Activo');
+        if (inpIni) inpIni.value = sem1.fecha_inicio;
+        if (inpFin) inpFin.value = sem1.fecha_termino;
+        if (chk) chk.checked = !!Number(sem1.activo);
+      }
+
+      if (sem2) {
+        const inpIni = document.getElementById('sem2Inicio');
+        const inpFin = document.getElementById('sem2Termino');
+        const chk = document.getElementById('sem2Activo');
+        if (inpIni) inpIni.value = sem2.fecha_inicio;
+        if (inpFin) inpFin.value = sem2.fecha_termino;
+        if (chk) chk.checked = !!Number(sem2.activo);
+      }
+
+      const semActivo = this.semestres.find((s) => Number(s.activo) === 1) || sem2 || sem1;
+      const weeksBox = document.getElementById('semestersWeeksList');
+      if (weeksBox && semActivo && semActivo.semanas) {
+        weeksBox.innerHTML = semActivo.semanas
           .map(
             (c) => `
             <div class="p-5 rounded-2xl bg-slate-50 border border-slate-200 space-y-3 text-xs">
@@ -2746,56 +2804,365 @@ class SgiApandiApplication {
                   </button>
                 </div>
               </div>
-            `;
-          })
+              <h4 class="font-extrabold text-slate-900 text-xs mt-1">${b.bloque_nombre}</h4>
+              <p class="text-[11px] text-slate-500">${b.taller_nombre} • Docente: ${b.docente_nombre}</p>
+            </div>
+            <div class="flex items-center gap-1.5 shrink-0">
+              <button type="button" onclick="window.app.editBlock(${b.id_horario})"
+                class="px-2.5 py-1 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-100 font-bold text-xs">
+                ✏️ Editar
+              </button>
+              <button type="button" onclick="window.app.selectBlockForAssignment(${b.id_horario})"
+                class="px-2.5 py-1 rounded-lg bg-apandi-600 hover:bg-apandi-700 text-white font-extrabold text-xs">
+                👥 Asignar Alumnos
+              </button>
+            </div>
+          </div>
+        `
+          )
           .join('');
       }
 
-      const evalBox = document.getElementById('evaluationsList');
-      if (evalBox && data.evaluaciones) {
-        evalBox.innerHTML = data.evaluaciones
-          .map((ev) => {
-            const color =
-              ev.nivel_logro === 'LOGRADO'
-                ? 'bg-emerald-100 text-emerald-900 border-emerald-300'
-                : ev.nivel_logro === 'EN_DESARROLLO'
-                ? 'bg-teal-100 text-teal-900 border-teal-300'
-                : 'bg-amber-100 text-amber-900 border-amber-300';
-            return `
-              <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200 flex flex-col justify-between gap-2">
-                <div class="flex items-start justify-between gap-2">
-                  <div>
-                    <span class="text-[10px] font-bold uppercase text-slate-500">${ev.dimension.replace(/_/g, ' ')}</span>
-                    <h4 class="font-extrabold text-slate-900 text-sm">${ev.estudiante_nombre}</h4>
-                  </div>
-                  <span class="px-2.5 py-1 rounded-full font-extrabold text-[11px] border shrink-0 ${color}">
-                    ${ev.nivel_logro.replace(/_/g, ' ')}
-                  </span>
-                </div>
-                <p class="font-semibold text-slate-800">${ev.indicador_competencia}</p>
-                <p class="text-[11px] text-slate-500 italic">"${ev.comentario_pedagogico || 'Sin observación adicional'}"</p>
-              </div>
-            `;
-          })
+      const assignSel = document.getElementById('assignBlockSelector');
+      if (assignSel) {
+        assignSel.innerHTML = this.bloques
+          .map(
+            (b) => `
+          <option value="${b.id_horario}">Bloque #${b.id_horario}: ${diasNombres[b.dia_semana]} (${b.hora_inicio.substring(0, 5)}-${b.hora_fin.substring(0, 5)}) - ${b.bloque_nombre}</option>
+        `
+          )
           .join('');
+
+        if (this.bloques.length > 0) {
+          this.loadBlockStudentsAssignment(assignSel.value || this.bloques[0].id_horario);
+        }
       }
+
+      this.updateAttendanceBlocksDropdown();
     } catch (err) {
-      console.warn('Error cargando Libro Digital:', err.message);
+      console.warn('Error cargando bloques:', err.message);
     }
   }
 
-  async submitPidClass() {
+  editBlock(idHorario) {
+    const b = this.bloques.find((x) => Number(x.id_horario) === Number(idHorario));
+    if (!b) return;
+    document.getElementById('bloqueId').value = b.id_horario;
+    document.getElementById('bloqueTaller').value = b.id_taller;
+    document.getElementById('bloqueDia').value = b.dia_semana;
+    document.getElementById('bloqueNombre').value = b.bloque_nombre;
+    document.getElementById('bloqueHoraInicio').value = b.hora_inicio.substring(0, 5);
+    document.getElementById('bloqueHoraFin').value = b.hora_fin.substring(0, 5);
+    document.getElementById('bloqueDuracion').value = b.duracion_minutos || 90;
+    this.showToast(`✏️ Bloque #${idHorario} cargado en el formulario para edición.`);
+  }
+
+  resetBlockForm() {
+    document.getElementById('bloqueId').value = '';
+    document.getElementById('bloqueNombre').value = '';
+    document.getElementById('bloqueHoraInicio').value = '08:30';
+    document.getElementById('bloqueHoraFin').value = '10:00';
+    document.getElementById('bloqueDuracion').value = '90';
+  }
+
+  async saveBlockConfig() {
     try {
-      const pin = document.getElementById('pidPin').value;
+      const idHorario = document.getElementById('bloqueId')?.value;
+      const idTaller = Number(document.getElementById('bloqueTaller')?.value || 1);
+      const diaSemana = Number(document.getElementById('bloqueDia')?.value || 1);
+      const bloqueNombre = document.getElementById('bloqueNombre')?.value.trim();
+      const horaInicio = document.getElementById('bloqueHoraInicio')?.value;
+      const horaFin = document.getElementById('bloqueHoraFin')?.value;
+      const duracion = Number(document.getElementById('bloqueDuracion')?.value || 90);
+
+      const res = await this.api.request('pedagogico/bloques', {
+        method: 'POST',
+        body: {
+          id_horario: idHorario ? Number(idHorario) : 0,
+          id_taller: idTaller,
+          dia_semana: diaSemana,
+          bloque_nombre: bloqueNombre,
+          hora_inicio: horaInicio + ':00',
+          hora_fin: horaFin + ':00',
+          duracion_minutos: duracion
+        }
+      });
+
+      this.showToast(`✅ ${res.mensaje}`);
+      this.resetBlockForm();
+      await this.loadBlocksConfig();
+    } catch (err) {
+      this.showToast(err.message, 'error');
+    }
+  }
+
+  selectBlockForAssignment(idHorario) {
+    const sel = document.getElementById('assignBlockSelector');
+    if (sel) {
+      sel.value = idHorario;
+      this.loadBlockStudentsAssignment(idHorario);
+      sel.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }
+
+  loadBlockStudentsAssignment(idHorario) {
+    const b = this.bloques.find((x) => Number(x.id_horario) === Number(idHorario));
+    const grid = document.getElementById('blockStudentsAssignmentGrid');
+    const badge = document.getElementById('assignBlockInfoBadge');
+    if (!b || !grid) return;
+
+    const assignedIds = new Set((b.estudiantes_asignados || []).map((e) => Number(e.id_estudiante)));
+    badge.textContent = `Nómina para: ${b.bloque_nombre} (${assignedIds.size} de ${this.students.length} asignados)`;
+
+    grid.innerHTML = this.students
+      .map((s) => {
+        const isAssigned = assignedIds.has(Number(s.id_estudiante));
+        return `
+        <label class="p-3 rounded-xl border ${
+          isAssigned ? 'bg-blue-50/80 border-blue-300 text-blue-950 font-bold' : 'bg-white border-slate-200 text-slate-700'
+        } flex items-center justify-between gap-3 cursor-pointer hover:bg-slate-50 transition">
+          <div class="flex items-center gap-2.5">
+            <input type="checkbox" name="assignStudent" value="${s.id_estudiante}" ${isAssigned ? 'checked' : ''}
+              class="w-4 h-4 rounded text-apandi-600 focus:ring-0 cursor-pointer" />
+            <div>
+              <div class="text-xs font-extrabold">${s.nombres} ${s.apellidos}</div>
+              <div class="text-[10px] text-slate-500">${s.rut} • ${s.taller_nombre}</div>
+            </div>
+          </div>
+          <span class="text-[10px] px-2 py-0.5 rounded-full font-extrabold ${
+            s.grupo_funcionalidad === 'GRUPO_A' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
+          }">
+            ${s.grupo_funcionalidad === 'GRUPO_A' ? 'Grupo A' : 'Grupo B'}
+          </span>
+        </label>
+      `;
+      })
+      .join('');
+  }
+
+  toggleAllBlockStudents(check) {
+    document.querySelectorAll('input[name="assignStudent"]').forEach((cb) => {
+      cb.checked = check;
+    });
+  }
+
+  async saveBlockStudentsAssignment() {
+    try {
+      const idHorario = Number(document.getElementById('assignBlockSelector')?.value);
+      if (!idHorario) return;
+
+      const checkedIds = Array.from(document.querySelectorAll('input[name="assignStudent"]:checked')).map((cb) =>
+        Number(cb.value)
+      );
+
+      const res = await this.api.request('pedagogico/bloques/asignar-estudiantes', {
+        method: 'POST',
+        body: {
+          id_horario: idHorario,
+          estudiantes_ids: checkedIds
+        }
+      });
+
+      this.showToast(`✅ ${res.mensaje}`);
+      await this.loadBlocksConfig();
+    } catch (err) {
+      this.showToast(err.message, 'error');
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // 5.2 Sub-vista 2: Planificación Semanal PID + Aprobación UTP
+  // ---------------------------------------------------------------------------
+
+  async loadPidSection() {
+    try {
+      const data = await this.api.request('pedagogico/libro');
+      this.pidClasses = data.clasesPid || [];
+      this.filterPidClasses();
+    } catch (err) {
+      console.warn('Error cargando planificaciones PID:', err.message);
+    }
+  }
+
+  filterPidClasses() {
+    const sem = document.getElementById('pidFilterSemestre')?.value;
+    const semana = document.getElementById('pidFilterSemana')?.value;
+    const taller = document.getElementById('pidFilterTaller')?.value;
+
+    let filtered = this.pidClasses;
+    if (sem) {
+      filtered = filtered.filter((c) => Number(c.semestre) === Number(sem));
+    }
+    if (semana) {
+      filtered = filtered.filter((c) => Number(c.numero_semana) === Number(semana));
+    }
+    if (taller) {
+      filtered = filtered.filter((c) => Number(c.id_taller) === Number(taller));
+    }
+
+    const countBadge = document.getElementById('pidCountBadge');
+    if (countBadge) {
+      countBadge.textContent = `${filtered.length} planificaciones`;
+    }
+
+    this.renderPidClasses(filtered);
+  }
+
+  renderPidClasses(list) {
+    const box = document.getElementById('pidClassesList');
+    if (!box) return;
+
+    if (list.length === 0) {
+      box.innerHTML = `
+        <div class="p-8 text-center text-xs text-slate-500 bg-slate-50 rounded-2xl border border-dashed border-slate-300">
+          No hay planificaciones registradas para los filtros seleccionados. Diseña una clase desde el panel izquierdo.
+        </div>
+      `;
+      return;
+    }
+
+    const isUtpOrAdmin = ['DIRECTOR_UTP', 'ADMIN'].includes(this.api.user?.rol_codigo);
+
+    box.innerHTML = list
+      .map((c) => {
+        const estado = c.estado_aprobacion || 'BORRADOR';
+        let badgeColor = 'bg-amber-100 text-amber-900 border-amber-300';
+        let badgeLabel = '📝 Borrador';
+
+        if (estado === 'ENVIADO_REVISION') {
+          badgeColor = 'bg-blue-100 text-blue-900 border-blue-300';
+          badgeLabel = '⏳ En Revisión UTP';
+        } else if (estado === 'APROBADO') {
+          badgeColor = 'bg-emerald-100 text-emerald-900 border-emerald-300';
+          badgeLabel = '🟢 Aprobado por UTP';
+        } else if (estado === 'OBSERVADO') {
+          badgeColor = 'bg-orange-100 text-orange-900 border-orange-300';
+          badgeLabel = '⚠️ Observado por UTP';
+        }
+
+        return `
+        <div class="p-5 rounded-2xl bg-white border border-slate-200/90 shadow-sm space-y-3.5 text-xs">
+          <div class="flex flex-wrap items-center justify-between gap-2 pb-2.5 border-b border-slate-100">
+            <div>
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 rounded text-[10px] font-extrabold bg-slate-100 text-slate-800">
+                  ${c.semestre}° Semestre • Semana ${c.numero_semana || 1}
+                </span>
+                <span class="text-[10px] font-bold uppercase text-apandi-700">${c.taller_nombre}</span>
+                <span class="text-[10px] text-slate-400 font-mono">${c.fecha_clase}</span>
+              </div>
+              <h4 class="font-extrabold text-slate-900 text-sm mt-1">${c.unidad_tematica}</h4>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="px-2.5 py-1 rounded-full font-extrabold text-[11px] border ${badgeColor}">
+                ${badgeLabel}
+              </span>
+              <span class="bg-emerald-50 text-emerald-800 font-mono text-[10px] font-bold px-2 py-1 rounded-lg border border-emerald-200">
+                SHA-256: ${(c.hash_firma_electronica || '').substring(0, 12)}...
+              </span>
+            </div>
+          </div>
+
+          <p class="text-slate-700 font-semibold"><strong class="text-slate-900">OA:</strong> ${c.objetivo_aprendizaje}</p>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div class="p-3 rounded-xl bg-emerald-50/70 border border-emerald-200 text-emerald-950">
+              <strong class="block mb-1 text-[11px]">🟢 Estrategia Diversificada GRUPO A (Mayor Funcionalidad):</strong>
+              <p>${c.actividad_grupo_a}</p>
+            </div>
+            <div class="p-3 rounded-xl bg-amber-50/70 border border-amber-200 text-amber-950">
+              <strong class="block mb-1 text-[11px]">🟡 Estrategia Diversificada GRUPO B (Mayor Apoyo y Mediación):</strong>
+              <p>${c.actividad_grupo_b}</p>
+            </div>
+          </div>
+
+          <div class="text-[11px] text-slate-500 flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-slate-100">
+            <span><strong>Recursos DUA:</strong> ${c.recursos_dua || 'ARASAAC / Material Concreto'}</span>
+            <span><strong>Docente:</strong> ${c.docente_nombre}</span>
+          </div>
+
+          ${
+            c.observaciones_utp
+              ? `
+            <div class="p-3 rounded-xl ${
+              estado === 'APROBADO' ? 'bg-emerald-50 border-emerald-200 text-emerald-900' : 'bg-orange-50 border-orange-200 text-orange-950'
+            } border text-[11px]">
+              <strong>Observaciones Técnico-Pedagógicas UTP:</strong>
+              <p class="mt-0.5">${c.observaciones_utp}</p>
+              ${c.aprobador_nombre ? `<span class="text-[10px] text-slate-500 block mt-1">Visado por: ${c.aprobador_nombre}</span>` : ''}
+            </div>
+          `
+              : ''
+          }
+
+          <div class="flex flex-wrap items-center justify-end gap-2 pt-1">
+            <button type="button" onclick="window.app.loadPidToForm(${c.id_clase})"
+              class="px-3 py-1.5 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-100 font-bold text-xs">
+              ✏️ Cargar para Editar
+            </button>
+
+            ${
+              isUtpOrAdmin
+                ? `
+              <button type="button" onclick="window.app.reviewPidClass(${c.id_clase}, 'APROBAR')"
+                class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs shadow-sm">
+                ✓ Aprobar Planificación UTP
+              </button>
+              <button type="button" onclick="window.app.reviewPidClass(${c.id_clase}, 'OBSERVAR')"
+                class="px-3 py-1.5 rounded-lg bg-orange-600 hover:bg-orange-700 text-white font-extrabold text-xs shadow-sm">
+                ⚠️ Observar Planificación
+              </button>
+            `
+                : ''
+            }
+          </div>
+        </div>
+      `;
+      })
+      .join('');
+  }
+
+  loadPidToForm(idClase) {
+    const c = this.pidClasses.find((x) => Number(x.id_clase) === Number(idClase));
+    if (!c) return;
+
+    document.getElementById('pidIdClase').value = c.id_clase;
+    document.getElementById('pidTaller').value = c.id_taller;
+    if (c.numero_semana) document.getElementById('pidSemana').value = c.numero_semana;
+    document.getElementById('pidFecha').value = c.fecha_clase;
+    document.getElementById('pidUnidad').value = c.unidad_tematica;
+    document.getElementById('pidObjetivo').value = c.objetivo_aprendizaje;
+    document.getElementById('pidGrupoA').value = c.actividad_grupo_a;
+    document.getElementById('pidGrupoB').value = c.actividad_grupo_b;
+    document.getElementById('pidRecursos').value = c.recursos_dua || '';
+
+    this.showToast(`✏️ Planificación cargada en el formulario para edición.`);
+    document.getElementById('pidForm').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  async submitPidClass(enviarRevision = false) {
+    try {
+      const pin = document.getElementById('pidPin')?.value.trim();
+      if (!pin || pin.length < 4) {
+        this.showToast('Debe ingresar su PIN de 6 dígitos para firmar criptográficamente.', 'error');
+        return;
+      }
+
+      const idClase = document.getElementById('pidIdClase')?.value;
       const res = await this.api.request('pedagogico/pid', {
         method: 'POST',
         body: {
+          id_clase: idClase ? Number(idClase) : 0,
           id_taller: Number(document.getElementById('pidTaller').value),
+          semestre: Number(document.getElementById('pidFilterSemestre')?.value || 2),
+          numero_semana: Number(document.getElementById('pidSemana')?.value || 1),
+          fecha_clase: document.getElementById('pidFecha').value || new Date().toISOString().split('T')[0],
           unidad_tematica: document.getElementById('pidUnidad').value,
           objetivo_aprendizaje: document.getElementById('pidObjetivo').value,
           actividad_grupo_a: document.getElementById('pidGrupoA').value,
           actividad_grupo_b: document.getElementById('pidGrupoB').value,
           recursos_dua: document.getElementById('pidRecursos').value,
+          enviar_revision: enviarRevision,
           pin_firma: pin
         }
       });
@@ -2806,6 +3173,7 @@ class SgiApandiApplication {
     }
   }
 
+  // Métodos retrocompatibles
   async saveStudentAttendance(id_estudiante, id_taller, estado) {
     try {
       const res = await this.api.request('pedagogico/asistencia', {
@@ -2837,12 +3205,12 @@ class SgiApandiApplication {
       const res = await this.api.request('pedagogico/evaluaciones', {
         method: 'POST',
         body: {
-          id_estudiante: Number(document.getElementById('evalEstudiante').value),
+          id_estudiante: Number(document.getElementById('evalEstudiante')?.value || 1),
           id_taller: 1,
-          dimension: document.getElementById('evalDimension').value,
-          nivel_logro: document.getElementById('evalLogro').value,
-          indicador_competencia: document.getElementById('evalIndicador').value,
-          comentario_pedagogico: document.getElementById('evalComentario').value
+          dimension: document.getElementById('evalDimension')?.value || 'TECNICA_VOCACIONAL',
+          nivel_logro: document.getElementById('evalLogro')?.value || 'LOGRADO',
+          indicador_competencia: document.getElementById('evalIndicador')?.value || 'Competencia Técnica',
+          comentario_pedagogico: document.getElementById('evalComentario')?.value || ''
         }
       });
       this.showToast(res.mensaje);

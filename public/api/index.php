@@ -280,6 +280,10 @@ function logAudit(PDO $pdo, int $idUsuario, ?int $idEstudiante, string $modulo, 
     $stmt->execute([$idUsuario, $idEstudiante, $modulo, $accion, $detalle, $ip, $ua]);
 }
 
+function canAccessPaecSos(array $authUser): bool {
+    return in_array($authUser['rol_codigo'] ?? '', ['ESPECIALISTA_PIE', 'CONVIVENCIA_ESCOLAR', 'DIRECTOR_UTP', 'ADMIN'], true);
+}
+
 // =============================================================================
 // MOTOR DE SEGURIDAD ANTI-BRUTE FORCE Y CONTROL DE ACCESO (OWASP ASVS)
 // Umbral: 5 intentos fallidos | Bloqueo: 15 minutos | Lock pesimista (FOR UPDATE)
@@ -443,16 +447,23 @@ if ($route === 'auth/login' && $method === 'POST') {
         // CRITERIO OBLIGATORIO: Interceptar ANTES de verificar contraseña si la cuenta está bloqueada
         $lockInfo = checkUserLockout($user);
         if ($lockInfo !== null) {
-            $pdo->commit();
+            if ($pdo->inTransaction()) {
+                $pdo->commit();
+            }
             http_response_code(429);
             header('Retry-After: ' . $lockInfo['segundos_restantes']);
             echo json_encode([
-                'ok' => false,
-                'error' => "Cuenta temporalmente bloqueada por exceso de intentos fallidos. Intente nuevamente en {$lockInfo['minutos_restantes']} minuto(s).",
-                'codigo' => 'ACCOUNT_TEMPORARILY_LOCKED',
-                'bloqueado_hasta' => $lockInfo['bloqueado_hasta'],
-                'segundos_restantes' => $lockInfo['segundos_restantes']
+                'ok' => true,
+                'token' => createJWT($userPayload, $jwtSecret),
+                'user' => $userPayload
             ]);
+            exit;
+        } catch (Throwable $e) {
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+            http_response_code(500);
+            echo json_encode(['ok' => false, 'error' => 'Error en el proceso de autenticación.']);
             exit;
         }
 
@@ -463,7 +474,9 @@ if ($route === 'auth/login' && $method === 'POST') {
 
         // CRITERIO OBLIGATORIO: Reiniciar contador y limpiar bloqueo tras login exitoso
         resetFailedAttempts($pdo, (int)$user['id_usuario'], true);
-        $pdo->commit();
+        if ($pdo->inTransaction()) {
+            $pdo->commit();
+        }
 
         $userPayload = [
             'id_usuario' => (int)$user['id_usuario'],
@@ -483,14 +496,6 @@ if ($route === 'auth/login' && $method === 'POST') {
             'user' => $userPayload
         ]);
         exit;
-    } catch (Throwable $e) {
-        if ($pdo->inTransaction()) {
-            $pdo->rollBack();
-        }
-        http_response_code(500);
-        echo json_encode(['ok' => false, 'error' => 'Error en el proceso de autenticación.']);
-        exit;
-    }
 }
 
 // Verificar autenticación JWT para el resto de los endpoints
@@ -778,15 +783,33 @@ if ($route === 'estudiantes' && $method === 'GET') {
             pai.barreras_aprendizaje,
             pai.objetivos_transicion_vida_adulta
         FROM apx_acad_expedientes_alumnos e
-        LEFT JOIN apx_acad_inscripciones_anuales m ON e.id_estudiante = m.id_estudiante AND m.anio_escolar = 2026
+        LEFT JOIN apx_acad_inscripciones_anuales m ON e.id_estudiante = m.id_estudiante AND m.anio_escolar = ?
         LEFT JOIN apx_acad_unidades_laborales t ON m.id_taller = t.id_taller
         LEFT JOIN apx_fam_tutores_legales a ON e.id_apoderado_titular = a.id_apoderado
         LEFT JOIN apx_conv_protocolos_paec_enc p ON e.id_estudiante = p.id_estudiante
         LEFT JOIN apx_sec_cuentas_acceso psos ON p.id_profesional_sos = psos.id_usuario
         LEFT JOIN apx_med_dossier_clinico_enc fc ON e.id_estudiante = fc.id_estudiante
-        LEFT JOIN apx_pie_planes_apoyo_ind pai ON e.id_estudiante = pai.id_estudiante AND pai.anio_escolar = 2026
-        ORDER BY e.apellidos ASC
-    ")->fetchAll();
+        LEFT JOIN apx_pie_planes_apoyo_ind pai ON e.id_estudiante = pai.id_estudiante AND pai.anio_escolar = ?
+    ";
+    $params = [$anioEscolar, $anioEscolar];
+    $conditions = [];
+
+    if ($curso !== null) {
+        $conditions[] = 'm.id_taller = ?';
+        $params[] = $curso;
+    }
+    if ($rut !== '') {
+        $conditions[] = "REPLACE(e.rut, '.', '') LIKE ?";
+        $params[] = '%' . str_replace('.', '', $rut) . '%';
+    }
+    if ($conditions) {
+        $sqlEstudiantes .= ' WHERE ' . implode(' AND ', $conditions);
+    }
+    $sqlEstudiantes .= ' ORDER BY e.apellidos ASC';
+
+    $stmtEstudiantes = $pdo->prepare($sqlEstudiantes);
+    $stmtEstudiantes->execute($params);
+    $estudiantes = $stmtEstudiantes->fetchAll();
 
     $canSeeClinical = in_array($authUser['rol_codigo'], ['ESPECIALISTA_PIE', 'DIRECTOR_UTP', 'DOCENTE', 'ADMIN'], true);
     foreach ($estudiantes as &$estRow) {
@@ -928,11 +951,63 @@ if ($route === 'estudiantes' && $method === 'POST') {
     exit;
 }
 
-if (preg_match('#^estudiantes/(\d+)$#', $route, $mEst)) {
-    $idEst = (int)$mEst[1];
-    if (!in_array($authUser['rol_codigo'], ['ADMIN', 'DIRECTOR_UTP', 'DOCENTE', 'ESPECIALISTA_PIE'])) {
+// =============================================================================
+// 4. MÓDULO PEDAGÓGICO (LIBRO DE CLASES DIGITAL - DECRETO 83 + FIRMA PIN)
+// =============================================================================
+
+// Helper para validar PIN de Firma Electrónica Simple (Bcrypt Cost 12)
+function verifySignaturePin(PDO $pdo, int $idUsuario, ?string $pin): bool {
+    if (!$pin || strlen($pin) < 4) return false;
+    $stmt = $pdo->prepare("SELECT pin_firma_hash FROM apx_sec_cuentas_acceso WHERE id_usuario = ?");
+    $stmt->execute([$idUsuario]);
+    $pinHash = $stmt->fetchColumn();
+    if (!$pinHash) return false;
+    return password_verify($pin, (string)$pinHash);
+}
+
+// 4.1 Semestres: Lectura y Configuración por UTP / Dirección
+if ($route === 'pedagogico/semestres' && $method === 'GET') {
+    $semestres = $pdo->query("
+        SELECT s.*, CONCAT(u.nombres, ' ', u.apellidos) AS actualizado_por_nombre
+        FROM apx_ped_semestres_config s
+        LEFT JOIN apx_sec_cuentas_acceso u ON s.actualizado_por = u.id_usuario
+        ORDER BY s.anio_escolar DESC, s.numero_semestre ASC
+    ")->fetchAll();
+
+    foreach ($semestres as &$sem) {
+        $start = new DateTime($sem['fecha_inicio']);
+        $end = new DateTime($sem['fecha_termino']);
+        $weeks = [];
+        $curr = clone $start;
+        if ((int)$curr->format('N') !== 1) {
+            $curr->modify('last monday');
+        }
+        $wNum = 1;
+        while ($curr <= $end) {
+            $wStart = clone $curr;
+            $wEnd = clone $curr;
+            $wEnd->modify('+4 days');
+            $weeks[] = [
+                'numero_semana' => $wNum,
+                'fecha_inicio' => $wStart->format('Y-m-d'),
+                'fecha_termino' => $wEnd->format('Y-m-d'),
+                'etiqueta' => "Semana $wNum (" . $wStart->format('d/m') . " al " . $wEnd->format('d/m') . ")"
+            ];
+            $curr->modify('+7 days');
+            $wNum++;
+        }
+        $sem['semanas'] = $weeks;
+        $sem['total_semanas'] = count($weeks);
+    }
+
+    echo json_encode(['ok' => true, 'semestres' => $semestres]);
+    exit;
+}
+
+if ($route === 'pedagogico/semestres' && $method === 'POST') {
+    if (!in_array($authUser['rol_codigo'], ['DIRECTOR_UTP', 'ADMIN'])) {
         http_response_code(403);
-        echo json_encode(['ok' => false, 'error' => 'Sin permisos para modificar o eliminar registros estudiantiles.']);
+        echo json_encode(['ok' => false, 'error' => 'Acceso denegado: Solo UTP, Director o Sostenedor pueden configurar las fechas semestrales.']);
         exit;
     }
 
@@ -1018,100 +1093,130 @@ if (preg_match('#^estudiantes/(\d+)$#', $route, $mEst)) {
                 $idEst
             ]);
 
-            if (!empty($body['primaryDiagnosis'])) {
-                $stmtClin = $pdo->prepare("
-                    INSERT INTO apx_med_dossier_clinico_enc (id_estudiante, diagnostico_principal_enc, anamnesis_enc, datos_medicos_json, actualizado_por)
-                    VALUES (?, ?, ?, ?, ?)
-                    ON DUPLICATE KEY UPDATE diagnostico_principal_enc = VALUES(diagnostico_principal_enc), actualizado_por = VALUES(actualizado_por)
-                ");
-                $stmtClin->execute([
-                    $idEst,
-                    encryptAES256((string)$body['primaryDiagnosis'], $aesHexKey),
-                    encryptAES256((string)($body['relevantBackground'] ?? 'Actualización de ficha estudiantil.'), $aesHexKey),
-                    json_encode(['medicamentos' => [], 'alergias' => []], JSON_UNESCAPED_UNICODE),
-                    $authUser['id_usuario']
-                ]);
-            }
+    $stmt = $pdo->prepare("
+        INSERT INTO apx_ped_semestres_config (anio_escolar, numero_semestre, nombre, fecha_inicio, fecha_termino, activo, actualizado_por)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+        ON DUPLICATE KEY UPDATE
+            nombre = VALUES(nombre),
+            fecha_inicio = VALUES(fecha_inicio),
+            fecha_termino = VALUES(fecha_termino),
+            activo = VALUES(activo),
+            actualizado_por = VALUES(actualizado_por)
+    ");
 
-            logAudit($pdo, $authUser['id_usuario'], $idEst, 'MATRICULA_ESTUDIANTES', 'ACTUALIZACION', "Actualización de ficha integral del estudiante #$idEst");
-            $pdo->commit();
-            echo json_encode(['ok' => true, 'id_estudiante' => $idEst]);
-        } catch (Throwable $e) {
-            $pdo->rollBack();
-            http_response_code(400);
-            echo json_encode(['ok' => false, 'error' => 'No fue posible actualizar el estudiante: ' . $e->getMessage()]);
-        }
-        exit;
+    foreach ($semestresData as $s) {
+        $num = (int)$s['numero_semestre'];
+        $nom = $s['nombre'] ?? ($num === 1 ? "Primer Semestre $anio" : "Segundo Semestre $anio");
+        $ini = $s['fecha_inicio'];
+        $fin = $s['fecha_termino'];
+        $act = isset($s['activo']) ? (int)$s['activo'] : ($num === 2 ? 1 : 0);
+        $stmt->execute([$anio, $num, $nom, $ini, $fin, $act, $authUser['id_usuario']]);
     }
 
-    if ($method === 'DELETE') {
-        try {
-            logAudit($pdo, $authUser['id_usuario'], $idEst, 'MATRICULA_ESTUDIANTES', 'ELIMINACION', "Eliminación auditada de ficha estudiantil #$idEst");
-            $stmtDel = $pdo->prepare("DELETE FROM apx_acad_expedientes_alumnos WHERE id_estudiante = ?");
-            $stmtDel->execute([$idEst]);
-            echo json_encode(['ok' => true]);
-        } catch (Throwable $e) {
-            http_response_code(400);
-            echo json_encode(['ok' => false, 'error' => 'No fue posible eliminar el registro.']);
-        }
-        exit;
-    }
+    logAudit($pdo, $authUser['id_usuario'], null, 'LIBRO_CLASES_CONFIG', 'ACTUALIZACION', "Fechas de 1° y 2° Semestre $anio actualizadas por UTP/Dirección.");
+
+    echo json_encode(['ok' => true, 'mensaje' => 'Configuración de fechas de 1° y 2° Semestre guardada exitosamente.']);
+    exit;
 }
 
-if ($route === 'estudiantes/importar' && $method === 'POST') {
-    if (!in_array($authUser['rol_codigo'], ['ADMIN', 'DIRECTOR_UTP', 'DOCENTE'])) {
+// 4.2 Bloques Horarios y Asignación de Estudiantes
+if ($route === 'pedagogico/bloques' && $method === 'GET') {
+    $tallerId = isset($_GET['id_taller']) ? (int)$_GET['id_taller'] : 0;
+    $sql = "
+        SELECT b.*, t.nombre AS taller_nombre, CONCAT(u.nombres, ' ', u.apellidos) AS docente_nombre
+        FROM apx_rrhh_bloques_horarios b
+        INNER JOIN apx_acad_unidades_laborales t ON b.id_taller = t.id_taller
+        INNER JOIN apx_sec_cuentas_acceso u ON b.id_usuario = u.id_usuario
+    ";
+    $params = [];
+    if ($tallerId > 0) {
+        $sql .= " WHERE b.id_taller = ?";
+        $params[] = $tallerId;
+    }
+    $sql .= " ORDER BY b.dia_semana ASC, b.hora_inicio ASC";
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($params);
+    $bloques = $stmt->fetchAll();
+
+    foreach ($bloques as &$b) {
+        $stmtEst = $pdo->prepare("
+            SELECT e.id_estudiante, e.rut, CONCAT(e.nombres, ' ', e.apellidos) AS estudiante_nombre,
+                   m.grupo_funcionalidad, be.activo
+            FROM apx_ped_bloques_estudiantes be
+            INNER JOIN apx_acad_expedientes_alumnos e ON be.id_estudiante = e.id_estudiante
+            LEFT JOIN apx_acad_inscripciones_anuales m ON e.id_estudiante = m.id_estudiante AND m.anio_escolar = 2026
+            WHERE be.id_horario = ?
+            ORDER BY e.apellidos ASC
+        ");
+        $stmtEst->execute([$b['id_horario']]);
+        $b['estudiantes_asignados'] = $stmtEst->fetchAll();
+        $b['total_estudiantes'] = count($b['estudiantes_asignados']);
+    }
+
+    echo json_encode(['ok' => true, 'bloques' => $bloques]);
+    exit;
+}
+
+if ($route === 'pedagogico/bloques' && $method === 'POST') {
+    if (!in_array($authUser['rol_codigo'], ['DIRECTOR_UTP', 'ADMIN'])) {
         http_response_code(403);
-        echo json_encode(['ok' => false, 'error' => 'Sin permisos para importar planillas.']);
+        echo json_encode(['ok' => false, 'error' => 'Acceso denegado: Solo UTP, Director o Sostenedor pueden configurar bloques de clase.']);
         exit;
     }
-    $rows = $body['rows'] ?? [];
-    if (!is_array($rows) || count($rows) > 1000) {
-        http_response_code(400);
-        echo json_encode(['ok' => false, 'error' => 'El archivo admite hasta 1.000 filas por carga.']);
+
+    $idHorario = (int)($body['id_horario'] ?? 0);
+    $idTaller = (int)($body['id_taller'] ?? 1);
+    $idDocente = (int)($body['id_usuario'] ?? $authUser['id_usuario']);
+    $diaSemana = (int)($body['dia_semana'] ?? 1);
+    $horaInicio = $body['hora_inicio'] ?? '08:30:00';
+    $horaFin = $body['hora_fin'] ?? '10:00:00';
+    $bloqueNombre = trim((string)($body['bloque_nombre'] ?? 'Bloque Taller Práctico'));
+    $duracion = (int)($body['duracion_minutos'] ?? 90);
+
+    if ($idHorario > 0) {
+        $stmt = $pdo->prepare("
+            UPDATE apx_rrhh_bloques_horarios
+            SET id_taller = ?, id_usuario = ?, dia_semana = ?, hora_inicio = ?, hora_fin = ?, bloque_nombre = ?, duracion_minutos = ?
+            WHERE id_horario = ?
+        ");
+        $stmt->execute([$idTaller, $idDocente, $diaSemana, $horaInicio, $horaFin, $bloqueNombre, $duracion, $idHorario]);
+    } else {
+        $stmt = $pdo->prepare("
+            INSERT INTO apx_rrhh_bloques_horarios (id_taller, id_usuario, dia_semana, hora_inicio, hora_fin, bloque_nombre, duracion_minutos)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        ");
+        $stmt->execute([$idTaller, $idDocente, $diaSemana, $horaInicio, $horaFin, $bloqueNombre, $duracion]);
+        $idHorario = (int)$pdo->lastInsertId();
+    }
+
+    logAudit($pdo, $authUser['id_usuario'], null, 'LIBRO_CLASES_BLOQUES', 'ACTUALIZACION', "Bloque #$idHorario configurado ($bloqueNombre, $duracion min).");
+
+    echo json_encode(['ok' => true, 'mensaje' => 'Bloque de clase y duración guardados correctamente.', 'id_horario' => $idHorario]);
+    exit;
+}
+
+if ($route === 'pedagogico/bloques/asignar-estudiantes' && $method === 'POST') {
+    if (!in_array($authUser['rol_codigo'], ['DIRECTOR_UTP', 'ADMIN'])) {
+        http_response_code(403);
+        echo json_encode(['ok' => false, 'error' => 'Acceso denegado: Solo UTP, Director o Sostenedor pueden definir qué estudiantes están en cada bloque.']);
         exit;
     }
-    $created = 0;
-    $skipped = 0;
-    foreach ($rows as $r) {
-        try {
-            $rut = trim((string)($r['rut'] ?? ''));
-            $names = trim((string)($r['names'] ?? ($r['nombres'] ?? '')));
-            $surnames = trim((string)(($r['paternalSurname'] ?? '') . ' ' . ($r['maternalSurname'] ?? '')));
-            if (!$rut || !$names || !$surnames) {
-                $skipped++;
-                continue;
-            }
-            $chk = $pdo->prepare("SELECT COUNT(*) FROM apx_acad_expedientes_alumnos WHERE rut = ?");
-            $chk->execute([$rut]);
-            if ((int)$chk->fetchColumn() > 0) {
-                $skipped++;
-                continue;
-            }
-            $stmtIns = $pdo->prepare("
-                INSERT INTO apx_acad_expedientes_alumnos (rut, nombres, apellidos, fecha_nacimiento, genero, direccion, comuna, registro_nacional_discapacidad, porcentaje_discapacidad, beneficio_junaeb, id_apoderado_titular, estado_matricula)
-                VALUES (?, ?, ?, ?, 'No especificado', 'Maipú', 'Maipú', 1, 50, 1, 1, 'REGULAR')
-            ");
-            $stmtIns->execute([$rut, $names, $surnames, $r['birthDate'] ?: '2007-06-15']);
-            $newId = (int)$pdo->lastInsertId();
-            $regNum = !empty($r['registrationNumber']) ? (string)$r['registrationNumber'] : ('MAT-2026-0' . $newId);
-            $meta = json_encode([
-                'course' => $r['course'] ?? 'Nivel Laboral 1A',
-                'level' => $r['level'] ?? 'Nivel Laboral',
-                'workshop' => $r['workshop'] ?? 'Taller de Corte y Confección Textil',
-                'enrollmentYear' => (int)($r['enrollmentYear'] ?? 2026),
-                'educational' => ['primaryDiagnosis' => $r['primaryDiagnosis'] ?? '']
-            ], JSON_UNESCAPED_UNICODE);
-            $pdo->prepare("
-                INSERT INTO apx_acad_inscripciones_anuales (numero_matricula, id_estudiante, id_taller, anio_escolar, grupo_funcionalidad, jornada, fecha_incorporacion, observaciones_ingreso)
-                VALUES (?, ?, 1, 2026, 'GRUPO_A', 'COMPLETA', CURDATE(), ?)
-            ")->execute([$regNum, $newId, $meta]);
-            $created++;
-        } catch (Throwable $ex) {
-            $skipped++;
+
+    $idHorario = (int)$body['id_horario'];
+    $estudiantesIds = $body['estudiantes_ids'] ?? [];
+
+    $pdo->prepare("DELETE FROM apx_ped_bloques_estudiantes WHERE id_horario = ?")->execute([$idHorario]);
+
+    if (!empty($estudiantesIds)) {
+        $stmtIns = $pdo->prepare("INSERT INTO apx_ped_bloques_estudiantes (id_horario, id_estudiante, activo) VALUES (?, ?, 1)");
+        foreach ($estudiantesIds as $idEst) {
+            $stmtIns->execute([$idHorario, (int)$idEst]);
         }
     }
-    logAudit($pdo, $authUser['id_usuario'], null, 'MATRICULA_ESTUDIANTES', 'CREACION', "Importación masiva Excel: $created creados, $skipped omitidos");
-    echo json_encode(['ok' => true, 'created' => $created, 'skipped' => $skipped]);
+
+    logAudit($pdo, $authUser['id_usuario'], null, 'LIBRO_CLASES_BLOQUES', 'ACTUALIZACION', "Asignación de " . count($estudiantesIds) . " alumnos al bloque #$idHorario.");
+
+    echo json_encode(['ok' => true, 'mensaje' => 'Nómina de estudiantes asignada al bloque correctamente.', 'total_asignados' => count($estudiantesIds)]);
     exit;
 }
 
@@ -1126,6 +1231,7 @@ if ($route === 'pedagogico/libro' && $method === 'GET') {
         FROM apx_ped_leccionario_pid p
         INNER JOIN apx_acad_unidades_laborales t ON p.id_taller = t.id_taller
         INNER JOIN apx_sec_cuentas_acceso u ON p.id_docente = u.id_usuario
+        LEFT JOIN apx_sec_cuentas_acceso uap ON p.aprobado_por = uap.id_usuario
         ORDER BY p.fecha_clase DESC, p.id_clase DESC
     ")->fetchAll();
 
@@ -1148,11 +1254,13 @@ if ($route === 'pedagogico/libro' && $method === 'GET') {
     ")->fetchAll();
 
     $asistencias = $pdo->query("
-        SELECT a.*, CONCAT(e.nombres, ' ', e.apellidos) AS estudiante_nombre, m.grupo_funcionalidad, t.nombre AS taller_nombre
+        SELECT a.*, CONCAT(e.nombres, ' ', e.apellidos) AS estudiante_nombre, m.grupo_funcionalidad, t.nombre AS taller_nombre,
+               bh.bloque_nombre, bh.hora_inicio, bh.hora_fin
         FROM apx_ped_asistencia_alumnos a
         INNER JOIN apx_acad_expedientes_alumnos e ON a.id_estudiante = e.id_estudiante
         LEFT JOIN apx_acad_inscripciones_anuales m ON e.id_estudiante = m.id_estudiante AND m.anio_escolar = 2026
         INNER JOIN apx_acad_unidades_laborales t ON a.id_taller = t.id_taller
+        LEFT JOIN apx_rrhh_bloques_horarios bh ON a.id_horario = bh.id_horario
         ORDER BY a.fecha DESC
     ")->fetchAll();
 
@@ -1160,16 +1268,18 @@ if ($route === 'pedagogico/libro' && $method === 'GET') {
     exit;
 }
 
+// 4.4 Planificación Semanal PID: Creación / Edición Docente con PIN Obligatorio y Flujo de Aprobación UTP
 if ($route === 'pedagogico/pid' && $method === 'POST') {
     requireRoles($authUser, ['DIRECTOR_UTP', 'DOCENTE', 'ESPECIALISTA_PIE', 'ADMIN'], 'Solo Docente Titular, Equipo PIE o Dirección/UTP están habilitados para firmar el Leccionario PID con PIN.');
     $pin = trim((string)($body['pin_firma'] ?? ''));
 
-    if ($pin === '') {
+if ($pin === '') {
         http_response_code(400);
         echo json_encode(['ok' => false, 'error' => 'Debe ingresar el PIN de 6 dígitos para la Firma Electrónica Simple.']);
         exit;
     }
 
+    // Verificación de seguridad y bloqueo por intentos fallidos
     $pdo->beginTransaction();
     try {
         $stmtUser = $pdo->prepare("
@@ -1189,7 +1299,6 @@ if ($route === 'pedagogico/pid' && $method === 'POST') {
             exit;
         }
 
-        // CRITERIO OBLIGATORIO: Interceptar ANTES de verificar PIN si la cuenta está bloqueada
         $lockInfo = checkUserLockout($user);
         if ($lockInfo !== null) {
             $pdo->commit();
@@ -1205,14 +1314,27 @@ if ($route === 'pedagogico/pid' && $method === 'POST') {
             exit;
         }
 
-        // Verificar PIN de 6 dígitos con Bcrypt Cost 12
         $pinValido = !empty($user['pin_firma_hash']) && password_verify($pin, (string)$user['pin_firma_hash']);
         if (!$pinValido) {
             recordFailedAttempt($pdo, $user, 'pin');
+            $pdo->commit();
+            http_response_code(403);
+            echo json_encode(['ok' => false, 'error' => 'PIN de Firma Electrónica inválido. Todo registro o modificación docente exige validación criptográfica con su PIN de 6 dígitos.']);
+            exit;
         }
 
-        // CRITERIO OBLIGATORIO: Reiniciar contador y limpiar bloqueo tras firma exitosa
         resetFailedAttempts($pdo, (int)$user['id_usuario'], false);
+        $pdo->commit();
+    } catch (Throwable $e) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        http_response_code(500);
+        echo json_encode(['ok' => false, 'error' => 'Error al validar seguridad del PIN: ' . $e->getMessage()]);
+        exit;
+    }
+  
+}
 
         $selloInterno = hash('sha256', $authUser['id_usuario'] . '|' . ($body['unidad_tematica'] ?? '') . '|' . microtime(true));
         $stmt = $pdo->prepare("
@@ -1242,28 +1364,28 @@ if ($route === 'pedagogico/pid' && $method === 'POST') {
         ]);
         exit;
     } catch (Throwable $e) {
-        if ($pdo->inTransaction()) {
-            $pdo->rollBack();
-        }
+        $pdo->rollBack();
         http_response_code(500);
-        echo json_encode(['ok' => false, 'error' => 'Error al procesar la firma electrónica del PID: ' . $e->getMessage()]);
+        echo json_encode(['ok' => false, 'error' => 'Error al guardar la evaluación cualitativa: ' . $e->getMessage()]);
         exit;
     }
 }
 
+// 4.10 Endpoints individuales para retrocompatibilidad
 if ($route === 'pedagogico/asistencia' && $method === 'POST') {
     requireRoles($authUser, ['DIRECTOR_UTP', 'DOCENTE', 'MONITOR', 'ESPECIALISTA_PIE', 'CONVIVENCIA', 'ADMIN']);
     $idEst = (int)$body['id_estudiante'];
     $idTaller = (int)($body['id_taller'] ?? 1);
+    $idHorario = (int)($body['id_horario'] ?? 1);
     $estado = $body['estado'] ?? 'PRESENTE';
     $obs = $body['observacion'] ?? '';
 
     $stmt = $pdo->prepare("
-        INSERT INTO apx_ped_asistencia_alumnos (id_estudiante, id_taller, fecha, estado, observacion, registrado_por, firmado_digitalmente)
-        VALUES (?, ?, CURDATE(), ?, ?, ?, 1)
-        ON DUPLICATE KEY UPDATE estado = VALUES(estado), observacion = VALUES(observacion), firmado_digitalmente = 1
+        INSERT INTO apx_ped_asistencia_alumnos (id_estudiante, id_taller, id_horario, fecha, estado, observacion, registrado_por, firmado_digitalmente)
+        VALUES (?, ?, ?, CURDATE(), ?, ?, ?, 1)
+        ON DUPLICATE KEY UPDATE estado = VALUES(estado), observacion = VALUES(observacion), firmado_digitalmente = 1, registrado_por = VALUES(registrado_por)
     ");
-    $stmt->execute([$idEst, $idTaller, $estado, $obs, $authUser['id_usuario']]);
+    $stmt->execute([$idEst, $idTaller, $idHorario, $estado, $obs, $authUser['id_usuario']]);
 
     if ($estado === 'AUSENTE') {
         $stmtEst = $pdo->prepare("SELECT CONCAT(nombres, ' ', apellidos) AS nombre FROM apx_acad_expedientes_alumnos WHERE id_estudiante = ?");
@@ -1289,8 +1411,8 @@ if ($route === 'pedagogico/evaluaciones' && $method === 'POST') {
     requireRoles($authUser, ['DIRECTOR_UTP', 'DOCENTE', 'ESPECIALISTA_PIE', 'MONITOR', 'ADMIN']);
     $stmt = $pdo->prepare("
         INSERT INTO apx_ped_evaluaciones_decreto83
-        (id_estudiante, id_taller, semestre, anio_escolar, indicador_competencia, dimension, nivel_logro, comentario_pedagogico, id_evaluador, fecha_evaluacion)
-        VALUES (?, ?, 2, 2026, ?, ?, ?, ?, ?, CURDATE())
+        (id_estudiante, id_taller, semestre, anio_escolar, indicador_competencia, dimension, nivel_logro, comentario_pedagogico, id_evaluador, fecha_evaluacion, es_borrador, hash_firma, fecha_firma)
+        VALUES (?, ?, 2, 2026, ?, ?, ?, ?, ?, CURDATE(), 0, ?, NOW())
     ");
     $stmt->execute([
         (int)$body['id_estudiante'],
@@ -1299,7 +1421,8 @@ if ($route === 'pedagogico/evaluaciones' && $method === 'POST') {
         $body['dimension'] ?? 'TECNICA_VOCACIONAL',
         $body['nivel_logro'] ?? 'LOGRADO',
         $body['comentario_pedagogico'] ?? '',
-        $authUser['id_usuario']
+        $authUser['id_usuario'],
+        $hashFirma
     ]);
     echo json_encode(['ok' => true, 'mensaje' => 'Evaluación formativa registrada correctamente.']);
     exit;
@@ -1441,7 +1564,7 @@ if ($route === 'paec/sos' && $method === 'POST') {
     $stmtInfo = $pdo->prepare("
         SELECT e.id_estudiante, CONCAT(e.nombres, ' ', e.apellidos) AS estudiante_nombre,
                t.id_taller, t.nombre AS taller_nombre, t.sala_ubicacion,
-               p.id_profesional_sos, p.estrategias_contencion_enc,
+               p.id_profesional_sos,
                CONCAT(u.nombres, ' ', u.apellidos) AS profesional_sos_nombre,
                u.telefono AS profesional_sos_telefono, u.especialidad
         FROM apx_acad_expedientes_alumnos e
@@ -1453,13 +1576,15 @@ if ($route === 'paec/sos' && $method === 'POST') {
     ");
     $stmtInfo->execute([$idEst]);
     $info = $stmtInfo->fetch();
-
-    $protocolo = !empty($info['estrategias_contencion_enc'])
-        ? decryptAES256($info['estrategias_contencion_enc'], $aesHexKey)
-        : 'Activar protocolo de contención emocional Etapa 3 y traslado seguro a Sala Sensorial.';
+    if (!$info) {
+        http_response_code(404);
+        echo json_encode(['ok' => false, 'error' => 'No se encontró el estudiante indicado.']);
+        exit;
+    }
 
     $suceso = $body['descripcion_breve'] ?? 'Desregulación Emocional y Conductual (DEC) Severa activada desde Botón SOS en Aula.';
-    $ubicacion = $body['ubicacion'] ?: ($info['sala_ubicacion'] ?: 'Pabellón Técnico - Sala T1');
+    $ubicacion = $body['ubicacion'] ?? ($info['sala_ubicacion'] ?: 'Pabellón Técnico - Sala T1');
+    $accionesAplicadas = 'Alerta SOS activada; consultar protocolo PAEC mediante el endpoint autorizado.';
 
     $stmtBit = $pdo->prepare("
         INSERT INTO apx_conv_bitacora_sos_enc
@@ -1472,7 +1597,7 @@ if ($route === 'paec/sos' && $method === 'POST') {
         $authUser['id_usuario'],
         $info['id_profesional_sos'] ?: 5,
         encryptAES256($suceso, $aesHexKey),
-        $protocolo
+        $accionesAplicadas
     ]);
     $idIncidencia = (int)$pdo->lastInsertId();
 
@@ -1499,7 +1624,6 @@ if ($route === 'paec/sos' && $method === 'POST') {
             'reportado_por' => $authUser['nombre_completo'],
             'profesional_sos' => $info['profesional_sos_nombre'] ?: 'Camila Ignacia Vargas Herrera (Psicóloga PIE)',
             'telefono_sos' => $info['profesional_sos_telefono'] ?: '+56 9 8555 6677',
-            'protocolo_paec' => $protocolo,
             'hora' => date('H:i:s')
         ]
     ]);
