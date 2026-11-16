@@ -1,6 +1,6 @@
 /**
  * =============================================================================
- * MOTOR API JAVASCRIPT, VALIDADOR RUT MÓDULO 11 & CRIPTOGRAFÍA AES-256-GCM
+ * MOTOR API JAVASCRIPT, VALIDADOR RUT & CRIPTOGRAFÍA
  * SGI APANDI — Integración Completa Diseño Figma + Arquitectura SGI Educación Especial
  * Compatible con cualquier navegador y cualquier Hosting en Chile (Apache/cPanel/Docker)
  * =============================================================================
@@ -176,29 +176,31 @@ window.APANDI_TEMPLATES = [
 const INITIAL_JS_DB = {
   users: [
     { id_usuario: 1, id: '1', rut: '15.432.198-K', nombre_completo: 'Roberto Andrés Soto Valdés', name: 'Roberto Andrés Soto Valdés', username: 'admin', email: 'admin@apandi.cl', rol_codigo: 'ADMIN', role: 'administrador', rol_nombre: 'Administrador Institucional', especialidad: 'Ingeniero en Informática / Encargado SIGE', horas_contrato: 44, active: true, activo: 1 },
-    { id_usuario: 2, id: '2', rut: '13.876.543-2', nombre_completo: 'Marcela Paz Rojas Contreras', name: 'Marcela Paz Rojas Contreras', username: 'utp', email: 'utp@apandi.cl', rol_codigo: 'DIRECTOR_UTP', role: 'administrador', rol_nombre: 'Directora / Jefa UTP', especialidad: 'Directora / Jefa Unidad Técnico-Pedagógica', horas_contrato: 44, active: true, activo: 1 },
-    { id_usuario: 3, id: '3', rut: '17.654.321-8', nombre_completo: 'Carolina Andrea Muñoz Tapia', name: 'Carolina Andrea Muñoz Tapia', username: 'cmunoz', email: 'cmunoz@apandi.cl', rol_codigo: 'DOCENTE', role: 'profesor', rol_nombre: 'Docente Titular Educación Diferencial', especialidad: 'Educadora Diferencial Mención DI y Retos Múltiples', horas_contrato: 40, active: true, activo: 1 },
-    { id_usuario: 4, id: '4', rut: '16.543.210-9', nombre_completo: 'Jorge Eduardo Fuentes Bravo', name: 'Jorge Eduardo Fuentes Bravo', username: 'jfuentes', email: 'jfuentes@apandi.cl', rol_codigo: 'MONITOR', role: 'docente', rol_nombre: 'Monitor Vocacional de Taller Laboral', especialidad: 'Maestro Sastre Industrial / Monitor Vocacional', horas_contrato: 38, active: true, activo: 1 },
-    { id_usuario: 5, id: '5', rut: '18.234.567-1', nombre_completo: 'Camila Ignacia Vargas Herrera', name: 'Camila Ignacia Vargas Herrera', username: 'cvargas.pie', email: 'cvargas.pie@apandi.cl', rol_codigo: 'ESPECIALISTA_PIE', role: 'profesor', rol_nombre: 'Especialista PIE (Equipo Multidisciplinario)', especialidad: 'Psicóloga Educacional / Coordinadora PIE y PAEC', horas_contrato: 44, active: true, activo: 1 },
-    { id_usuario: 6, id: '6', rut: '12.345.678-5', nombre_completo: 'Patricia Elena Gómez Díaz', name: 'Patricia Elena Gómez Díaz', username: 'pgomez.familia', email: 'pgomez.familia@gmail.com', rol_codigo: 'APODERADO', role: 'apoderado', rol_nombre: 'Apoderado / Familia', especialidad: 'Apoderada Titular', horas_contrato: 0, active: true, activo: 1 }
+    { id_usuario: 2, id: '2', rut: '13.876.543-2', nombre_completo: 'Marcela Paz Rojas Contreras', name: 'Marcela Paz Rojas Contreras', username: 'utp', email: 'utp@apandi.cl', rol_codigo: 'DIRECTOR_UTP', role: 'director_utp', rol_nombre: 'Directora / Jefa UTP', especialidad: 'Directora / Jefa Unidad Técnico-Pedagógica', horas_contrato: 44, active: true, activo: 1 },
+    { id_usuario: 3, id: '3', rut: '17.654.321-8', nombre_completo: 'Carolina Andrea Muñoz Tapia', name: 'Carolina Andrea Muñoz Tapia', username: 'cmunoz', email: 'cmunoz@apandi.cl', rol_codigo: 'DOCENTE', role: 'docente', rol_nombre: 'Docente Titular Educación Diferencial', especialidad: 'Educadora Diferencial Mención DI y Retos Múltiples', horas_contrato: 40, active: true, activo: 1 },
+    { id_usuario: 4, id: '4', rut: '16.543.210-9', nombre_completo: 'Jorge Eduardo Fuentes Bravo', name: 'Jorge Eduardo Fuentes Bravo', username: 'jfuentes', email: 'jfuentes@apandi.cl', rol_codigo: 'MONITOR', role: 'monitor', rol_nombre: 'Monitor Vocacional de Taller Laboral', especialidad: 'Maestro Sastre Industrial / Monitor Vocacional', horas_contrato: 38, active: true, activo: 1 },
+    { id_usuario: 5, id: '5', rut: '18.234.567-1', nombre_completo: 'Camila Ignacia Vargas Herrera', name: 'Camila Ignacia Vargas Herrera', username: 'cvargas.pie', email: 'cvargas.pie@apandi.cl', rol_codigo: 'ESPECIALISTA_PIE', role: 'especialista_pie', rol_nombre: 'Especialista PIE (Equipo Multidisciplinario)', especialidad: 'Psicóloga Educacional / Coordinadora PIE y PAEC', horas_contrato: 44, active: true, activo: 1 },
+    { id_usuario: 6, id: '6', rut: '12.345.678-5', nombre_completo: 'Patricia Elena Gómez Díaz', name: 'Patricia Elena Gómez Díaz', username: 'pgomez.familia', email: 'pgomez.familia@gmail.com', rol_codigo: 'APODERADO', role: 'apoderado', rol_nombre: 'Apoderado / Familia', especialidad: 'Apoderada Titular', horas_contrato: 0, active: true, activo: 1 },
+    { id_usuario: 8, id: '8', rut: '10.234.567-8', nombre_completo: 'Hernán Patricio Valdivia Montes', name: 'Hernán Patricio Valdivia Montes', username: 'sostenedor', email: 'sostenedor@apandi.cl', rol_codigo: 'SOSTENEDOR', role: 'sostenedor', rol_nombre: 'Sostenedor Institucional', especialidad: 'Representante Legal / Sostenedor Corporación Educacional', horas_contrato: 44, active: true, activo: 1 },
+    { id_usuario: 9, id: '9', rut: '16.890.123-4', nombre_completo: 'Javiera Paz Morales Araya', name: 'Javiera Paz Morales Araya', username: 'convivencia', email: 'convivencia@apandi.cl', rol_codigo: 'CONVIVENCIA', role: 'convivencia', rol_nombre: 'Encargada de Convivencia Escolar', especialidad: 'Trabajadora Social / Encargada de Convivencia Escolar', horas_contrato: 44, active: true, activo: 1 }
   ],
   talleres: [
-    { id_taller: 1, codigo_mineduc: 'TL-CORTE-01', nombre: 'Taller Laboral de Corte y Confección Textil', nivel_decreto: 'Nivel Laboral 2 (Decreto Exento N° 83)', capacidad_maxima: 12, sala_ubicacion: 'Pabellón Técnico - Sala T1' },
-    { id_taller: 2, codigo_mineduc: 'TL-GASTRO-02', nombre: 'Taller Laboral de Gastronomía, Panadería y Repostería', nivel_decreto: 'Nivel Laboral 1 y 2 (Decreto Exento N° 83)', capacidad_maxima: 14, sala_ubicacion: 'Cocina Pedagógica Industrial - Sala G1' },
-    { id_taller: 3, codigo_mineduc: 'TL-HORTI-03', nombre: 'Taller Laboral de Horticultura, Vivero y Paisajismo', nivel_decreto: 'Nivel Laboral 3 Dual (Decreto Exento N° 83)', capacidad_maxima: 15, sala_ubicacion: 'Invernadero Institucional - Sector Norte' }
+    { id_taller: 1, codigo_mineduc: 'TL-CORTE-01', nombre: 'Taller Laboral de Corte y Confección Textil', nivel_decreto: 'Nivel Laboral 2', capacidad_maxima: 12, sala_ubicacion: 'Pabellón Técnico - Sala T1' },
+    { id_taller: 2, codigo_mineduc: 'TL-GASTRO-02', nombre: 'Taller Laboral de Gastronomía, Panadería y Repostería', nivel_decreto: 'Nivel Laboral 1 y 2', capacidad_maxima: 14, sala_ubicacion: 'Cocina Pedagógica Industrial - Sala G1' },
+    { id_taller: 3, codigo_mineduc: 'TL-HORTI-03', nombre: 'Taller Laboral de Horticultura, Vivero y Paisajismo', nivel_decreto: 'Nivel Laboral 3 Dual', capacidad_maxima: 15, sala_ubicacion: 'Invernadero Institucional - Sector Norte' }
   ],
   estudiantes: [
     {
       id_estudiante: 1, id: '1', rut: '22.345.678-2', nombres: 'Matías Ignacio', apellidos: 'Vera Gómez', paternalSurname: 'Vera', maternalSurname: 'Gómez', names: 'Matías Ignacio', fullName: 'Matías Ignacio Vera Gómez', socialName: 'Mati', fecha_nacimiento: '2007-05-14', birthDate: '2007-05-14', genero: 'Masculino', gender: 'Masculino', nationality: 'Chilena', direccion: 'Av. Los Pajaritos 3450, Depto 402', comuna: 'Maipú',
       registro_nacional_discapacidad: 1, porcentaje_discapacidad: 65, beneficio_junaeb: 1, estado_matricula: 'REGULAR', status: 'activo',
-      numero_matricula: 'MAT-2026-001', registrationNumber: 'MAT-2026-001', course: 'Nivel Laboral 2A', level: 'Nivel Laboral 2 (Decreto 83)', enrollmentYear: 2026, entryDate: '2024-03-04', evaluationDate: '2026-03-15', reevaluationDate: '2026-11-24',
+      numero_matricula: 'MAT-2026-001', registrationNumber: 'MAT-2026-001', course: 'Nivel Laboral 2A', level: 'Nivel Laboral 2', enrollmentYear: 2026, entryDate: '2024-03-04', evaluationDate: '2026-03-15', reevaluationDate: '2026-11-24',
       grupo_funcionalidad: 'GRUPO_B', jornada: 'COMPLETA', id_taller: 1, taller_nombre: 'Taller Laboral de Corte y Confección Textil', workshop: 'Taller Laboral de Corte y Confección Textil', codigo_mineduc: 'TL-CORTE-01', sala_ubicacion: 'Pabellón Técnico - Sala T1',
       apoderado_nombre: 'Patricia Elena Gómez Díaz', apoderado_rut: '12.345.678-5', apoderado_parentesco: 'Madre', apoderado_telefono: '+56 9 8666 7788', apoderado_email: 'pgomez.familia@gmail.com',
       profesional_sos_nombre: 'Camila Ignacia Vargas Herrera', profesional_sos_especialidad: 'Psicóloga Educacional / Coordinadora PIE y PAEC', profesional_sos_telefono: '+56 9 8555 6677',
       diagnostico_principal: 'Trastorno del Espectro Autista (TEA Nivel 2) concomitante con Discapacidad Intelectual Moderada',
       contact: { address: 'Av. Los Pajaritos 3450, Depto 402', municipality: 'Maipú', phone: '+56 9 8666 7788', guardianName: 'Patricia Elena Gómez Díaz', guardianRut: '12.345.678-5', guardianPhone: '+56 9 8666 7788', guardianEmail: 'pgomez.familia@gmail.com' },
       educational: {
-        primaryDiagnosis: 'Trastorno del Espectro Autista (TEA Nivel 2) y DI Moderada (Decreto 170)',
+        primaryDiagnosis: 'Trastorno del Espectro Autista (TEA Nivel 2) y Discapacidad Intelectual Moderada',
         secondaryDiagnosis: 'Hipersensibilidad sensorial auditiva',
         strengths: 'Excelente memoria visual, adherencia a secuencias pictográficas ARASAAC y alta precisión en pre-costura.',
         supportNeeds: 'Anticipación visual ante cambios de rutina, uso de protectores auditivos SNR 28dB y mediación paso a paso (Grupo B).',
@@ -209,14 +211,14 @@ const INITIAL_JS_DB = {
     {
       id_estudiante: 2, id: '2', rut: '23.456.789-6', nombres: 'Valentina Paz', apellidos: 'Silva Espinoza', paternalSurname: 'Silva', maternalSurname: 'Espinoza', names: 'Valentina Paz', fullName: 'Valentina Paz Silva Espinoza', socialName: 'Vale', fecha_nacimiento: '2008-09-22', birthDate: '2008-09-22', genero: 'Femenino', gender: 'Femenino', nationality: 'Chilena', direccion: 'Pasaje El Roble 128', comuna: 'Cerrillos',
       registro_nacional_discapacidad: 1, porcentaje_discapacidad: 45, beneficio_junaeb: 1, estado_matricula: 'REGULAR', status: 'activo',
-      numero_matricula: 'MAT-2026-002', registrationNumber: 'MAT-2026-002', course: 'Nivel Laboral 2A', level: 'Nivel Laboral 2 (Decreto 83)', enrollmentYear: 2026, entryDate: '2024-03-04', evaluationDate: '2026-03-18', reevaluationDate: '2026-11-28',
+      numero_matricula: 'MAT-2026-002', registrationNumber: 'MAT-2026-002', course: 'Nivel Laboral 2A', level: 'Nivel Laboral 2', enrollmentYear: 2026, entryDate: '2024-03-04', evaluationDate: '2026-03-18', reevaluationDate: '2026-11-28',
       grupo_funcionalidad: 'GRUPO_A', jornada: 'COMPLETA', id_taller: 1, taller_nombre: 'Taller Laboral de Corte y Confección Textil', workshop: 'Taller Laboral de Corte y Confección Textil', codigo_mineduc: 'TL-CORTE-01', sala_ubicacion: 'Pabellón Técnico - Sala T1',
       apoderado_nombre: 'Héctor Manuel Silva Morales', apoderado_rut: '11.223.344-5', apoderado_parentesco: 'Padre', apoderado_telefono: '+56 9 7766 5544', apoderado_email: 'hsilva@correo.cl',
       profesional_sos_nombre: 'Camila Ignacia Vargas Herrera', profesional_sos_especialidad: 'Psicóloga Educacional / Coordinadora PIE y PAEC', profesional_sos_telefono: '+56 9 8555 6677',
       diagnostico_principal: 'Discapacidad Intelectual Leve (CI 64 WISC-V). Alta competencia adaptativa.',
       contact: { address: 'Pasaje El Roble 128', municipality: 'Cerrillos', phone: '+56 9 7766 5544', guardianName: 'Héctor Manuel Silva Morales', guardianRut: '11.223.344-5', guardianPhone: '+56 9 7766 5544', guardianEmail: 'hsilva@correo.cl' },
       educational: {
-        primaryDiagnosis: 'Discapacidad Intelectual Leve (Decreto 170 MINEDUC)',
+        primaryDiagnosis: 'Discapacidad Intelectual Leve',
         secondaryDiagnosis: 'Sin diagnóstico secundario',
         strengths: 'Liderazgo positivo entre pares, motricidad fina sobresaliente y manejo autónomo de máquina recta.',
         supportNeeds: 'Fraccionamiento de instrucciones extensas y refuerzo positivo de autoconfianza laboral (Grupo A).',
@@ -227,7 +229,7 @@ const INITIAL_JS_DB = {
     {
       id_estudiante: 3, id: '3', rut: '21.987.321-0', nombres: 'Benjamín Alonso', apellidos: 'Castro Riquelme', paternalSurname: 'Castro', maternalSurname: 'Riquelme', names: 'Benjamín Alonso', fullName: 'Benjamín Alonso Castro Riquelme', socialName: 'Benja', fecha_nacimiento: '2006-11-03', birthDate: '2006-11-03', genero: 'Masculino', gender: 'Masculino', nationality: 'Chilena', direccion: 'Av. Central 890', comuna: 'Maipú',
       registro_nacional_discapacidad: 1, porcentaje_discapacidad: 55, beneficio_junaeb: 1, estado_matricula: 'REGULAR', status: 'activo',
-      numero_matricula: 'MAT-2026-003', registrationNumber: 'MAT-2026-003', course: 'Nivel Laboral 2B', level: 'Nivel Laboral 2 (Decreto 83)', enrollmentYear: 2026, entryDate: '2023-03-06', evaluationDate: '2026-04-02', reevaluationDate: '2026-12-04',
+      numero_matricula: 'MAT-2026-003', registrationNumber: 'MAT-2026-003', course: 'Nivel Laboral 2B', level: 'Nivel Laboral 2', enrollmentYear: 2026, entryDate: '2023-03-06', evaluationDate: '2026-04-02', reevaluationDate: '2026-12-04',
       grupo_funcionalidad: 'GRUPO_A', jornada: 'COMPLETA', id_taller: 1, taller_nombre: 'Taller Laboral de Corte y Confección Textil', workshop: 'Taller Laboral de Corte y Confección Textil', codigo_mineduc: 'TL-CORTE-01', sala_ubicacion: 'Pabellón Técnico - Sala T1',
       apoderado_nombre: 'Carmen Gloria Riquelme Soto', apoderado_rut: '13.445.566-7', apoderado_parentesco: 'Madre', apoderado_telefono: '+56 9 5544 3322', apoderado_email: 'criquelme@correo.cl',
       profesional_sos_nombre: 'Camila Ignacia Vargas Herrera', profesional_sos_especialidad: 'Psicóloga Educacional / Coordinadora PIE y PAEC', profesional_sos_telefono: '+56 9 8555 6677',
@@ -245,11 +247,11 @@ const INITIAL_JS_DB = {
     {
       id_estudiante: 4, id: '4', rut: '22.765.432-5', nombres: 'Florencia Belén', apellidos: 'Herrera Paredes', paternalSurname: 'Herrera', maternalSurname: 'Paredes', names: 'Florencia Belén', fullName: 'Florencia Belén Herrera Paredes', socialName: 'Flo', fecha_nacimiento: '2007-02-19', birthDate: '2007-02-19', genero: 'Femenino', gender: 'Femenino', nationality: 'Chilena', direccion: 'Villa Los Héroes Pje. 4 #512', comuna: 'Maipú',
       registro_nacional_discapacidad: 1, porcentaje_discapacidad: 70, beneficio_junaeb: 1, estado_matricula: 'REGULAR', status: 'activo',
-      numero_matricula: 'MAT-2026-004', registrationNumber: 'MAT-2026-004', course: 'Nivel Laboral 1B', level: 'Nivel Laboral 1 (Decreto 83)', enrollmentYear: 2026, entryDate: '2024-03-04', evaluationDate: '2026-04-10', reevaluationDate: '2026-12-11',
+      numero_matricula: 'MAT-2026-004', registrationNumber: 'MAT-2026-004', course: 'Nivel Laboral 1B', level: 'Nivel Laboral 1', enrollmentYear: 2026, entryDate: '2024-03-04', evaluationDate: '2026-04-10', reevaluationDate: '2026-12-11',
       grupo_funcionalidad: 'GRUPO_B', jornada: 'COMPLETA', id_taller: 2, taller_nombre: 'Taller Laboral de Gastronomía, Panadería y Repostería', workshop: 'Taller Laboral de Gastronomía, Panadería y Repostería', codigo_mineduc: 'TL-GASTRO-02', sala_ubicacion: 'Cocina Pedagógica Industrial - Sala G1',
       apoderado_nombre: 'Rosa Ester Paredes Lagos', apoderado_rut: '9.876.543-3', apoderado_parentesco: 'Abuela / Tutora Legal', apoderado_telefono: '+56 9 3322 1100', apoderado_email: 'rparedes@correo.cl',
       profesional_sos_nombre: 'Sebastián Tomás Morales Pino', profesional_sos_especialidad: 'Terapeuta Ocupacional', profesional_sos_telefono: '+56 9 8777 8899',
-      diagnostico_principal: 'Síndrome de Down / Discapacidad Intelectual Moderada (Decreto 170)',
+      diagnostico_principal: 'Síndrome de Down / Discapacidad Intelectual Moderada',
       contact: { address: 'Villa Los Héroes Pje. 4 #512', municipality: 'Maipú', phone: '+56 9 3322 1100', guardianName: 'Rosa Ester Paredes Lagos', guardianRut: '9.876.543-3', guardianPhone: '+56 9 3322 1100', guardianEmail: 'rparedes@correo.cl' },
       educational: {
         primaryDiagnosis: 'Síndrome de Down / Discapacidad Intelectual Moderada',
@@ -263,7 +265,7 @@ const INITIAL_JS_DB = {
     {
       id_estudiante: 5, id: '5', rut: '20.543.987-3', nombres: 'Diego Alejandro', apellidos: 'Mendoza Gómez', paternalSurname: 'Mendoza', maternalSurname: 'Gómez', names: 'Diego Alejandro', fullName: 'Diego Alejandro Mendoza Gómez', socialName: 'Diego', fecha_nacimiento: '2005-08-11', birthDate: '2005-08-11', genero: 'Masculino', gender: 'Masculino', nationality: 'Chilena', direccion: 'Av. Los Pajaritos 3450, Depto 402', comuna: 'Maipú',
       registro_nacional_discapacidad: 1, porcentaje_discapacidad: 40, beneficio_junaeb: 1, estado_matricula: 'EGRESADO_PRACTICA', status: 'egresado',
-      numero_matricula: 'MAT-2026-005', registrationNumber: 'MAT-2026-005', course: 'Nivel Laboral 3 Dual', level: 'Nivel Laboral 3 Dual (Decreto 83)', enrollmentYear: 2026, entryDate: '2022-03-01', evaluationDate: '2026-03-20', reevaluationDate: '2026-12-18',
+      numero_matricula: 'MAT-2026-005', registrationNumber: 'MAT-2026-005', course: 'Nivel Laboral 3 Dual', level: 'Nivel Laboral 3 Dual', enrollmentYear: 2026, entryDate: '2022-03-01', evaluationDate: '2026-03-20', reevaluationDate: '2026-12-18',
       grupo_funcionalidad: 'GRUPO_A', jornada: 'COMPLETA', id_taller: 3, taller_nombre: 'Taller Laboral de Horticultura, Vivero y Paisajismo', workshop: 'Taller Laboral de Horticultura, Vivero y Paisajismo', codigo_mineduc: 'TL-HORTI-03', sala_ubicacion: 'Invernadero Institucional - Sector Norte',
       apoderado_nombre: 'Patricia Elena Gómez Díaz', apoderado_rut: '12.345.678-5', apoderado_parentesco: 'Madre', apoderado_telefono: '+56 9 8666 7788', apoderado_email: 'pgomez.familia@gmail.com',
       profesional_sos_nombre: 'Sebastián Tomás Morales Pino', profesional_sos_especialidad: 'Terapeuta Ocupacional', profesional_sos_telefono: '+56 9 8777 8899',
@@ -297,7 +299,7 @@ const INITIAL_JS_DB = {
         'Apoyos en el aula (DUA)': 'Tablero visual de anticipación diaria, moldes acrílicos con tope táctil y estación libre de ruido directo.',
         'Estrategias prácticas': 'Modelado paso a paso en Grupo B con pausas sensoriales reguladas cada 45 minutos.',
         'Apoyo de la familia': 'Refuerzo de rutinas de anticipación en el hogar y envío diario de protectores auditivos.',
-        'Evaluación': 'Evaluación formativa mediante lista de cotejo cualitativa Decreto 83 (L / ED / EI).',
+        'Evaluación': 'Evaluación formativa mediante lista de cotejo cualitativa (L / ED / EI).',
         'Seguimiento': 'Revisión bimensual por equipo multidisciplinario PIE y Docente Titular.'
       }
     },
@@ -376,7 +378,7 @@ const INITIAL_JS_DB = {
       recursos_dua: 'Secuencia pictográfica ARASAAC, moldes táctiles de alto contraste y protectores auditivos.',
       docente_nombre: 'Carolina Andrea Muñoz Tapia',
       firmado: 1,
-      hash_firma_electronica: '9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08'
+      estado_firma: 'Firmado electrónicamente con PIN'
     }
   ],
   evaluaciones: [
@@ -415,38 +417,42 @@ const INITIAL_JS_DB = {
     {
       id_notificacion: 1,
       tipo: 'COMUNICADO_UTP',
-      titulo: '📋 Cierre de Evaluaciones Conceptuales Decreto 83 y Documentación PAI/PACI',
+      titulo: 'Cierre de Evaluaciones Conceptuales y Documentación PAI/PACI',
       mensaje: 'Unidad Técnico-Pedagógica recuerda completar las fichas de reevaluación y firmar el Leccionario PID con PIN electrónico.',
       created_at: 'Hoy 08:30'
     },
     {
       id_notificacion: 2,
       tipo: 'RECORDATORIO_FIRMA',
-      titulo: '🔒 Resguardo de Datos Sensibles Ley N° 19.628 Activo',
-      mensaje: 'Todos los accesos a fichas clínicas, protocolos PAEC y descargas de informes quedan registrados en la consola forense.',
+      titulo: 'Registro Institucional de Accesos Activo',
+      mensaje: 'Todos los accesos a fichas clínicas, protocolos PAEC y descargas de informes quedan registrados en la consola de auditoría.',
       created_at: 'Hoy 08:00'
     }
   ],
   horarios: [
     { dia_semana: 1, hora_inicio: '08:30:00', hora_fin: '11:30:00', bloque_nombre: 'Módulo Práctico Corte y Confección (Grupo A/B)', taller_nombre: 'Taller de Corte y Confección Textil', sala_ubicacion: 'Pabellón Técnico - Sala T1' },
     { dia_semana: 2, hora_inicio: '08:30:00', hora_fin: '11:30:00', bloque_nombre: 'Control de Calidad y Ensamblaje Textil', taller_nombre: 'Taller de Corte y Confección Textil', sala_ubicacion: 'Pabellón Técnico - Sala T1' },
-    { dia_semana: 3, hora_inicio: '14:00:00', hora_fin: '16:30:00', bloque_nombre: 'Co-Docencia PIE y Articulación DUA', taller_nombre: 'Equipo Multidisciplinario PIE', sala_ubicacion: 'Sala UTP / PIE' },
-    { dia_semana: 4, hora_inicio: '08:30:00', hora_fin: '12:00:00', bloque_nombre: 'Taller de Autonomía Sociolaboral Decreto 83', taller_nombre: 'Taller de Corte y Confección Textil', sala_ubicacion: 'Pabellón Técnico - Sala T1' }
+    { dia_semana: 3, hora_inicio: '14:00:00', hora_fin: '16:30:00', bloque_nombre: 'Co-Docencia PIE y Articulación Pedagógica', taller_nombre: 'Equipo Multidisciplinario PIE', sala_ubicacion: 'Sala UTP / PIE' },
+    { dia_semana: 4, hora_inicio: '08:30:00', hora_fin: '12:00:00', bloque_nombre: 'Taller de Autonomía Sociolaboral', taller_nombre: 'Taller de Corte y Confección Textil', sala_ubicacion: 'Pabellón Técnico - Sala T1' }
   ],
   roles: [
-    { codigo: 'ADMIN', nombre: 'Administrador Institucional', descripcion: 'Gestión integral de plataforma, cuentas del equipo, configuración y auditoría forense.' },
+    { codigo: 'SOSTENEDOR', nombre: 'Sostenedor Institucional', descripcion: 'Gobierno corporativo, control de subvención educacional, dotación RRHH, asistencia y auditoría.' },
     { codigo: 'DIRECTOR_UTP', nombre: 'Directora / Jefa UTP', descripcion: 'Supervisión técnico-pedagógica, visado de PAI/PACI, matrícula y acceso clínico completo.' },
+    { codigo: 'ADMIN', nombre: 'Administrador Institucional', descripcion: 'Gestión integral de plataforma, cuentas del equipo, configuración y auditoría del sistema.' },
     { codigo: 'DOCENTE', nombre: 'Docente Titular Educación Diferencial', descripcion: 'Gestión de estudiantes, Libro de Clases Digital (PID con PIN), documentos y lectura clínica.' },
-    { codigo: 'ESPECIALISTA_PIE', nombre: 'Especialista PIE (Psicología / T.O. / Fono)', descripcion: 'Lectura y escritura encriptada AES-256 de fichas clínicas, PAI, PACI, PAEC y atención SOS.' },
-    { codigo: 'MONITOR', nombre: 'Monitor Vocacional de Taller', descripcion: 'Apoyo práctico en taller laboral y activación de Botón SOS (sin acceso a datos clínicos Ley 19.628).' },
+    { codigo: 'ESPECIALISTA_PIE', nombre: 'Especialista PIE (Psicología / T.O. / Fono)', descripcion: 'Lectura y escritura de fichas clínicas, PAI, PACI, PAEC y atención de alertas SOS.' },
+    { codigo: 'CONVIVENCIA', nombre: 'Encargado de Convivencia Escolar', descripcion: 'Gestión de protocolos PAEC, bitácora de contención emocional, alertas SOS y seguimiento de asistencia.' },
+    { codigo: 'MONITOR', nombre: 'Monitor Vocacional de Taller', descripcion: 'Apoyo práctico en taller laboral, asistencia y activación de Botón SOS.' },
     { codigo: 'APODERADO', nombre: 'Portal Familia / Apoderado', descripcion: 'Acceso exclusivo de lectura al avance pedagógico y descarga del Informe Oficial para la Familia.' }
   ],
   logs: [
-    { id_log: 104, fecha_hora: '2026-11-10 08:15:22', usuario_nombre: 'Camila Ignacia Vargas Herrera', rol_codigo: 'ESPECIALISTA_PIE', modulo: 'FICHA_CLINICA_PIE_PAEC', accion: 'LECTURA', detalle: 'Acceso autorizado y desencriptación AES-256-GCM de expediente #1', ip_origen: '192.168.1.42' },
-    { id_log: 103, fecha_hora: '2026-11-10 08:10:05', usuario_nombre: 'Carolina Andrea Muñoz Tapia', rol_codigo: 'DOCENTE', modulo: 'LIBRO_CLASES_PID', accion: 'FIRMA_DIGITAL', detalle: 'Clase PID firmada con PIN electrónico Bcrypt. Sello SHA-256: 9f86d081884c7d65', ip_origen: '192.168.1.18' },
+    { id_log: 104, fecha_hora: '2026-11-10 08:15:22', usuario_nombre: 'Camila Ignacia Vargas Herrera', rol_codigo: 'ESPECIALISTA_PIE', modulo: 'FICHA_CLINICA_PIE_PAEC', accion: 'LECTURA', detalle: 'Acceso autorizado a expediente clínico #1', ip_origen: '192.168.1.42' },
+    { id_log: 103, fecha_hora: '2026-11-10 08:10:05', usuario_nombre: 'Carolina Andrea Muñoz Tapia', rol_codigo: 'DOCENTE', modulo: 'LIBRO_CLASES_PID', accion: 'FIRMA_DIGITAL', detalle: 'Clase PID registrada y validada (Firmado electrónicamente con PIN)', ip_origen: '192.168.1.18' },
     { id_log: 102, fecha_hora: '2026-11-09 16:40:11', usuario_nombre: 'Marcela Paz Rojas Contreras', rol_codigo: 'DIRECTOR_UTP', modulo: 'DOCUMENTACION_INSTITUCIONAL', accion: 'CREACION', detalle: 'Generación de documento institucional (PAI): Plan de Apoyo Individual — Matías Vera', ip_origen: '192.168.1.10' }
   ]
 };
+
+window.APANDI_DEV_ACCOUNTS = INITIAL_JS_DB.users;
 
 window.ApandiAPIClient = class ApandiAPIClient {
   constructor() {
@@ -544,15 +550,49 @@ window.ApandiAPIClient = class ApandiAPIClient {
   }
 
   async handleJsFallback(route, method, body) {
-    const users = this.getLocalStore('users', INITIAL_JS_DB.users);
-    const students = this.getLocalStore('estudiantes', INITIAL_JS_DB.estudiantes);
+    let users = this.getLocalStore('users', INITIAL_JS_DB.users);
+    INITIAL_JS_DB.users.forEach((seedUser) => {
+      if (!users.some((u) => u.rol_codigo === seedUser.rol_codigo || u.email === seedUser.email)) {
+        users.push(JSON.parse(JSON.stringify(seedUser)));
+      }
+    });
+    const cleanNormative = (val) => String(val || '').replace(/\s*\((?:Decreto|Datos protegidos|Ley)[^)]*\)/gi, '').replace(/\bDecreto(?:\s+Exento)?\s*(?:N°?\s*)?\d+\b/gi, '').replace(/\bLey(?:\s+N°?)?\s*19\.628\b/gi, '').trim();
+    const students = this.getLocalStore('estudiantes', INITIAL_JS_DB.estudiantes).map((st) => {
+      st.level = cleanNormative(st.level) || 'Nivel Laboral 2';
+      st.diagnostico_principal = cleanNormative(st.diagnostico_principal);
+      if (st.educational) {
+        st.educational.primaryDiagnosis = cleanNormative(st.educational.primaryDiagnosis);
+      }
+      return st;
+    });
     const docs = this.getLocalStore('documentos', INITIAL_JS_DB.documentos);
-    const clasesPid = this.getLocalStore('clasesPid', INITIAL_JS_DB.clasesPid);
+    const clasesPid = this.getLocalStore('clasesPid', INITIAL_JS_DB.clasesPid).map((c) => ({
+      id_clase: c.id_clase,
+      id_taller: c.id_taller,
+      taller_nombre: c.taller_nombre,
+      docente_nombre: c.docente_nombre,
+      fecha_clase: c.fecha_clase,
+      unidad_tematica: c.unidad_tematica,
+      objetivo_aprendizaje: c.objetivo_aprendizaje,
+      actividad_grupo_a: c.actividad_grupo_a,
+      actividad_grupo_b: c.actividad_grupo_b,
+      recursos_dua: c.recursos_dua,
+      firmado: 1,
+      estado_firma: 'Firmado electrónicamente con PIN',
+      fecha_firma: c.fecha_firma
+    }));
     const evaluaciones = this.getLocalStore('evaluaciones', INITIAL_JS_DB.evaluaciones);
     const asistencias = this.getLocalStore('asistencias', []);
     const notificaciones = this.getLocalStore('notificaciones', INITIAL_JS_DB.notificaciones);
     const logs = this.getLocalStore('logs', INITIAL_JS_DB.logs);
     const bitacora = this.getLocalStore('bitacora', []);
+    const currentRole = this.user?.rol_codigo || 'DOCENTE';
+
+    const checkRoles = (allowed, customMsg) => {
+      if (!allowed.includes(currentRole)) {
+        throw new Error(customMsg || `Control de Acceso: Su perfil (${currentRole}) no cuenta con permisos para este módulo.`);
+      }
+    };
 
     if (route === 'auth/login' && method === 'POST') {
       const input = String(body.emailOrRut || body.identifier || '').trim().toLowerCase();
@@ -606,7 +646,7 @@ window.ApandiAPIClient = class ApandiAPIClient {
         numero_matricula: numMat,
         registrationNumber: numMat,
         course: body.course || 'Nivel Laboral 2A',
-        level: body.level || 'Nivel Laboral (Decreto 83)',
+        level: body.level || 'Nivel Laboral',
         workshop: body.workshop || tallerObj.nombre,
         taller_nombre: body.workshop || tallerObj.nombre,
         id_taller: tallerObj.id_taller,
@@ -625,7 +665,7 @@ window.ApandiAPIClient = class ApandiAPIClient {
         profesional_sos_nombre: 'Camila Ignacia Vargas Herrera',
         profesional_sos_especialidad: 'Psicóloga Educacional / Coordinadora PIE y PAEC',
         profesional_sos_telefono: '+56 9 8555 6677',
-        diagnostico_principal: body.primaryDiagnosis || 'Evaluación diagnóstica Decreto 170',
+        diagnostico_principal: body.primaryDiagnosis || 'Evaluación diagnóstica multiprofesional',
         contact: {
           address: body.address || body.direccion || 'Maipú',
           municipality: body.municipality || body.comuna || 'Maipú',
@@ -636,7 +676,7 @@ window.ApandiAPIClient = class ApandiAPIClient {
           guardianEmail: body.guardianEmail || ''
         },
         educational: {
-          primaryDiagnosis: body.primaryDiagnosis || 'Evaluación diagnóstica Decreto 170',
+          primaryDiagnosis: body.primaryDiagnosis || 'Evaluación diagnóstica multiprofesional',
           secondaryDiagnosis: body.secondaryDiagnosis || '',
           supportNeeds: body.supportNeeds || '',
           strengths: body.strengths || '',
@@ -761,9 +801,9 @@ window.ApandiAPIClient = class ApandiAPIClient {
           status: r.status || 'activo',
           estado_matricula: 'REGULAR',
           enrollmentYear: Number(r.enrollmentYear || 2026),
-          diagnostico_principal: r.primaryDiagnosis || 'Evaluación Decreto 170',
+          diagnostico_principal: r.primaryDiagnosis || 'Evaluación diagnóstica',
           contact: { municipality: 'Maipú', guardianName: 'Apoderado Registrado' },
-          educational: { primaryDiagnosis: r.primaryDiagnosis || 'Evaluación Decreto 170' }
+          educational: { primaryDiagnosis: r.primaryDiagnosis || 'Evaluación diagnóstica' }
         });
         created++;
       });
@@ -771,11 +811,27 @@ window.ApandiAPIClient = class ApandiAPIClient {
       return { ok: true, created, skipped };
     }
 
+    if (route === 'auth/change-password' && method === 'POST') {
+      if (String(body.newPassword || '').length < 10) {
+        throw new Error('La nueva contraseña debe tener al menos 10 caracteres.');
+      }
+      return { ok: true, mensaje: 'Contraseña institucional actualizada y protegida correctamente.' };
+    }
+
+    if (route === 'auth/change-pin' && method === 'POST') {
+      if (!/^\d{6}$/.test(String(body.newPin || ''))) {
+        throw new Error('El nuevo PIN de Firma Electrónica debe contener exactamente 6 dígitos numéricos.');
+      }
+      return { ok: true, mensaje: 'PIN de Firma Electrónica Simple de 6 dígitos actualizado exitosamente.' };
+    }
+
     if (route === 'documentos' && method === 'GET') {
+      checkRoles(['DIRECTOR_UTP', 'DOCENTE', 'ESPECIALISTA_PIE', 'CONVIVENCIA', 'APODERADO', 'SOSTENEDOR', 'ADMIN']);
       return { ok: true, documentos: docs };
     }
 
     if (route === 'documentos' && method === 'POST') {
+      checkRoles(['DIRECTOR_UTP', 'DOCENTE', 'ESPECIALISTA_PIE', 'CONVIVENCIA', 'ADMIN'], 'Su perfil no está autorizado para crear o editar documentos oficiales.');
       const newDoc = {
         id: 'doc-' + Date.now(),
         student: Number(body.studentId || 1),
@@ -795,17 +851,62 @@ window.ApandiAPIClient = class ApandiAPIClient {
       return { ok: true, documento: newDoc };
     }
 
+    const matchDocId = route.match(/^documentos\/(.+)$/);
+    if (matchDocId) {
+      const docId = matchDocId[1];
+      if (method === 'PUT') {
+        checkRoles(['DIRECTOR_UTP', 'DOCENTE', 'ESPECIALISTA_PIE', 'CONVIVENCIA', 'ADMIN'], 'Su perfil no está autorizado para modificar documentos oficiales.');
+        const idx = docs.findIndex((d) => String(d.id) === String(docId));
+        if (idx !== -1) {
+          docs[idx] = Object.assign({}, docs[idx], {
+            student: Number(body.studentId || docs[idx].student || 1),
+            studentId: String(body.studentId || docs[idx].studentId || '1'),
+            documentType: body.type || docs[idx].documentType,
+            type: body.type || docs[idx].type,
+            title: body.title || docs[idx].title,
+            status: body.status || docs[idx].status,
+            date: body.date || docs[idx].date,
+            content: body.content || docs[idx].content,
+            observations: body.observations ?? docs[idx].observations,
+            responsibleName: body.responsibleName || docs[idx].responsibleName
+          });
+          this.setLocalStore('documentos', docs);
+        }
+        return { ok: true };
+      }
+      if (method === 'DELETE') {
+        checkRoles(['DIRECTOR_UTP', 'ADMIN', 'ESPECIALISTA_PIE', 'DOCENTE'], 'Su perfil no está autorizado para eliminar documentos oficiales.');
+        const filtered = docs.filter((d) => String(d.id) !== String(docId));
+        this.setLocalStore('documentos', filtered);
+        return { ok: true };
+      }
+    }
+
     if (route === 'usuarios' && method === 'GET') {
+      checkRoles(['ADMIN', 'DIRECTOR_UTP', 'SOSTENEDOR'], 'Acceso reservado para Administración, Dirección/UTP y Sostenedor.');
       return { ok: true, usuarios: users };
     }
 
     if (route === 'usuarios' && method === 'POST') {
+      checkRoles(['ADMIN', 'DIRECTOR_UTP'], 'Solo Administración o Dirección/UTP pueden crear nuevas cuentas de funcionarios.');
       if (String(body.password || '').length < 10) {
         throw new Error('La contraseña temporal debe tener al menos 10 caracteres.');
       }
-      const newId = users.length + 1;
-      const roleMap = { administrador: 'ADMIN', profesor: 'DOCENTE', docente: 'DOCENTE', especialista_pie: 'ESPECIALISTA_PIE', monitor: 'MONITOR' };
-      const rolCodigo = roleMap[String(body.role || 'docente').toLowerCase()] || 'DOCENTE';
+      const newId = users.length ? Math.max(...users.map((u) => Number(u.id_usuario) || 0)) + 1 : 10;
+      const roleMap = {
+        sostenedor: 'SOSTENEDOR',
+        director_utp: 'DIRECTOR_UTP',
+        administrador: 'ADMIN',
+        admin: 'ADMIN',
+        profesor: 'DOCENTE',
+        docente: 'DOCENTE',
+        especialista_pie: 'ESPECIALISTA_PIE',
+        convivencia: 'CONVIVENCIA',
+        monitor: 'MONITOR',
+        apoderado: 'APODERADO'
+      };
+      const rolCodigo = roleMap[String(body.role || 'docente').toLowerCase()] || String(body.role || 'DOCENTE').toUpperCase();
+      const roleObj = INITIAL_JS_DB.roles.find((r) => r.codigo === rolCodigo) || { nombre: 'Funcionario Institucional' };
       const newUser = {
         id_usuario: newId,
         id: String(newId),
@@ -815,17 +916,36 @@ window.ApandiAPIClient = class ApandiAPIClient {
         username: body.username || String(body.email || '').split('@')[0],
         email: body.email,
         rol_codigo: rolCodigo,
-        role: body.role || 'docente',
-        rol_nombre: body.role || 'Docente Institucional',
-        especialidad: body.especialidad || 'Profesional Educación Especial',
-        horas_contrato: 40,
+        role: String(body.role || 'docente').toLowerCase(),
+        rol_nombre: roleObj.nombre,
+        especialidad: body.especialidad || roleObj.nombre,
+        horas_contrato: Number(body.horas_contrato || 40),
         active: true,
         activo: 1,
         customPassword: body.password
       };
       users.push(newUser);
-      this.setLocalStore('usuarios', users);
+      this.setLocalStore('users', users);
       return { ok: true, usuario: newUser };
+    }
+
+    const matchUserToggle = route.match(/^usuarios\/(\d+)\/toggle$/);
+    if (matchUserToggle && method === 'PUT') {
+      checkRoles(['ADMIN', 'DIRECTOR_UTP'], 'Solo Administración o Dirección/UTP pueden cambiar el estado de cuentas.');
+      const idU = Number(matchUserToggle[1]);
+      const target = users.find((u) => Number(u.id_usuario) === idU);
+      if (target) {
+        target.active = !target.active;
+        target.activo = target.active ? 1 : 0;
+        this.setLocalStore('users', users);
+      }
+      return { ok: true };
+    }
+
+    const matchUserReset = route.match(/^usuarios\/(\d+)\/reset-password$/);
+    if (matchUserReset && method === 'PUT') {
+      checkRoles(['ADMIN', 'DIRECTOR_UTP'], 'Solo Administración o Dirección/UTP pueden restablecer contraseñas.');
+      return { ok: true, mensaje: 'Contraseña restablecida exitosamente.' };
     }
 
     if (route === 'rrhh/dashboard' && method === 'GET') {
@@ -835,7 +955,8 @@ window.ApandiAPIClient = class ApandiAPIClient {
         historial_reloj: [
           { funcionario_nombre: 'Carolina Andrea Muñoz Tapia', especialidad: 'Educadora Diferencial', rol_codigo: 'DOCENTE', metodo_marcaje: 'GEOLOCALIZADO', hora_entrada: '08:04:12', hora_salida: null },
           { funcionario_nombre: 'Camila Ignacia Vargas Herrera', especialidad: 'Psicóloga PIE / PAEC', rol_codigo: 'ESPECIALISTA_PIE', metodo_marcaje: 'GEOLOCALIZADO', hora_entrada: '08:01:45', hora_salida: null },
-          { funcionario_nombre: 'Jorge Eduardo Fuentes Bravo', especialidad: 'Monitor Vocacional', rol_codigo: 'MONITOR', metodo_marcaje: 'BIOMETRICO', hora_entrada: '08:10:00', hora_salida: null }
+          { funcionario_nombre: 'Jorge Eduardo Fuentes Bravo', especialidad: 'Monitor Vocacional', rol_codigo: 'MONITOR', metodo_marcaje: 'BIOMETRICO', hora_entrada: '08:10:00', hora_salida: null },
+          { funcionario_nombre: 'Javiera Paz Morales Araya', especialidad: 'Encargada Convivencia Escolar', rol_codigo: 'CONVIVENCIA', metodo_marcaje: 'GEOLOCALIZADO', hora_entrada: '08:02:18', hora_salida: null }
         ],
         horarios: INITIAL_JS_DB.horarios,
         notificaciones: notificaciones
@@ -843,18 +964,56 @@ window.ApandiAPIClient = class ApandiAPIClient {
     }
 
     if (route === 'rrhh/reloj-control' && method === 'POST') {
+      checkRoles(['SOSTENEDOR', 'DIRECTOR_UTP', 'ADMIN', 'DOCENTE', 'MONITOR', 'ESPECIALISTA_PIE', 'CONVIVENCIA'], 'El Reloj Control Biométrico/GPS es exclusivo para personal de la escuela.');
       return { ok: true, mensaje: `Marca de ${body.tipo_marca || 'ENTRADA'} registrada exitosamente (${body.metodo_marcaje || 'GEOLOCALIZADO'}).` };
     }
 
+    if (route === 'sostenedor/resumen' && method === 'GET') {
+      checkRoles(['SOSTENEDOR', 'DIRECTOR_UTP', 'ADMIN'], 'Acceso reservado para Sostenedor, Dirección/UTP y Administración.');
+      const dotacion = users.filter((u) => u.rol_codigo !== 'APODERADO');
+      const horasContratoTotal = dotacion.reduce((acc, u) => acc + Number(u.horas_contrato || 0), 0);
+      const talleresCapacidad = INITIAL_JS_DB.talleres.map((t) => ({
+        codigo_mineduc: t.codigo_mineduc,
+        nombre: t.nombre,
+        nivel_decreto: t.nivel_decreto,
+        capacidad_maxima: t.capacidad_maxima,
+        sala_ubicacion: t.sala_ubicacion,
+        matriculados: students.filter((s) => Number(s.id_taller) === Number(t.id_taller)).length
+      }));
+      const kpisObj = {
+        matricula_total: students.length,
+        matricula_regular: students.filter((s) => s.estado_matricula === 'REGULAR' || s.status === 'activo').length,
+        matricula_practica_dual: students.filter((s) => s.estado_matricula === 'EGRESADO_PRACTICA' || s.status === 'egresado').length,
+        beneficiarios_junaeb: students.filter((s) => Number(s.beneficio_junaeb ?? 1) === 1).length,
+        inscritos_rnd: students.filter((s) => Number(s.registro_nacional_discapacidad ?? 1) === 1).length,
+        asistencia_media_pct: 94.6,
+        dotacion_activa: dotacion.length,
+        horas_contrato_semanales: horasContratoTotal,
+        clases_pid_firmadas: clasesPid.length,
+        documentos_oficiales: docs.length,
+        subvencion_mensual_estimada_clp: students.length * 412850,
+        estado_reconocimiento_oficial: 'VIGENTE — Reconocimiento Oficial Educación Especial'
+      };
+      return {
+        ok: true,
+        kpis: kpisObj,
+        metricas: kpisObj,
+        talleres: talleresCapacidad,
+        talleres_capacidad: talleresCapacidad,
+        dotacion: dotacion
+      };
+    }
+
     if (route === 'pedagogico/libro' && method === 'GET') {
+      checkRoles(['DIRECTOR_UTP', 'DOCENTE', 'MONITOR', 'ESPECIALISTA_PIE', 'SOSTENEDOR', 'ADMIN'], 'Su perfil no tiene autorización para acceder al Libro de Clases Digital.');
       return { ok: true, clasesPid: clasesPid, evaluaciones: evaluaciones, asistencias: asistencias };
     }
 
     if (route === 'pedagogico/pid' && method === 'POST') {
+      checkRoles(['DIRECTOR_UTP', 'DOCENTE'], 'Solo Docentes Titulares y Dirección/UTP están facultados para firmar el Leccionario PID con PIN Electrónico.');
       if (String(body.pin_firma) !== '849206') {
         throw new Error('PIN de Firma Electrónica Simple inválido para su cuenta institucional.');
       }
-      const hash = 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855';
       const tallerObj = INITIAL_JS_DB.talleres.find((t) => Number(t.id_taller) === Number(body.id_taller)) || INITIAL_JS_DB.talleres[0];
       clasesPid.unshift({
         id_clase: Date.now(),
@@ -868,13 +1027,18 @@ window.ApandiAPIClient = class ApandiAPIClient {
         recursos_dua: body.recursos_dua,
         docente_nombre: this.user?.nombre_completo || 'Carolina Andrea Muñoz Tapia',
         firmado: 1,
-        hash_firma_electronica: hash
+        estado_firma: 'Firmado electrónicamente con PIN'
       });
       this.setLocalStore('clasesPid', clasesPid);
-      return { ok: true, mensaje: 'Planificación PID registrada y sellada con Firma Electrónica Simple.', hash_firma: hash };
+      return {
+        ok: true,
+        mensaje: 'Planificación PID registrada y validada (Firmado electrónicamente con PIN).',
+        estado_firma: 'Firmado electrónicamente con PIN'
+      };
     }
 
     if (route === 'pedagogico/asistencia' && method === 'POST') {
+      checkRoles(['DIRECTOR_UTP', 'DOCENTE', 'MONITOR', 'CONVIVENCIA'], 'Su perfil no tiene permisos para modificar la asistencia diaria.');
       const idx = asistencias.findIndex((a) => Number(a.id_estudiante) === Number(body.id_estudiante));
       const record = { id_estudiante: body.id_estudiante, id_taller: body.id_taller, estado: body.estado, fecha: new Date().toISOString().slice(0, 10) };
       if (idx >= 0) asistencias[idx] = record;
@@ -884,6 +1048,7 @@ window.ApandiAPIClient = class ApandiAPIClient {
     }
 
     if (route === 'pedagogico/evaluaciones' && method === 'POST') {
+      checkRoles(['DIRECTOR_UTP', 'DOCENTE', 'ESPECIALISTA_PIE'], 'Solo Docentes Titulares, Equipo PIE y UTP pueden registrar evaluaciones conceptuales.');
       const st = students.find((s) => Number(s.id_estudiante) === Number(body.id_estudiante)) || students[0];
       evaluaciones.unshift({
         id_evaluacion: Date.now(),
@@ -896,7 +1061,7 @@ window.ApandiAPIClient = class ApandiAPIClient {
         fecha_evaluacion: new Date().toISOString().slice(0, 10)
       });
       this.setLocalStore('evaluaciones', evaluaciones);
-      return { ok: true, mensaje: 'Evaluación conceptual Decreto 83 registrada correctamente.' };
+      return { ok: true, mensaje: 'Evaluación conceptual registrada correctamente.' };
     }
 
     const matchClin = route.match(/^clinico\/expediente\/(\d+)$/);
@@ -904,32 +1069,37 @@ window.ApandiAPIClient = class ApandiAPIClient {
       const idEst = Number(matchClin[1]);
       const rol = this.user?.rol_codigo || 'DOCENTE';
       if (!['ESPECIALISTA_PIE', 'DIRECTOR_UTP', 'DOCENTE', 'ADMIN'].includes(rol)) {
-        throw new Error(`Restricción Legal Ley 19.628: Su perfil (${rol}) no tiene autorización para acceder a diagnósticos clínicos ni expedientes PIE encriptados.`);
+        throw new Error(`Su perfil (${rol}) no tiene autorización para acceder a diagnósticos clínicos ni expedientes PIE.`);
       }
       const st = students.find((s) => Number(s.id_estudiante) === idEst) || students[0];
       if (method === 'PUT') {
         if (!['ESPECIALISTA_PIE', 'DIRECTOR_UTP'].includes(rol)) {
-          throw new Error('Modo Solo Lectura (Ley 19.628): Solo el Equipo PIE y Dirección/UTP pueden modificar datos clínicos.');
+          throw new Error('Modo Solo Lectura: Solo el Equipo PIE y Dirección/UTP pueden modificar datos clínicos.');
         }
         st.diagnostico_principal = body.diagnostico_principal;
         st.anamnesis_custom = body.anamnesis;
         if (st.educational) st.educational.primaryDiagnosis = body.diagnostico_principal;
         this.setLocalStore('estudiantes', students);
-        return { ok: true, mensaje: 'Expediente Clínico y PAEC cifrados con AES-256-GCM y guardados.' };
+        return {
+          ok: true,
+          mensaje: 'Expediente Clínico y PAEC guardados correctamente.',
+          estado_proteccion: 'Resguardo Clínico Institucional'
+        };
       }
       return {
         ok: true,
         permiso_escritura: ['ESPECIALISTA_PIE', 'DIRECTOR_UTP'].includes(rol),
         rol_acceso: rol,
+        estado_proteccion: 'Resguardo Clínico Institucional',
         ficha: {
           id_ficha: idEst,
-          cipher_preview: 'a4f91c2d08e1738b61c23901:8b71e2a3c4d5f6a70192837465564738:9e83b1657ff1fc53b92dc18148a1d65d...',
-          diagnostico_principal: st.educational?.primaryDiagnosis || st.diagnostico_principal || 'Diagnóstico Decreto 170 vigente.',
+          estado_proteccion: 'Resguardo Clínico Institucional',
+          diagnostico_principal: st.educational?.primaryDiagnosis || st.diagnostico_principal || 'Diagnóstico multiprofesional vigente.',
           anamnesis: st.anamnesis_custom || st.educational?.relevantBackground || 'Parto a término. Escolaridad en modalidad de Educación Especial con apoyo multidisciplinario PIE.',
           datos_medicos: {
             medicamentos: idEst === 1 ? [{ nombre: 'Risperidona', dosis: '1 mg', horario: '08:00 y 20:00 hrs' }] : [],
             alergias: idEst === 1 ? ['Penicilina', 'Polvo textil sintético'] : ['Ninguna reportada'],
-            perfil_sensorial: st.educational?.supportNeeds || 'Adecuado al entorno de taller con apoyos DUA.'
+            perfil_sensorial: st.educational?.supportNeeds || 'Adecuado al entorno de taller con apoyos pedagógicos.'
           },
           sistema_salud: 'FONASA',
           centro_salud_derivacion: 'CRS Maipú / COSAM'
@@ -948,14 +1118,15 @@ window.ApandiAPIClient = class ApandiAPIClient {
           }
         },
         paci: {
-          tipo_adecuacion: st.grupo_funcionalidad === 'GRUPO_B' ? 'INTEGRAL (ACCESO Y OBJETIVOS)' : 'ACCESO Y TIEMPOS DUA',
+          tipo_adecuacion: st.grupo_funcionalidad === 'GRUPO_B' ? 'INTEGRAL (ACCESO Y OBJETIVOS)' : 'ACCESO Y TIEMPOS',
           criterios_adecuacion_json: {
             acceso: 'Señalética visual ARASAAC, mobiliario adaptado y protectores auditivos.',
             objetivos_aprendizaje: 'Graduación de complejidad en operaciones de maquinaria y medición.'
           },
-          estrategias_evaluacion_diferenciada: 'Rúbrica conceptual Decreto 83 basada en observación directa y portafolio práctico.'
+          estrategias_evaluacion_diferenciada: 'Rúbrica conceptual basada en observación directa y portafolio práctico.'
         },
         paec: {
+          estado_proteccion: 'Resguardo Clínico Institucional',
           profesional_sos_nombre: st.profesional_sos_nombre || 'Camila Ignacia Vargas Herrera',
           profesional_sos_especialidad: st.profesional_sos_especialidad || 'Psicóloga Educacional / Coordinadora PIE',
           profesional_sos_telefono: st.profesional_sos_telefono || '+56 9 8555 6677',
@@ -968,6 +1139,7 @@ window.ApandiAPIClient = class ApandiAPIClient {
     }
 
     if (route === 'paec/sos' && method === 'POST') {
+      checkRoles(['DIRECTOR_UTP', 'DOCENTE', 'MONITOR', 'ESPECIALISTA_PIE', 'CONVIVENCIA', 'ADMIN'], 'El Botón SOS en Aula es de uso exclusivo para el personal del establecimiento.');
       const st = students.find((s) => Number(s.id_estudiante) === Number(body.id_estudiante)) || students[0];
       const alerta = {
         id_incidencia: Date.now(),
@@ -989,18 +1161,61 @@ window.ApandiAPIClient = class ApandiAPIClient {
         acciones_aplicadas_paec: alerta.protocolo_paec,
         reportante_nombre: alerta.reportado_por,
         profesional_nombre: alerta.profesional_sos,
+        estado_proteccion: 'Resguardo Institucional',
         fecha_hora_suceso: 'Hoy ' + alerta.hora
       });
       this.setLocalStore('bitacora', bitacora);
-      return { ok: true, mensaje: '¡Alerta SOS despachada inmediatamente al Profesional SOS designado en el PAEC!', alerta };
+      return { ok: true, mensaje: 'Alerta SOS despachada inmediatamente al Profesional SOS designado en el PAEC.', alerta };
     }
 
     if (route === 'paec/bitacora' && method === 'GET') {
-      return { ok: true, bitacora: bitacora };
+      checkRoles(['DIRECTOR_UTP', 'DOCENTE', 'MONITOR', 'ESPECIALISTA_PIE', 'CONVIVENCIA', 'SOSTENEDOR', 'ADMIN'], 'Su perfil no tiene autorización para consultar la Bitácora PAEC.');
+      const protocolos_paec = students.map((st) => ({
+        id_estudiante: st.id_estudiante,
+        nombres: st.nombres,
+        apellidos: st.apellidos,
+        numero_matricula: st.numero_matricula,
+        grupo_funcionalidad: st.grupo_funcionalidad,
+        taller_nombre: st.taller_nombre,
+        sala_ubicacion: st.sala_ubicacion,
+        profesional_sos_nombre: st.profesional_sos_nombre || 'Camila Ignacia Vargas Herrera',
+        profesional_sos_especialidad: st.profesional_sos_especialidad || 'Psicóloga Educacional / Coordinadora PIE',
+        profesional_sos_telefono: st.profesional_sos_telefono || '+56 9 8555 6677',
+        gatillantes_dec: 'Ruido súbito de maquinaria industrial, cambios imprevistos de rutina o sobrecarga sensorial.',
+        senales_previas: 'Se cubre los oídos, aumento de inquietud motora o aislamiento en la estación de trabajo.',
+        estrategias_contencion: 'Etapa 1: Ofrecer protectores auditivos y pausa activa. Etapa 2: Disminuir estímulos y acompañar a zona de calma. Etapa 3: Activar Botón SOS en Aula hacia Sala Sensorial.',
+        acuerdos_familia: 'Comunicación diaria con equipo PIE y anticipación de cambios de rutina desde el hogar.',
+        estado_proteccion: 'Resguardo Institucional'
+      }));
+      return { ok: true, bitacora: bitacora, protocolos_paec: protocolos_paec };
+    }
+
+    if (route === 'paec/convivencia' && method === 'POST') {
+      checkRoles(['CONVIVENCIA', 'ESPECIALISTA_PIE', 'DIRECTOR_UTP', 'DOCENTE'], 'Su perfil no está autorizado para registrar intervenciones en la Bitácora de Convivencia Escolar.');
+      const st = students.find((s) => Number(s.id_estudiante) === Number(body.id_estudiante)) || students[0];
+      bitacora.unshift({
+        id_incidencia: Date.now(),
+        tipo_incidencia: body.tipo_incidencia || 'SEGUIMIENTO_CONVIVENCIA',
+        estudiante_nombre: `${st.nombres} ${st.apellidos}`,
+        estado_alerta: body.estado_alerta || 'CONTENIDA_RESUELTA',
+        descripcion_suceso: body.descripcion_suceso || '',
+        acciones_aplicadas_paec: body.acciones_aplicadas_paec || 'Intervención formativa y acompañamiento psicosocial.',
+        reportante_nombre: this.user?.nombre_completo || 'Encargada de Convivencia Escolar',
+        profesional_nombre: this.user?.nombre_completo || 'Encargada de Convivencia Escolar',
+        estado_proteccion: 'Resguardo Institucional',
+        fecha_hora_suceso: 'Hoy ' + new Date().toLocaleTimeString('es-CL')
+      });
+      this.setLocalStore('bitacora', bitacora);
+      return {
+        ok: true,
+        mensaje: 'Intervención de Convivencia Escolar registrada correctamente.',
+        estado_proteccion: 'Resguardo Institucional'
+      };
     }
 
     const matchApod = route.match(/^apoderados\/resumen\/(\d+)$/);
     if (matchApod && method === 'GET') {
+      checkRoles(['APODERADO', 'DIRECTOR_UTP', 'DOCENTE', 'ESPECIALISTA_PIE', 'CONVIVENCIA', 'ADMIN'], 'Su perfil no tiene acceso al Portal de Familia.');
       const idEst = Number(matchApod[1]);
       const st = students.find((s) => Number(s.id_estudiante) === idEst) || students[0];
       const stEvals = evaluaciones.filter((ev) => Number(ev.id_estudiante) === idEst);
@@ -1017,6 +1232,7 @@ window.ApandiAPIClient = class ApandiAPIClient {
     }
 
     if (route === 'seguridad/auditoria' && method === 'GET') {
+      checkRoles(['ADMIN', 'DIRECTOR_UTP', 'SOSTENEDOR'], 'Acceso a la Consola de Auditoría reservado para Administración, Dirección/UTP y Sostenedor.');
       return { ok: true, logs: logs, roles: INITIAL_JS_DB.roles, usuarios: users };
     }
 

@@ -155,7 +155,7 @@ try {
     // Continuar si la instancia MariaDB no permite modificación de time_zone
 }
 
-// Asegurar existencia de columnas de seguridad Anti-Brute Force en MariaDB
+// Asegurar existencia de columnas de seguridad Anti-Brute Force y perfiles RBAC completos en MariaDB
 function ensureSecurityColumns(PDO $pdo): void {
     try {
         $cols = $pdo->query("SHOW COLUMNS FROM apx_sec_cuentas_acceso LIKE 'bloqueado_hasta'")->fetch();
@@ -168,6 +168,33 @@ function ensureSecurityColumns(PDO $pdo): void {
         }
     } catch (Throwable $e) {
         // Ignorar si ya existen las columnas o el entorno es de solo lectura
+    }
+
+    try {
+        $pdo->exec("
+            INSERT IGNORE INTO apx_sec_rbac_perfiles (id_rol, codigo, nombre, descripcion, permisos_json) VALUES
+            (7, 'SOSTENEDOR', 'Sostenedor / Representante Legal', 'Supervisión ejecutiva de subvenciones, dotación RRHH, infraestructura, matrícula y cumplimiento SIE/MINEDUC', '{\"sostenedor\": \"rw\", \"seguridad\": \"r\", \"rrhh\": \"r\", \"estudiantes\": \"r\", \"pedagogico\": \"r\", \"clinico\": \"none\", \"paec\": \"r\", \"auditoria\": \"r\"}'),
+            (8, 'CONVIVENCIA', 'Encargado/a de Convivencia Escolar', 'Gestión de protocolos PAEC, atención de alertas SOS, bitácora DEC, mediación escolar y retención por inasistencia', '{\"rrhh\": \"rw\", \"estudiantes\": \"r\", \"pedagogico\": \"r\", \"clinico\": \"none\", \"paec\": \"rw\", \"convivencia\": \"rw\"}')
+        ");
+        $pdo->exec("
+            INSERT IGNORE INTO apx_sec_cuentas_acceso (id_usuario, id_rol, rut, nombres, apellidos, email, telefono, password_hash, pin_firma_hash, especialidad, horas_contrato) VALUES
+            (8, 7, '10.234.567-8', 'Hernán Patricio', 'Valdivia Montes', 'sostenedor@apandi.cl', '+56 9 8000 1122', '\$2y\$12\$cLrJlhPwVUG1PYmVQmma1egZiaAPKT5uGuIjcmQ4Za057tmUBAiz2', '\$2y\$12\$/gdl1gniqeHdgU8b5ERoNOB7ukLHOqbem0TfqLAmCgG7WZ4yWrLUO', 'Sostenedor / Representante Legal Institucional', 44),
+            (9, 8, '16.890.123-4', 'Javiera Paz', 'Morales Araya', 'convivencia@apandi.cl', '+56 9 8999 0011', '\$2y\$12\$cLrJlhPwVUG1PYmVQmma1egZiaAPKT5uGuIjcmQ4Za057tmUBAiz2', '\$2y\$12\$/gdl1gniqeHdgU8b5ERoNOB7ukLHOqbem0TfqLAmCgG7WZ4yWrLUO', 'Trabajadora Social / Encargada de Convivencia Escolar', 44)
+        ");
+    } catch (Throwable $e) {
+        // Ignorar si ya existen los perfiles
+    }
+}
+
+function requireRoles(array $authUser, array $allowedRoles, string $customMessage = ''): void {
+    $rol = $authUser['rol_codigo'] ?? '';
+    if (!in_array($rol, $allowedRoles, true)) {
+        http_response_code(403);
+        echo json_encode([
+            'ok' => false,
+            'error' => $customMessage ?: "Control de Acceso RBAC: Su perfil ($rol) no cuenta con autorización para acceder a este módulo o ejecutar esta operación."
+        ]);
+        exit;
     }
 }
 
@@ -184,7 +211,7 @@ function ensureEncryptedClinicalSeed(PDO $pdo, string $aesHexKey): void {
         ");
         $stmt->execute([
             1,
-            encryptAES256('Trastorno del Espectro Autista (TEA Nivel 2) concomitante con Discapacidad Intelectual Moderada (Decreto 170 MINEDUC).', $aesHexKey),
+            encryptAES256('Trastorno del Espectro Autista (TEA Nivel 2) concomitante con Discapacidad Intelectual Moderada.', $aesHexKey),
             encryptAES256('Parto a término sin complicaciones. Diagnóstico temprano a los 3 años. Hipersensibilidad auditiva a motores industriales de alta frecuencia. Excelente memoria visual y adherencia a secuencias pictográficas ARASAAC.', $aesHexKey),
             json_encode([
                 'medicamentos' => [
@@ -203,7 +230,7 @@ function ensureEncryptedClinicalSeed(PDO $pdo, string $aesHexKey): void {
         $stmt->execute([
             2,
             encryptAES256('Discapacidad Intelectual Leve (CI 64 WISC-V). Alta competencia adaptativa y motriz fina en taller laboral.', $aesHexKey),
-            encryptAES256('Desarrollo motor acorde a su edad cronológica. Escolaridad previa en escuela especial con tránsito exitoso a nivel laboral Decreto 83.', $aesHexKey),
+            encryptAES256('Desarrollo motor acorde a su edad cronológica. Escolaridad previa en escuela especial con tránsito exitoso a nivel laboral.', $aesHexKey),
             json_encode([
                 'medicamentos' => [],
                 'alergias' => ['Ninguna conocida'],
@@ -382,44 +409,36 @@ if ($route === 'auth/login' && $method === 'POST') {
     $rutSinPuntos = str_replace('.', '', $emailOrRut);
     $password = (string)($body['password'] ?? '');
 
-    // Recupera solo los datos necesarios y calcula si el bloqueo sigue vigente.
-    $stmt = $pdo->prepare("
-        SELECT u.id_usuario, u.rut, u.nombres, u.apellidos, u.email, u.password_hash,
-               u.especialidad, u.horas_contrato, u.debe_cambiar_clave,
-               u.intentos_fallidos, u.bloqueado_hasta,
-               (u.bloqueado_hasta IS NOT NULL AND u.bloqueado_hasta > NOW()) AS cuenta_bloqueada,
-               r.codigo AS rol_codigo, r.nombre AS rol_nombre
-        FROM apx_sec_cuentas_acceso u
-        INNER JOIN apx_sec_rbac_perfiles r ON u.id_rol = r.id_rol
-        WHERE (u.email = ? OR SUBSTRING_INDEX(u.email, '@', 1) = ? OR u.rut = ? OR REPLACE(u.rut, '.', '') = ?) AND u.activo = 1
-        LIMIT 1
-    ");
-    $stmt->execute([$emailOrRut, $emailOrRut, $emailOrRut, $rutSinPuntos]);
-    $user = $stmt->fetch();
-
-    // Rechaza credenciales inválidas o cuentas bloqueadas y contabiliza el fallo si corresponde.
-    if (!$user || (int)$user['cuenta_bloqueada'] === 1 || !password_verify($password, $user['password_hash'])) {
-        if ($user && (int)$user['cuenta_bloqueada'] !== 1) {
-            recordFailedLogin($pdo, (int)$user['id_usuario']);
-        }
-        http_response_code(401);
-        echo json_encode(['ok' => false, 'error' => 'Credenciales inválidas o usuario inactivo.']);
+    if ($emailOrRut === '' || $password === '') {
+        http_response_code(400);
+        echo json_encode(['ok' => false, 'error' => 'Debe ingresar su usuario, RUT o correo institucional y su contraseña.']);
         exit;
     }
 
-    $pdo->prepare("UPDATE apx_sec_cuentas_acceso SET ultimo_acceso = NOW() WHERE id_usuario = ?")->execute([$user['id_usuario']]);
+    $pdo->beginTransaction();
+    try {
+        // Recupera solo los datos necesarios y calcula si el bloqueo sigue vigente con bloqueo pesimista FOR UPDATE.
+        $stmt = $pdo->prepare("
+            SELECT u.id_usuario, u.rut, u.nombres, u.apellidos, u.email, u.password_hash,
+                   u.especialidad, u.horas_contrato, u.debe_cambiar_clave, u.activo,
+                   u.intentos_fallidos, u.bloqueado_hasta,
+                   TIMESTAMPDIFF(SECOND, NOW(), u.bloqueado_hasta) AS segundos_bloqueo,
+                   r.codigo AS rol_codigo, r.nombre AS rol_nombre
+            FROM apx_sec_cuentas_acceso u
+            INNER JOIN apx_sec_rbac_perfiles r ON u.id_rol = r.id_rol
+            WHERE (u.email = ? OR SUBSTRING_INDEX(u.email, '@', 1) = ? OR u.rut = ? OR REPLACE(u.rut, '.', '') = ?)
+            LIMIT 1
+            FOR UPDATE
+        ");
+        $stmt->execute([$emailOrRut, $emailOrRut, $emailOrRut, $rutSinPuntos]);
+        $user = $stmt->fetch();
 
-    $userPayload = [
-        'id_usuario' => (int)$user['id_usuario'],
-        'rut' => $user['rut'],
-        'nombre_completo' => $user['nombres'] . ' ' . $user['apellidos'],
-        'email' => $user['email'],
-        'rol_codigo' => $user['rol_codigo'],
-        'rol_nombre' => $user['rol_nombre'],
-        'especialidad' => $user['especialidad'],
-        'horas_contrato' => (int)$user['horas_contrato'],
-        'debe_cambiar_clave' => (int)($user['debe_cambiar_clave'] ?? 0)
-    ];
+        if (!$user || (int)$user['activo'] !== 1) {
+            $pdo->commit();
+            http_response_code(401);
+            echo json_encode(['ok' => false, 'error' => 'Credenciales inválidas o usuario inactivo.']);
+            exit;
+        }
 
         // CRITERIO OBLIGATORIO: Interceptar ANTES de verificar contraseña si la cuenta está bloqueada
         $lockInfo = checkUserLockout($user);
@@ -454,7 +473,8 @@ if ($route === 'auth/login' && $method === 'POST') {
             'rol_codigo' => $user['rol_codigo'],
             'rol_nombre' => $user['rol_nombre'],
             'especialidad' => $user['especialidad'],
-            'horas_contrato' => (int)$user['horas_contrato']
+            'horas_contrato' => (int)$user['horas_contrato'],
+            'debe_cambiar_clave' => (int)($user['debe_cambiar_clave'] ?? 0)
         ];
 
         echo json_encode([
@@ -627,6 +647,7 @@ if ($route === 'auth/change-pin' && $method === 'POST') {
 
 // 2. Dashboard RRHH y Reloj Control
 if ($route === 'rrhh/dashboard' && $method === 'GET') {
+    requireRoles($authUser, ['SOSTENEDOR', 'DIRECTOR_UTP', 'ADMIN', 'DOCENTE', 'MONITOR', 'ESPECIALISTA_PIE', 'CONVIVENCIA']);
     $uid = $authUser['id_usuario'];
     $stmtH = $pdo->prepare("
         SELECT h.*, t.nombre AS taller_nombre, t.sala_ubicacion, t.codigo_mineduc
@@ -668,6 +689,7 @@ if ($route === 'rrhh/dashboard' && $method === 'GET') {
 }
 
 if ($route === 'rrhh/reloj-control' && $method === 'POST') {
+    requireRoles($authUser, ['SOSTENEDOR', 'DIRECTOR_UTP', 'ADMIN', 'DOCENTE', 'MONITOR', 'ESPECIALISTA_PIE', 'CONVIVENCIA']);
     $uid = $authUser['id_usuario'];
     $tipo = $body['tipo_marca'] ?? 'ENTRADA';
     $lat = $body['latitud'] ?? -33.51124;
@@ -697,8 +719,39 @@ if ($route === 'rrhh/reloj-control' && $method === 'POST') {
     exit;
 }
 
+// 2.1 Resumen Ejecutivo para Sostenedor Institucional
+if ($route === 'sostenedor/resumen' && $method === 'GET') {
+    requireRoles($authUser, ['SOSTENEDOR', 'DIRECTOR_UTP', 'ADMIN'], 'Acceso reservado exclusivamente a Sostenedor, Dirección/UTP y Administración.');
+    $totalAlumnos = (int)$pdo->query("SELECT COUNT(*) FROM apx_acad_expedientes_alumnos")->fetchColumn();
+    $alumnosRegulares = (int)$pdo->query("SELECT COUNT(*) FROM apx_acad_expedientes_alumnos WHERE estado_matricula = 'REGULAR'")->fetchColumn();
+    $dotacionActiva = (int)$pdo->query("SELECT COUNT(*) FROM apx_sec_cuentas_acceso WHERE activo = 1 AND horas_contrato > 0")->fetchColumn();
+    $horasTotales = (int)$pdo->query("SELECT COALESCE(SUM(horas_contrato), 0) FROM apx_sec_cuentas_acceso WHERE activo = 1")->fetchColumn();
+    $talleres = $pdo->query("
+        SELECT t.*, COUNT(m.id_matricula) AS matriculados
+        FROM apx_acad_unidades_laborales t
+        LEFT JOIN apx_acad_inscripciones_anuales m ON t.id_taller = m.id_taller AND m.anio_escolar = 2026
+        WHERE t.activo = 1
+        GROUP BY t.id_taller
+    ")->fetchAll();
+
+    echo json_encode([
+        'ok' => true,
+        'kpis' => [
+            'matricula_total' => $totalAlumnos,
+            'matricula_subvencionable' => $alumnosRegulares,
+            'asistencia_media_sige' => 94.2,
+            'dotacion_funcionarios' => $dotacionActiva,
+            'horas_contratadas' => $horasTotales,
+            'cumplimiento_sie_pct' => 100
+        ],
+        'talleres' => $talleres
+    ]);
+    exit;
+}
+
 // 3. Módulo Administrativo: Estudiantes, Matrícula y Talleres (Grupo A / B) + Ficha Integral Figma
 if ($route === 'estudiantes' && $method === 'GET') {
+    requireRoles($authUser, ['SOSTENEDOR', 'DIRECTOR_UTP', 'ADMIN', 'DOCENTE', 'MONITOR', 'ESPECIALISTA_PIE', 'CONVIVENCIA', 'APODERADO']);
     $estudiantes = $pdo->query("
         SELECT 
             e.*,
@@ -735,16 +788,28 @@ if ($route === 'estudiantes' && $method === 'GET') {
         ORDER BY e.apellidos ASC
     ")->fetchAll();
 
-    $canSeeClinical = in_array($authUser['rol_codigo'], ['ESPECIALISTA_PIE', 'DIRECTOR_UTP', 'DOCENTE', 'ADMIN']);
+    $canSeeClinical = in_array($authUser['rol_codigo'], ['ESPECIALISTA_PIE', 'DIRECTOR_UTP', 'DOCENTE', 'ADMIN'], true);
     foreach ($estudiantes as &$estRow) {
         if ($canSeeClinical && !empty($estRow['diagnostico_principal_enc'])) {
             $estRow['diagnostico_principal'] = decryptAES256($estRow['diagnostico_principal_enc'], $aesHexKey);
         } else {
-            $estRow['diagnostico_principal'] = 'Evaluación diagnóstica integral Decreto 170';
+            $estRow['diagnostico_principal'] = 'En seguimiento por equipo multiprofesional';
         }
         unset($estRow['diagnostico_principal_enc']);
     }
     unset($estRow);
+
+    if ($authUser['rol_codigo'] === 'APODERADO') {
+        $userEmail = strtolower(trim((string)($authUser['email'] ?? '')));
+        $userRut = trim((string)($authUser['rut'] ?? ''));
+        $filteredEst = array_values(array_filter($estudiantes, function ($row) use ($userEmail, $userRut) {
+            return ($userEmail !== '' && strtolower((string)($row['apoderado_email'] ?? '')) === $userEmail)
+                || ($userRut !== '' && (string)($row['apoderado_rut'] ?? '') === $userRut);
+        }));
+        if (!empty($filteredEst)) {
+            $estudiantes = $filteredEst;
+        }
+    }
 
     $talleres = $pdo->query("SELECT * FROM apx_acad_unidades_laborales WHERE activo = 1")->fetchAll();
     echo json_encode(['ok' => true, 'estudiantes' => $estudiantes, 'talleres' => $talleres]);
@@ -797,7 +862,7 @@ if ($route === 'estudiantes' && $method === 'POST') {
 
         $metaJson = json_encode([
             'course' => $body['course'] ?? 'Nivel Laboral 2A',
-            'level' => $body['level'] ?? 'Nivel Laboral (Decreto 83)',
+            'level' => $body['level'] ?? 'Nivel Laboral',
             'workshop' => $body['workshop'] ?? '',
             'nationality' => $body['nationality'] ?? 'Chilena',
             'enrollmentYear' => (int)($body['enrollmentYear'] ?? 2026),
@@ -909,7 +974,7 @@ if (preg_match('#^estudiantes/(\d+)$#', $route, $mEst)) {
 
             $metaJson = json_encode([
                 'course' => $body['course'] ?? 'Nivel Laboral 2A',
-                'level' => $body['level'] ?? 'Nivel Laboral (Decreto 83)',
+                'level' => $body['level'] ?? 'Nivel Laboral',
                 'workshop' => $body['workshop'] ?? '',
                 'nationality' => $body['nationality'] ?? 'Chilena',
                 'enrollmentYear' => (int)($body['enrollmentYear'] ?? 2026),
@@ -1050,15 +1115,26 @@ if ($route === 'estudiantes/importar' && $method === 'POST') {
     exit;
 }
 
-// 4. Módulo Pedagógico (Libro de Clases Digital: PID, Asistencia, Evaluaciones y Firma PIN Cifrada)
+// 4. Módulo Pedagógico (Libro de Clases Digital: PID, Asistencia, Evaluaciones y Firma PIN)
 if ($route === 'pedagogico/libro' && $method === 'GET') {
+    requireRoles($authUser, ['SOSTENEDOR', 'DIRECTOR_UTP', 'ADMIN', 'DOCENTE', 'MONITOR', 'ESPECIALISTA_PIE']);
     $clasesPid = $pdo->query("
-        SELECT p.*, t.nombre AS taller_nombre, t.codigo_mineduc, CONCAT(u.nombres, ' ', u.apellidos) AS docente_nombre
+        SELECT p.id_clase, p.id_taller, p.id_docente, p.fecha_clase, p.unidad_tematica,
+               p.objetivo_aprendizaje, p.actividad_grupo_a, p.actividad_grupo_b,
+               p.recursos_dua, p.firmado, p.fecha_firma, p.created_at,
+               t.nombre AS taller_nombre, t.codigo_mineduc, CONCAT(u.nombres, ' ', u.apellidos) AS docente_nombre
         FROM apx_ped_leccionario_pid p
         INNER JOIN apx_acad_unidades_laborales t ON p.id_taller = t.id_taller
         INNER JOIN apx_sec_cuentas_acceso u ON p.id_docente = u.id_usuario
         ORDER BY p.fecha_clase DESC, p.id_clase DESC
     ")->fetchAll();
+
+    foreach ($clasesPid as &$cRow) {
+        $cRow['estado_firma'] = ((int)($cRow['firmado'] ?? 0) === 1)
+            ? 'Firmado electrónicamente con PIN'
+            : 'Pendiente de firma';
+    }
+    unset($cRow);
 
     $evaluaciones = $pdo->query("
         SELECT ev.*, CONCAT(e.nombres, ' ', e.apellidos) AS estudiante_nombre,
@@ -1085,6 +1161,7 @@ if ($route === 'pedagogico/libro' && $method === 'GET') {
 }
 
 if ($route === 'pedagogico/pid' && $method === 'POST') {
+    requireRoles($authUser, ['DIRECTOR_UTP', 'DOCENTE', 'ESPECIALISTA_PIE', 'ADMIN'], 'Solo Docente Titular, Equipo PIE o Dirección/UTP están habilitados para firmar el Leccionario PID con PIN.');
     $pin = trim((string)($body['pin_firma'] ?? ''));
 
     if ($pin === '') {
@@ -1137,7 +1214,7 @@ if ($route === 'pedagogico/pid' && $method === 'POST') {
         // CRITERIO OBLIGATORIO: Reiniciar contador y limpiar bloqueo tras firma exitosa
         resetFailedAttempts($pdo, (int)$user['id_usuario'], false);
 
-        $hashFirma = hash('sha256', $authUser['id_usuario'] . '|' . ($body['unidad_tematica'] ?? '') . '|' . microtime(true));
+        $selloInterno = hash('sha256', $authUser['id_usuario'] . '|' . ($body['unidad_tematica'] ?? '') . '|' . microtime(true));
         $stmt = $pdo->prepare("
             INSERT INTO apx_ped_leccionario_pid
             (id_taller, id_docente, fecha_clase, unidad_tematica, objetivo_aprendizaje, actividad_grupo_a, actividad_grupo_b, recursos_dua, firmado, hash_firma_electronica, fecha_firma)
@@ -1151,17 +1228,17 @@ if ($route === 'pedagogico/pid' && $method === 'POST') {
             $body['actividad_grupo_a'] ?? '',
             $body['actividad_grupo_b'] ?? '',
             $body['recursos_dua'] ?? '',
-            $hashFirma
+            $selloInterno
         ]);
 
-        logAudit($pdo, $authUser['id_usuario'], null, 'LIBRO_CLASES_PID', 'FIRMA_DIGITAL', "Clase PID firmada con PIN electrónico Bcrypt. Sello SHA-256: " . substr($hashFirma, 0, 16));
+        logAudit($pdo, $authUser['id_usuario'], null, 'LIBRO_CLASES_PID', 'FIRMA_DIGITAL', 'Clase PID registrada y validada (Firmado electrónicamente con PIN).');
 
         $pdo->commit();
 
         echo json_encode([
             'ok' => true,
-            'mensaje' => 'Planificación Interdisciplinaria Diversificada (PID) registrada y sellada con Firma Electrónica Simple.',
-            'hash_firma' => $hashFirma
+            'mensaje' => 'Planificación Interdisciplinaria Diversificada (PID) registrada (Firmado electrónicamente con PIN).',
+            'estado_firma' => 'Firmado electrónicamente con PIN'
         ]);
         exit;
     } catch (Throwable $e) {
@@ -1175,6 +1252,7 @@ if ($route === 'pedagogico/pid' && $method === 'POST') {
 }
 
 if ($route === 'pedagogico/asistencia' && $method === 'POST') {
+    requireRoles($authUser, ['DIRECTOR_UTP', 'DOCENTE', 'MONITOR', 'ESPECIALISTA_PIE', 'CONVIVENCIA', 'ADMIN']);
     $idEst = (int)$body['id_estudiante'];
     $idTaller = (int)($body['id_taller'] ?? 1);
     $estado = $body['estado'] ?? 'PRESENTE';
@@ -1198,7 +1276,7 @@ if ($route === 'pedagogico/asistencia' && $method === 'POST') {
         ");
         $stmtNotif->execute([
             $authUser['id_usuario'],
-            "⚠️ Alerta Automática de Inasistencia: $nomEst",
+            "Alerta Automática de Inasistencia: $nomEst",
             "Se registró ausencia en el Libro de Clases Digital para $nomEst. Se activa protocolo preventivo de contacto familiar UTP / Convivencia Escolar."
         ]);
     }
@@ -1208,6 +1286,7 @@ if ($route === 'pedagogico/asistencia' && $method === 'POST') {
 }
 
 if ($route === 'pedagogico/evaluaciones' && $method === 'POST') {
+    requireRoles($authUser, ['DIRECTOR_UTP', 'DOCENTE', 'ESPECIALISTA_PIE', 'MONITOR', 'ADMIN']);
     $stmt = $pdo->prepare("
         INSERT INTO apx_ped_evaluaciones_decreto83
         (id_estudiante, id_taller, semestre, anio_escolar, indicador_competencia, dimension, nivel_logro, comentario_pedagogico, id_evaluador, fecha_evaluacion)
@@ -1222,27 +1301,27 @@ if ($route === 'pedagogico/evaluaciones' && $method === 'POST') {
         $body['comentario_pedagogico'] ?? '',
         $authUser['id_usuario']
     ]);
-    echo json_encode(['ok' => true, 'mensaje' => 'Evaluación conceptual Decreto 83 registrada correctamente.']);
+    echo json_encode(['ok' => true, 'mensaje' => 'Evaluación formativa registrada correctamente.']);
     exit;
 }
 
-// 5. Módulo Clínico y PIE (Encriptación AES-256-GCM - Ley 19.628)
+// 5. Módulo Clínico y PIE (Protección de Datos Ley 19.628)
 if (preg_match('#^clinico/expediente/(\d+)$#', $route, $m)) {
     $idEst = (int)$m[1];
     $rol = $authUser['rol_codigo'];
 
-    if (!in_array($rol, ['ESPECIALISTA_PIE', 'DIRECTOR_UTP', 'DOCENTE', 'ADMIN'])) {
+    if (!in_array($rol, ['ESPECIALISTA_PIE', 'DIRECTOR_UTP', 'DOCENTE', 'ADMIN'], true)) {
         logAudit($pdo, $authUser['id_usuario'], $idEst, 'FICHA_CLINICA_PIE', 'LECTURA', "INTENTO DENEGADO por rol no autorizado ($rol) - Ley 19.628");
         http_response_code(403);
         echo json_encode([
             'ok' => false,
-            'error' => "Restricción Legal Ley 19.628: Su perfil ($rol) no tiene autorización para acceder a diagnósticos clínicos ni expedientes PIE encriptados. Solo Equipo PIE, Dirección/UTP y Docente Titular (en modo lectura) están habilitados."
+            'error' => "Restricción Legal Ley 19.628: Su perfil ($rol) no tiene autorización para acceder a diagnósticos clínicos ni expedientes PIE protegidos. Solo Equipo PIE, Dirección/UTP y Docente Titular (en modo lectura) están habilitados."
         ]);
         exit;
     }
 
     if ($method === 'GET') {
-        logAudit($pdo, $authUser['id_usuario'], $idEst, 'FICHA_CLINICA_PIE_PAEC', 'LECTURA', "Acceso autorizado ($rol) y desencriptación AES-256-GCM de expediente #$idEst");
+        logAudit($pdo, $authUser['id_usuario'], $idEst, 'FICHA_CLINICA_PIE_PAEC', 'LECTURA', "Acceso autorizado ($rol) a expediente protegido Ley 19.628 #$idEst");
 
         $stmtF = $pdo->prepare("SELECT * FROM apx_med_dossier_clinico_enc WHERE id_estudiante = ?");
         $stmtF->execute([$idEst]);
@@ -1265,7 +1344,7 @@ if (preg_match('#^clinico/expediente/(\d+)$#', $route, $m)) {
 
         $ficha = $fichaRaw ? [
             'id_ficha' => $fichaRaw['id_ficha'],
-            'cipher_preview' => substr($fichaRaw['diagnostico_principal_enc'], 0, 56) . '...',
+            'estado_proteccion' => 'Datos protegidos Ley 19.628',
             'diagnostico_principal' => decryptAES256($fichaRaw['diagnostico_principal_enc'], $aesHexKey),
             'anamnesis' => decryptAES256($fichaRaw['anamnesis_enc'], $aesHexKey),
             'datos_medicos' => json_decode($fichaRaw['datos_medicos_json'], true) ?: [],
@@ -1277,22 +1356,23 @@ if (preg_match('#^clinico/expediente/(\d+)$#', $route, $m)) {
 
         $paec = $paecRaw ? [
             'id_paec' => $paecRaw['id_paec'],
+            'estado_proteccion' => 'Datos protegidos Ley 19.628',
             'profesional_sos_nombre' => $paecRaw['profesional_sos_nombre'],
             'profesional_sos_telefono' => $paecRaw['profesional_sos_telefono'],
             'profesional_sos_especialidad' => $paecRaw['profesional_sos_especialidad'],
-            'cipher_paec_preview' => substr($paecRaw['gatillantes_dec_enc'], 0, 56) . '...',
             'gatillantes_dec' => decryptAES256($paecRaw['gatillantes_dec_enc'], $aesHexKey),
             'senales_previas' => decryptAES256($paecRaw['senales_previas_enc'], $aesHexKey),
             'estrategias_contencion' => decryptAES256($paecRaw['estrategias_contencion_enc'], $aesHexKey),
             'acuerdos_familia' => $paecRaw['acuerdos_familia']
         ] : null;
 
-        $soloLectura = in_array($rol, ['DOCENTE', 'ADMIN']);
+        $soloLectura = in_array($rol, ['DOCENTE', 'ADMIN'], true);
 
         echo json_encode([
             'ok' => true,
             'permiso_escritura' => !$soloLectura,
             'rol_acceso' => $rol,
+            'estado_proteccion' => 'Datos protegidos Ley 19.628',
             'ficha' => $ficha,
             'paec' => $paec,
             'pai' => $stmtPai->fetch() ?: null,
@@ -1302,7 +1382,7 @@ if (preg_match('#^clinico/expediente/(\d+)$#', $route, $m)) {
     }
 
     if ($method === 'PUT') {
-        if (!in_array($rol, ['ESPECIALISTA_PIE', 'DIRECTOR_UTP'])) {
+        if (!in_array($rol, ['ESPECIALISTA_PIE', 'DIRECTOR_UTP'], true)) {
             http_response_code(403);
             echo json_encode(['ok' => false, 'error' => 'Modo Solo Lectura (Ley 19.628): Solo el Equipo PIE y Dirección/UTP pueden modificar datos clínicos o del PAEC.']);
             exit;
@@ -1348,14 +1428,15 @@ if (preg_match('#^clinico/expediente/(\d+)$#', $route, $m)) {
             ]);
         }
 
-        logAudit($pdo, $authUser['id_usuario'], $idEst, 'FICHA_CLINICA_PIE_PAEC', 'ACTUALIZACION', "Actualización encriptada AES-256-GCM de expediente clínico/PAEC #$idEst");
-        echo json_encode(['ok' => true, 'mensaje' => 'Expediente Clínico y PAEC cifrados con AES-256-GCM y guardados en MariaDB.']);
+        logAudit($pdo, $authUser['id_usuario'], $idEst, 'FICHA_CLINICA_PIE_PAEC', 'ACTUALIZACION', "Actualización de expediente clínico/PAEC #$idEst");
+        echo json_encode(['ok' => true, 'mensaje' => 'Expediente Clínico y PAEC guardados correctamente.']);
         exit;
     }
 }
 
-// 6. Botón SOS en Aula y Bitácora de Incidencias (PAEC)
+// 6. Botón SOS en Aula y Bitácora de Incidencias (PAEC & Convivencia Escolar)
 if ($route === 'paec/sos' && $method === 'POST') {
+    requireRoles($authUser, ['DIRECTOR_UTP', 'DOCENTE', 'MONITOR', 'ESPECIALISTA_PIE', 'CONVIVENCIA', 'ADMIN', 'SOSTENEDOR']);
     $idEst = (int)($body['id_estudiante'] ?? 1);
     $stmtInfo = $pdo->prepare("
         SELECT e.id_estudiante, CONCAT(e.nombres, ' ', e.apellidos) AS estudiante_nombre,
@@ -1401,7 +1482,7 @@ if ($route === 'paec/sos' && $method === 'POST') {
     ");
     $stmtNotif->execute([
         $authUser['id_usuario'],
-        "🚨 SOS AULA ACTIVO: Desregulación Severa — " . $info['estudiante_nombre'],
+        "SOS AULA ACTIVO: Desregulación Severa — " . $info['estudiante_nombre'],
         "Ubicación: $ubicacion. Profesional SOS convocado: " . ($info['profesional_sos_nombre'] ?: 'Camila Vargas') . " (" . ($info['profesional_sos_telefono'] ?: '+56 9 8555 6677') . ")."
     ]);
 
@@ -1409,7 +1490,7 @@ if ($route === 'paec/sos' && $method === 'POST') {
 
     echo json_encode([
         'ok' => true,
-        'mensaje' => '¡Alerta SOS despachada inmediatamente al Profesional SOS designado en el PAEC!',
+        'mensaje' => 'Alerta SOS despachada inmediatamente al Profesional SOS designado en el PAEC.',
         'alerta' => [
             'id_incidencia' => $idIncidencia,
             'estudiante' => $info['estudiante_nombre'],
@@ -1426,8 +1507,12 @@ if ($route === 'paec/sos' && $method === 'POST') {
 }
 
 if ($route === 'paec/bitacora' && $method === 'GET') {
+    requireRoles($authUser, ['DIRECTOR_UTP', 'DOCENTE', 'MONITOR', 'ESPECIALISTA_PIE', 'CONVIVENCIA', 'ADMIN', 'SOSTENEDOR']);
     $rows = $pdo->query("
-        SELECT b.*, CONCAT(e.nombres, ' ', e.apellidos) AS estudiante_nombre,
+        SELECT b.id_incidencia, b.id_estudiante, b.id_taller, b.id_reportante, b.id_profesional_interviniente,
+               b.tipo_incidencia, b.etapa_dec, b.descripcion_suceso_enc, b.acciones_aplicadas_paec,
+               b.notificado_apoderado, b.estado_alerta, b.fecha_hora_suceso, b.fecha_hora_cierre,
+               CONCAT(e.nombres, ' ', e.apellidos) AS estudiante_nombre,
                CONCAT(rep.nombres, ' ', rep.apellidos) AS reportante_nombre,
                CONCAT(prof.nombres, ' ', prof.apellidos) AS profesional_nombre,
                t.nombre AS taller_nombre
@@ -1441,14 +1526,78 @@ if ($route === 'paec/bitacora' && $method === 'GET') {
 
     foreach ($rows as &$r) {
         $r['descripcion_suceso'] = decryptAES256($r['descripcion_suceso_enc'], $aesHexKey);
+        $r['estado_proteccion'] = 'Datos protegidos Ley 19.628';
+        unset($r['descripcion_suceso_enc']);
+    }
+    unset($r);
+
+    // También incluir protocolo PAEC seguro (sin datos médicos farmacológicos) para vista PAEC/Convivencia
+    $stmtPaecList = $pdo->query("
+        SELECT p.id_paec, p.id_estudiante, p.gatillantes_dec_enc, p.senales_previas_enc, p.estrategias_contencion_enc, p.acuerdos_familia,
+               CONCAT(e.nombres, ' ', e.apellidos) AS estudiante_nombre,
+               CONCAT(u.nombres, ' ', u.apellidos) AS profesional_sos_nombre, u.telefono AS profesional_sos_telefono, u.especialidad AS profesional_sos_especialidad
+        FROM apx_conv_protocolos_paec_enc p
+        INNER JOIN apx_acad_expedientes_alumnos e ON p.id_estudiante = e.id_estudiante
+        INNER JOIN apx_sec_cuentas_acceso u ON p.id_profesional_sos = u.id_usuario
+        ORDER BY p.id_estudiante ASC
+    ")->fetchAll();
+
+    $protocolosPaec = [];
+    foreach ($stmtPaecList as $pr) {
+        $protocolosPaec[] = [
+            'id_paec' => $pr['id_paec'],
+            'id_estudiante' => (int)$pr['id_estudiante'],
+            'estudiante_nombre' => $pr['estudiante_nombre'],
+            'estado_proteccion' => 'Datos protegidos Ley 19.628',
+            'profesional_sos_nombre' => $pr['profesional_sos_nombre'],
+            'profesional_sos_telefono' => $pr['profesional_sos_telefono'],
+            'profesional_sos_especialidad' => $pr['profesional_sos_especialidad'],
+            'gatillantes_dec' => decryptAES256($pr['gatillantes_dec_enc'], $aesHexKey),
+            'senales_previas' => decryptAES256($pr['senales_previas_enc'], $aesHexKey),
+            'estrategias_contencion' => decryptAES256($pr['estrategias_contencion_enc'], $aesHexKey),
+            'acuerdos_familia' => $pr['acuerdos_familia']
+        ];
     }
 
-    echo json_encode(['ok' => true, 'bitacora' => $rows]);
+    echo json_encode(['ok' => true, 'bitacora' => $rows, 'protocolos_paec' => $protocolosPaec]);
+    exit;
+}
+
+if ($route === 'paec/convivencia' && $method === 'POST') {
+    requireRoles($authUser, ['CONVIVENCIA', 'DIRECTOR_UTP', 'ESPECIALISTA_PIE', 'DOCENTE', 'ADMIN']);
+    $idEst = (int)($body['id_estudiante'] ?? 1);
+    $tipo = in_array($body['tipo_incidencia'] ?? '', ['CONVIVENCIA_POSITIVA', 'DESREGULACION_LEVE', 'DESREGULACION_MODERADA', 'ACCIDENTE_ESCOLAR'], true)
+        ? $body['tipo_incidencia']
+        : 'CONVIVENCIA_POSITIVA';
+    $etapa = in_array($body['etapa_dec'] ?? '', ['ETAPA_1_PREVENCION', 'ETAPA_2_MODERADA', 'ETAPA_3_SEVERA'], true)
+        ? $body['etapa_dec']
+        : 'ETAPA_1_PREVENCION';
+    $descripcion = trim((string)($body['descripcion_suceso'] ?? 'Seguimiento preventivo de Convivencia Escolar y entrevista con familia.'));
+    $acciones = trim((string)($body['acciones_aplicadas_paec'] ?? 'Mediación formativa y acuerdos de retención escolar.'));
+
+    $stmtBit = $pdo->prepare("
+        INSERT INTO apx_conv_bitacora_sos_enc
+        (id_estudiante, id_taller, id_reportante, id_profesional_interviniente, tipo_incidencia, etapa_dec, descripcion_suceso_enc, acciones_aplicadas_paec, notificado_apoderado, estado_alerta)
+        VALUES (?, 1, ?, ?, ?, ?, ?, ?, 1, 'RESUELTA')
+    ");
+    $stmtBit->execute([
+        $idEst,
+        $authUser['id_usuario'],
+        $authUser['id_usuario'],
+        $tipo,
+        $etapa,
+        encryptAES256($descripcion, $aesHexKey),
+        $acciones
+    ]);
+
+    logAudit($pdo, $authUser['id_usuario'], $idEst, 'CONVIVENCIA_ESCOLAR', 'CREACION', "Registro de intervención de Convivencia Escolar ($tipo)");
+    echo json_encode(['ok' => true, 'mensaje' => 'Intervención de Convivencia Escolar registrada correctamente.']);
     exit;
 }
 
 // 7. Portal Apoderados y Datos Consolidados para el Generador PDF en JS
 if (preg_match('#^apoderados/resumen/(\d+)$#', $route, $m) && $method === 'GET') {
+    requireRoles($authUser, ['APODERADO', 'DIRECTOR_UTP', 'DOCENTE', 'ESPECIALISTA_PIE', 'CONVIVENCIA', 'ADMIN', 'SOSTENEDOR']);
     $idEst = (int)$m[1];
     $stmtEst = $pdo->prepare("
         SELECT e.*, m.numero_matricula, m.grupo_funcionalidad, m.jornada,
@@ -1502,11 +1651,7 @@ if (preg_match('#^reportes/auditar-pdf/(\d+)$#', $route, $m) && $method === 'POS
 
 // 8. Seguridad y Auditoría Forense Ley 19.628
 if ($route === 'seguridad/auditoria' && $method === 'GET') {
-    if (!in_array($authUser['rol_codigo'], ['ADMIN', 'DIRECTOR_UTP', 'ESPECIALISTA_PIE'])) {
-        http_response_code(403);
-        echo json_encode(['ok' => false, 'error' => 'Acceso reservado a Administración, Dirección/UTP y Coordinación PIE.']);
-        exit;
-    }
+    requireRoles($authUser, ['ADMIN', 'DIRECTOR_UTP', 'SOSTENEDOR'], 'Acceso reservado a Administración, Dirección/UTP y Sostenedor.');
 
     $logs = $pdo->query("
         SELECT l.*, CONCAT(u.nombres, ' ', u.apellidos) AS usuario_nombre, r.codigo AS rol_codigo,
@@ -1534,6 +1679,7 @@ if ($route === 'seguridad/auditoria' && $method === 'GET') {
 // 9. Documentación Institucional (PAI, PAEC, PACI, IEP, IF, AN, PV) — Integración Figma
 $docsStoragePath = sys_get_temp_dir() . '/apandi_institutional_docs.json';
 if ($route === 'documentos' && $method === 'GET') {
+    requireRoles($authUser, ['SOSTENEDOR', 'DIRECTOR_UTP', 'ADMIN', 'DOCENTE', 'ESPECIALISTA_PIE', 'CONVIVENCIA']);
     $stored = [];
     if (is_readable($docsStoragePath)) {
         $stored = json_decode((string)file_get_contents($docsStoragePath), true) ?: [];
@@ -1543,14 +1689,15 @@ if ($route === 'documentos' && $method === 'GET') {
 }
 
 if ($route === 'documentos' && $method === 'POST') {
+    requireRoles($authUser, ['DIRECTOR_UTP', 'ADMIN', 'DOCENTE', 'ESPECIALISTA_PIE', 'CONVIVENCIA']);
     $idEst = (int)($body['studentId'] ?? ($body['id_estudiante'] ?? 1));
-    $docType = (string)($body['type'] ?? ($body['documentType'] ?? 'pai'));
+    $docType = (string)($body['type'] ?? ($body['documentType'] ?? ($body['templateId'] ?? 'pai')));
     $title = trim((string)($body['title'] ?? 'Documento Institucional'));
     $status = in_array($body['status'] ?? '', ['borrador', 'finalizado']) ? $body['status'] : 'borrador';
     $date = trim((string)($body['date'] ?? date('Y-m-d')));
     $content = is_array($body['content'] ?? null) ? $body['content'] : [];
     $observations = trim((string)($body['observations'] ?? ''));
-    $responsibleName = trim((string)($body['responsibleName'] ?? $authUser['nombre_completo']));
+    $responsibleName = trim((string)($body['responsibleName'] ?? ($body['responsible'] ?? $authUser['nombre_completo'])));
 
     $stored = [];
     if (is_readable($docsStoragePath)) {
@@ -1561,6 +1708,7 @@ if ($route === 'documentos' && $method === 'POST') {
         'id' => 'doc-' . time() . '-' . random_int(100, 999),
         'student' => $idEst,
         'studentId' => $idEst,
+        'templateId' => $docType,
         'documentType' => $docType,
         'type' => $docType,
         'title' => $title,
@@ -1568,6 +1716,7 @@ if ($route === 'documentos' && $method === 'POST') {
         'date' => $date,
         'content' => $content,
         'observations' => $observations,
+        'responsible' => $responsibleName,
         'responsibleName' => $responsibleName,
         'createdBy' => $authUser['nombre_completo'],
         'createdAt' => date('c')
@@ -1584,10 +1733,12 @@ if ($route === 'documentos' && $method === 'POST') {
 
 // 10. Administración de Cuentas de Usuario del Equipo (UsersView Figma)
 if ($route === 'usuarios' && $method === 'GET') {
+    requireRoles($authUser, ['ADMIN', 'DIRECTOR_UTP', 'SOSTENEDOR']);
     $usuarios = $pdo->query("
         SELECT u.id_usuario, u.rut, u.nombres, u.apellidos, CONCAT(u.nombres, ' ', u.apellidos) AS name,
                SUBSTRING_INDEX(u.email, '@', 1) AS username, u.email, u.telefono, u.especialidad,
-               u.horas_contrato, u.activo, u.ultimo_acceso, r.codigo AS rol_codigo, r.nombre AS rol_nombre
+               u.horas_contrato, u.activo, u.ultimo_acceso, r.codigo AS rol_codigo, r.nombre AS rol_nombre,
+               LOWER(r.codigo) AS role
         FROM apx_sec_cuentas_acceso u
         INNER JOIN apx_sec_rbac_perfiles r ON u.id_rol = r.id_rol
         ORDER BY u.id_rol ASC, u.id_usuario ASC
@@ -1597,11 +1748,7 @@ if ($route === 'usuarios' && $method === 'GET') {
 }
 
 if ($route === 'usuarios' && $method === 'POST') {
-    if (!in_array($authUser['rol_codigo'], ['ADMIN', 'DIRECTOR_UTP', 'DOCENTE'])) {
-        http_response_code(403);
-        echo json_encode(['ok' => false, 'error' => 'Sin permisos para crear cuentas del equipo.']);
-        exit;
-    }
+    requireRoles($authUser, ['ADMIN', 'DIRECTOR_UTP'], 'Sin permisos para crear cuentas del equipo.');
     $name = trim((string)($body['name'] ?? ''));
     $email = strtolower(trim((string)($body['email'] ?? '')));
     $password = (string)($body['password'] ?? '');
@@ -1616,12 +1763,14 @@ if ($route === 'usuarios' && $method === 'POST') {
     }
 
     $roleMap = [
+        'sostenedor' => 'SOSTENEDOR',
         'administrador' => 'ADMIN',
         'admin' => 'ADMIN',
         'director_utp' => 'DIRECTOR_UTP',
         'profesor' => 'DOCENTE',
         'docente' => 'DOCENTE',
         'especialista_pie' => 'ESPECIALISTA_PIE',
+        'convivencia' => 'CONVIVENCIA',
         'monitor' => 'MONITOR',
         'apoderado' => 'APODERADO'
     ];
@@ -1646,7 +1795,7 @@ if ($route === 'usuarios' && $method === 'POST') {
         $newUid = (int)$pdo->lastInsertId();
 
         logAudit($pdo, $authUser['id_usuario'], null, 'CUENTAS_EQUIPO', 'CREACION', "Creación de cuenta institucional #$newUid ($email - $rolCodigo)");
-        echo json_encode(['ok' => true, 'id_usuario' => $newUid]);
+        echo json_encode(['ok' => true, 'id_usuario' => $newUid, 'mensaje' => 'Cuenta institucional creada exitosamente.']);
     } catch (Throwable $e) {
         http_response_code(400);
         echo json_encode(['ok' => false, 'error' => 'No fue posible crear la cuenta. El usuario, RUT o correo puede estar en uso.']);
